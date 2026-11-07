@@ -68,6 +68,60 @@
           "notes": "Reviewer non-blocking: real-output test lacks reconciliation/dtype checks; empty-frame cast untested"
         }
       }
+    },
+    "posting-preprocessing": {
+      "spec": "specs/features/posting-preprocessing.html",
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "a50ca0808066b2067",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: apply_domain_filter on empty frame returns only families column (mask dtype); real pipeline never empty"
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "aff27e931932e5c20",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: positional multi-arg calls; idempotency not guaranteed for nested tags/double-escaped (spec issue, same as resume clean_text)"
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "a9a613ee791231deb",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "worktree": ".",
+          "developer_agent": "adeb332db1d3f4d3b",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: _build_summary (7 params) and _write_outputs (5) exceed 4-param style limit; domain_kept passed only for len()"
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "worktree": ".",
+          "developer_agent": "a0036e0a65c922fbc",
+          "fix_rounds": 0,
+          "notes": "Reviewer domain-rule observations: project_manager rule too loose (any TECH_INDUSTRIES hit), programmer/systems engineer broad; recall gaps for data engineer/architect, cloud admin, NOC, infrastructure, technical lead"
+        }
+      }
     }
   }
 }

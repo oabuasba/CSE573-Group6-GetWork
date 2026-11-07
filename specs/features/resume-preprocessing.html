@@ -311,7 +311,7 @@ ol.steps > li > strong:first-child { display: block; }
         <div class="constraint"><strong>LLM calls:</strong> none</div>
         <div class="constraint"><strong>Rows:</strong> 29,783 in</div>
         <div class="constraint"><strong>Expected drops:</strong> about 1k (short + duplicates)</div>
-        <div class="constraint"><strong>Output:</strong> data/processed/, committed</div>
+        <div class="constraint"><strong>Output:</strong> data/processed/resumes/, committed</div>
       </div>
     </section>
 
@@ -322,7 +322,7 @@ ol.steps > li > strong:first-child { display: block; }
         <li>Minimal Python project scaffold managed with uv (<code>pyproject.toml</code> and a committed <code>uv.lock</code> at the repo root, the <code>src/getwork/</code> package, tests in <code>src/tests/</code>), because the repo has no code yet.</li>
         <li>Reading <code>.txt</code>/<code>.lab</code> pairs from the zip, decoding them, and validating labels.</li>
         <li>Cleaning text, quality filtering (too short, corrupted, non-English), and deduplication with label merging.</li>
-        <li>Writing <code>data/processed/resumes_clean.parquet</code>, <code>resumes_raw.parquet</code>, <code>resumes_drop_log.csv</code>, and <code>resumes_summary.json</code>.</li>
+        <li>Writing <code>data/processed/resumes/resumes_clean.parquet</code>, <code>resumes_raw.parquet</code>, <code>resumes_drop_log.csv</code>, and <code>resumes_summary.json</code>.</li>
         <li>A command-line entry point and tests, including a validation test of the real outputs.</li>
       </ul>
       <h3>Out of scope</h3>
@@ -436,7 +436,7 @@ def drop_duplicates_merge_labels(df: pd.DataFrame) -&gt; tuple[pd.DataFrame, pd.
     rule "duplicate" and detail "duplicate_of=&lt;kept id&gt;"."""</code></pre>
 <pre><code># src/getwork/preprocess/run_resumes.py
 DEFAULT_ZIP: Path = Path("data/resume_corpus/resumes_corpus.zip")
-DEFAULT_OUT: Path = Path("data/processed")
+DEFAULT_OUT: Path = Path("data/processed/resumes")
 
 def run(zip_path: Path, out_dir: Path, cfg: ResumeFilterConfig = ResumeFilterConfig()) -&gt; dict:
     """load_resumes -&gt; add_clean_columns -&gt; apply_quality_filters -&gt;
@@ -483,7 +483,7 @@ def main(argv: list[str] | None = None) -&gt; int:
 │       ├── <span class="file">test_resume_dedup.py</span>
 │       ├── <span class="file">test_run_resumes.py</span>
 │       └── <span class="file">test_resume_outputs.py</span>       <span class="comment"># validates the real outputs; skipped if absent</span>
-└── <span class="dir">data/processed/</span>                       <span class="comment"># generated, committed (the four output files)</span></div>
+└── <span class="dir">data/processed/resumes/</span>                       <span class="comment"># generated, committed (the four output files)</span></div>
     </section>
 
     <section id="acceptance">
@@ -508,7 +508,7 @@ def main(argv: list[str] | None = None) -&gt; int:
         <li id="AC-16"><strong>AC-16</strong>: <code>run</code> on a fixture zip writes the four files with exactly the documented columns and keys; <code>loaded == kept + sum(dropped.values())</code>; the drop log has that many rows; the ids in <code>resumes_raw.parquet</code> equal the ids in <code>resumes_clean.parquet</code>; and each kept <code>text_raw</code> equals the decoded original. <em>Test:</em> <code>src/tests/test_run_resumes.py::test_run_outputs_and_reconciliation</code></li>
         <li id="AC-17"><strong>AC-17</strong>: Running <code>run</code> twice on the same input produces identical output tables and an identical summary. <em>Test:</em> <code>src/tests/test_run_resumes.py::test_run_is_deterministic</code></li>
         <li id="AC-18"><strong>AC-18</strong>: <code>main(["--zip", Z, "--out", O])</code> returns 0, writes the outputs, and prints the summary as JSON. <em>Test:</em> <code>src/tests/test_run_resumes.py::test_main_cli</code></li>
-        <li id="AC-19"><strong>AC-19</strong>: On the real outputs in <code>data/processed/</code>: summary <code>loaded == 29783</code>; ids are unique; every label is in <code>RESUME_CLASSES</code>; no <code>text_clean</code> contains <code>&lt;span</code>; <code>kept / loaded &gt;= 0.90</code>; each Parquet file is under 90 MB. The test is skipped when the outputs are absent. <em>Test:</em> <code>src/tests/test_resume_outputs.py::test_real_outputs</code>, run after <code>uv run python -m getwork.preprocess.run_resumes</code></li>
+        <li id="AC-19"><strong>AC-19</strong>: On the real outputs in <code>data/processed/resumes/</code>: summary <code>loaded == 29783</code>; ids are unique; every label is in <code>RESUME_CLASSES</code>; no <code>text_clean</code> contains <code>&lt;span</code>; <code>kept / loaded &gt;= 0.90</code>; each Parquet file is under 90 MB. The test is skipped when the outputs are absent. <em>Test:</em> <code>src/tests/test_resume_outputs.py::test_real_outputs</code>, run after <code>uv run python -m getwork.preprocess.run_resumes</code></li>
       </ol>
     </section>
 
@@ -672,12 +672,12 @@ def drop_duplicates_merge_labels(df: pd.DataFrame) -&gt; tuple[pd.DataFrame, pd.
 
       <section id="T-6" class="card">
         <div class="card-header"><span class="badge badge-info">T-6</span><h3>Pipeline run, outputs, CLI, real-data validation</h3></div>
-        <p><strong>Files:</strong> <code>src/getwork/preprocess/run_resumes.py</code> (new), <code>src/tests/test_run_resumes.py</code> (new), <code>src/tests/test_resume_outputs.py</code> (new). After the code is merged, run the CLI on the real data and add the generated <code>data/processed/</code> files.</p>
+        <p><strong>Files:</strong> <code>src/getwork/preprocess/run_resumes.py</code> (new), <code>src/tests/test_run_resumes.py</code> (new), <code>src/tests/test_resume_outputs.py</code> (new). After the code is merged, run the CLI on the real data and add the generated <code>data/processed/resumes/</code> files.</p>
         <p><strong>Depends on:</strong> T-3, T-4, T-5. <strong>Satisfies:</strong> AC-15, AC-16, AC-17, AC-18, AC-19.</p>
         <p><strong>Interfaces (verbatim from Design):</strong></p>
 <pre><code># src/getwork/preprocess/run_resumes.py
 DEFAULT_ZIP: Path = Path("data/resume_corpus/resumes_corpus.zip")
-DEFAULT_OUT: Path = Path("data/processed")
+DEFAULT_OUT: Path = Path("data/processed/resumes")
 
 def run(zip_path: Path, out_dir: Path, cfg: ResumeFilterConfig = ResumeFilterConfig()) -&gt; dict:
     """load_resumes -&gt; add_clean_columns -&gt; apply_quality_filters -&gt;
@@ -692,7 +692,7 @@ def main(argv: list[str] | None = None) -&gt; int:
           <li>Create <code>out_dir</code> if missing. Sort kept rows by <code>id</code> before writing. Concatenate the two drop frames (filters first, dedup second), sort by <code>id</code>, write CSV with <code>index=False</code>. Write the summary with <code>json.dumps(..., sort_keys=True, indent=2)</code>. <code>dropped</code> must contain all four rule keys even when a count is zero.</li>
           <li>Process in memory. The raw text is about 205 MB, which is fine. Do not stream.</li>
           <li><code>src/tests/test_run_resumes.py</code> uses <code>make_resume_zip</code> (T-3). The fixture contains at least: 2 normal resumes, 1 too-short, 1 exact-case-variant duplicate of a normal one with different labels, 1 unlabeled normal resume, 1 cp1252 resume, 1 non-English resume of at least 50 words. Assert reconciliation, columns, determinism (<code>pd.testing.assert_frame_equal</code> on re-read outputs plus equal summary dicts), and <code>main</code>'s return value and stdout JSON.</li>
-          <li><code>src/tests/test_resume_outputs.py::test_real_outputs</code> uses <code>pytest.skip</code> when <code>data/processed/resumes_summary.json</code> does not exist, and otherwise checks every condition in AC-19. Resolve paths relative to the repo root, not the working directory: from <code>src/tests/test_resume_outputs.py</code> the root is <code>Path(__file__).resolve().parents[2]</code>.</li>
+          <li><code>src/tests/test_resume_outputs.py::test_real_outputs</code> uses <code>pytest.skip</code> when <code>data/processed/resumes/resumes_summary.json</code> does not exist, and otherwise checks every condition in AC-19. Resolve paths relative to the repo root, not the working directory: from <code>src/tests/test_resume_outputs.py</code> the root is <code>Path(__file__).resolve().parents[2]</code>.</li>
           <li>Real run: <code>uv run python -m getwork.preprocess.run_resumes</code>, then <code>uv run pytest src/tests/test_resume_outputs.py</code>. If <code>kept / loaded</code> is below 0.90, do not tune thresholds silently. Stop and report the per-rule counts, because a rule is over-dropping. Otherwise record the printed summary in the pull request description.</li>
         </ul>
       </section>
@@ -723,7 +723,7 @@ def main(argv: list[str] | None = None) -&gt; int:
     <section id="open-questions">
       <h2>Open questions</h2>
       <div class="callout warn"><span class="callout-title">Assumptions</span>
-        <p><strong>1.</strong> The Q-6 conventions (Python 3.11+, <code>pytest</code>, Parquet) are adopted for this feature, though the user has not confirmed them explicitly. The layout follows the user's tree: all code under <code>src/</code> (package <code>src/getwork/</code>, tests in <code>src/tests/</code>), with only <code>pyproject.toml</code> at the repo root, which is an assumption because uv and pytest look for it there. uv is the package manager, as the user decided. The top-level <code>evaluations/</code> directory is not used by this feature. <strong>2.</strong> <code>langdetect</code> (seeded) is the language library. The user asked for a Python library and allowed pandas. <code>lingua</code> is more accurate but heavier; swapping means changing only <code>detect_language</code>. <strong>3.</strong> Thresholds (<code>min_words=50</code>, alpha ratio 0.5, control ratio 0.01, language probability 0.90) are provisional. The first three come from the measurements above; the language threshold is unmeasured because <code>langdetect</code> is not installed yet. Inspect the drop log after the first real run. <strong>4.</strong> <code>first_label</code> is <code>labels[0]</code>. Whether the order of labels in a <code>.lab</code> file carries meaning is not verified. <strong>5.</strong> Cleaned outputs are committed under <code>data/processed/</code> as the user decided; the raw zip is not touched by this feature (<a href="../architecture.html#open-questions">Q-7</a> is still open). <strong>6.</strong> Whitespace is flattened completely. The source has no newlines, so no structure is lost.</p>
+        <p><strong>1.</strong> The Q-6 conventions (Python 3.11+, <code>pytest</code>, Parquet) are adopted for this feature, though the user has not confirmed them explicitly. The layout follows the user's tree: all code under <code>src/</code> (package <code>src/getwork/</code>, tests in <code>src/tests/</code>), with only <code>pyproject.toml</code> at the repo root, which is an assumption because uv and pytest look for it there. uv is the package manager, as the user decided. The top-level <code>evaluations/</code> directory is not used by this feature. <strong>2.</strong> <code>langdetect</code> (seeded) is the language library. The user asked for a Python library and allowed pandas. <code>lingua</code> is more accurate but heavier; swapping means changing only <code>detect_language</code>. <strong>3.</strong> Thresholds (<code>min_words=50</code>, alpha ratio 0.5, control ratio 0.01, language probability 0.90) are provisional. The first three come from the measurements above; the language threshold is unmeasured because <code>langdetect</code> is not installed yet. Inspect the drop log after the first real run. <strong>4.</strong> <code>first_label</code> is <code>labels[0]</code>. Whether the order of labels in a <code>.lab</code> file carries meaning is not verified. <strong>5.</strong> Cleaned outputs are committed under <code>data/processed/resumes/</code> as the user decided; the raw zip is not touched by this feature (<a href="../architecture.html#open-questions">Q-7</a> is still open). <strong>6.</strong> Whitespace is flattened completely. The source has no newlines, so no structure is lost.</p>
       </div>
     </section>
 
