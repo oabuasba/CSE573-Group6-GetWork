@@ -1,0 +1,22 @@
+{
+  "config": {
+    "lang_sample_chars": 2000,
+    "max_control_ratio": 0.01,
+    "min_alpha_ratio": 0.5,
+    "min_words": 50,
+    "non_english_min_prob": 0.9
+  },
+  "dropped": {
+    "corrupted": 0,
+    "duplicate": 770,
+    "non_english": 2,
+    "too_short": 169
+  },
+  "encodings": {
+    "cp1252": 28991,
+    "utf-8": 792
+  },
+  "kept": 28842,
+  "loaded": 29783,
+  "unlabeled_kept": 745
+}
