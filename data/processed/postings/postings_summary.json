@@ -1,0 +1,30 @@
+{
+  "config": {
+    "lang_sample_chars": 2000,
+    "max_control_ratio": 0.01,
+    "min_alpha_ratio": 0.5,
+    "min_words": 50,
+    "non_english_min_prob": 0.9,
+    "review_sample_size": 100
+  },
+  "dropped": {
+    "corrupted": 1,
+    "duplicate": 638,
+    "non_english": 0,
+    "not_in_domain": 114625,
+    "too_short": 162
+  },
+  "experience_level_null": 2375,
+  "families": {
+    "database": 231,
+    "network": 323,
+    "project_manager": 933,
+    "security": 680,
+    "software": 5260,
+    "sysadmin": 1105
+  },
+  "in_domain": 9224,
+  "kept": 8423,
+  "loaded": 123849,
+  "unmapped_industry_rows": 0
+}
