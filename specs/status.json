@@ -1,0 +1,73 @@
+{
+  "mode": "in-place on dev; no worktrees, no commits (user decides commits later); user handles pushes",
+  "features": {
+    "resume-preprocessing": {
+      "spec": "specs/features/resume-preprocessing.html",
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "a7e9b8f3652bb6d9b",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "worktree": ".",
+          "developer_agent": "a33348fbceebac8a7",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: clean_text not idempotent for double-escaped entities (spec issue); U+FFFD literal in text.py/test_text.py"
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "a76613b3bb67136f5",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: duplicate zip stem silently keeps last; .lab decode error does not name file; empty-frame dtypes object"
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "aba3b4c5fc2686c36",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: alpha-ratio detail untested. Spec issue: AC-9 test suggestion \"word\"*n is detected as Afrikaans; T-6 real-data may show false non_english drops"
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "worktree": ".",
+          "developer_agent": "a614276a54cdb6cad",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: no test for no-duplicates case; weak has_label assertion; no unsorted-kept-order test"
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-3",
+            "T-4",
+            "T-5"
+          ],
+          "worktree": ".",
+          "developer_agent": "af83308a02fe204b9",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: real-output test lacks reconciliation/dtype checks; empty-frame cast untested"
+        }
+      }
+    }
+  }
+}
