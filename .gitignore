@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Raw input data (not tracked; data/processed/ stays tracked)
+data/job_postings/
+data/resume_corpus/
