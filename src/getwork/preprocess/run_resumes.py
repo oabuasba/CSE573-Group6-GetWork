@@ -9,7 +9,7 @@ from getwork.preprocess import dedup, filters, resumes
 from getwork.preprocess.filters import ResumeFilterConfig
 
 DEFAULT_ZIP: Path = Path("data/resume_corpus/resumes_corpus.zip")
-DEFAULT_OUT: Path = Path("data/processed")
+DEFAULT_OUT: Path = Path("data/processed/resumes")
 
 CLEAN_COLUMNS = ["id", "text_clean", "labels", "first_label", "has_label", "n_chars", "n_words", "encoding"]
 RAW_COLUMNS = ["id", "text_raw"]
