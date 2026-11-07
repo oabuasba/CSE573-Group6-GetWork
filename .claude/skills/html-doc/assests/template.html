@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Name — Design Decisions</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#flow">Request flow</a>
+      <a href="#decisions">Decisions</a>
+      <a href="#findings">Findings</a>
+      <a href="#runbook">Runbook</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>Project Name — Design Decisions</h1>
+      <p class="subtitle">One sentence on what this document decides and who it is for.</p>
+      <div class="meta"><span><strong>Status:</strong> Draft</span><span><strong>Updated:</strong> YYYY-MM-DD</span><span><strong>Owner:</strong> Team name</span></div>
+      <span class="product-badge">project-key</span>
+    </header>
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>Two or three sentences of context: the problem, the goal, and what is out of scope.</p>
+      <div class="constraints">
+        <div class="constraint"><strong>Runtime:</strong> serverless functions</div>
+        <div class="constraint"><strong>Data:</strong> internal only</div>
+        <div class="constraint"><strong>Latency:</strong> p95 under 2s</div>
+        <div class="constraint"><strong>Region:</strong> single</div>
+      </div>
+      <div class="card">
+        <h3>Summary</h3>
+        <p>The single most important takeaway, stated plainly. Use <code>inline code</code> for identifiers.</p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <div class="arch-diagram">
+        <svg viewBox="0 0 770 360" role="img" aria-labelledby="arch-title arch-desc">
+          <title id="arch-title">System architecture</title>
+          <desc id="arch-desc">A client calls an API gateway in the cloud account. The gateway routes to a service in a private network, which reads secrets and writes to a database and an object store.</desc>
+          <defs>
+            <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path class="arrow-head" d="M0,0 L10,5 L0,10 z"/>
+            </marker>
+          </defs>
+
+          <rect class="zone-outer" x="190" y="30" width="560" height="310" rx="12"/>
+          <text class="zone-label" x="205" y="55">Cloud account</text>
+          <rect class="zone-inner" x="400" y="115" width="335" height="210" rx="10"/>
+          <text class="zone-label" x="415" y="314">Private network</text>
+
+          <path class="edge two-way" d="M160,180 H220"/>
+          <text class="edge-label" x="190" y="170" text-anchor="middle">HTTPS</text>
+          <path class="edge" d="M370,180 H420"/>
+          <path class="edge" d="M540,180 H580"/>
+          <text class="edge-label" x="560" y="172" text-anchor="middle">SQL</text>
+          <path class="edge" d="M480,210 V268 H580"/>
+          <path class="edge dashed" d="M480,150 V96"/>
+          <text class="edge-label" x="488" y="128">reads</text>
+
+          <rect class="external" x="20" y="150" width="140" height="60" rx="6"/>
+          <text class="t1" x="90" y="176" text-anchor="middle">Client</text>
+          <text class="t2" x="90" y="194" text-anchor="middle">browser / CLI</text>
+
+          <rect class="platform" x="220" y="150" width="150" height="60" rx="6"/>
+          <text class="t1" x="295" y="176" text-anchor="middle">API gateway</text>
+          <text class="t2" x="295" y="194" text-anchor="middle">auth + routing</text>
+
+          <rect class="platform" x="415" y="40" width="130" height="56" rx="6"/>
+          <text class="t1" x="480" y="64" text-anchor="middle">Secrets</text>
+          <text class="t2" x="480" y="82" text-anchor="middle">managed store</text>
+
+          <rect class="compute" x="420" y="150" width="120" height="60" rx="6"/>
+          <text class="t1" x="480" y="176" text-anchor="middle">Service</text>
+          <text class="t2" x="480" y="194" text-anchor="middle">business logic</text>
+
+          <rect class="storage" x="580" y="150" width="140" height="60" rx="6"/>
+          <text class="t1" x="650" y="176" text-anchor="middle">Database</text>
+          <text class="t2" x="650" y="194" text-anchor="middle">relational</text>
+
+          <rect class="storage" x="580" y="240" width="140" height="56" rx="6"/>
+          <text class="t1" x="650" y="264" text-anchor="middle">Object store</text>
+          <text class="t2" x="650" y="282" text-anchor="middle">files + exports</text>
+        </svg>
+      </div>
+      <div class="arch-legend">
+        <span style="--swatch: var(--platform)">Managed platform</span>
+        <span style="--swatch: var(--brand)">Our compute</span>
+        <span style="--swatch: var(--info)">Data store</span>
+        <span style="--swatch: var(--gray-2)">External</span>
+      </div>
+    </section>
+
+    <section id="flow">
+      <h2>Request flow</h2>
+      <p>Hover or tab to a step for detail.</p>
+      <div class="flow-diagram">
+        <div class="flow-node external" tabindex="0">Client<span class="tooltip">Detail shown on hover or focus</span></div>
+        <div class="flow-arrow"></div><div class="flow-label">POST /api/items</div>
+        <div class="flow-node platform" tabindex="0">API gateway<span class="tooltip">Validates the token before routing</span></div>
+        <div class="flow-arrow"></div><div class="flow-label">authorized request</div>
+        <div class="flow-node compute" tabindex="0">Service<span class="tooltip">Stateless; scales per request</span></div>
+        <div class="flow-split">
+          <div class="flow-branch">
+            <div class="flow-arrow"></div><div class="flow-label">sync write</div>
+            <div class="flow-node storage" tabindex="0">Database<span class="tooltip">Primary record</span></div>
+          </div>
+          <div class="flow-branch">
+            <div class="flow-arrow"></div><div class="flow-label">async event</div>
+            <div class="flow-node platform" tabindex="0">Queue<span class="tooltip">Retries with a dead-letter queue</span></div>
+            <div class="flow-arrow"></div><div class="flow-label">batch</div>
+            <div class="flow-node compute" tabindex="0">Worker<span class="tooltip">Idempotent consumer</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <h2>Decisions</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Decision</th><th>Choice</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Compute</td><td>Serverless functions</td><td>Spiky traffic; no idle cost.</td></tr>
+            <tr><td>Storage</td><td>Relational database</td><td>Joins across entities; strong consistency.</td></tr>
+            <tr><td>Auth</td><td>Token at the gateway</td><td>One enforcement point; services stay simple.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Alternatives considered</h3>
+      <details>
+        <summary>Containers instead of functions</summary>
+        <p>Rejected: steady baseline cost and more to operate for a low-traffic workload.</p>
+      </details>
+      <details>
+        <summary>Document database</summary>
+        <p>Rejected: the access patterns are relational and need joins.</p>
+      </details>
+    </section>
+
+    <section id="findings">
+      <h2>Findings</h2>
+      <div class="card">
+        <div class="card-header"><span class="badge badge-blocking">Blocking</span><h3>Short title of the issue</h3></div>
+        <p>What is wrong, the concrete impact, and the fix.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="badge badge-warning">Warning</span><h3>Short title of the issue</h3></div>
+        <p>A real risk that is not merge-blocking.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="badge badge-info">Info</span><h3>Observation</h3></div>
+        <p>Context worth knowing; no action needed.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="badge badge-safe">Safe</span><h3>Verified behavior</h3></div>
+        <p>Something checked and confirmed correct.</p>
+      </div>
+      <div class="callout warn"><span class="callout-title">Open question</span><p>Something that needs an owner's decision before work proceeds.</p></div>
+    </section>
+
+    <section id="runbook">
+      <h2>Runbook</h2>
+      <ol class="steps">
+        <li><strong>Install dependencies</strong>Run the setup target from the repository root.<pre><code>make install</code></pre></li>
+        <li><strong>Configure</strong>Copy the example config and fill in values. Never commit secrets.</li>
+        <li><strong>Verify</strong>Run the test suite; all checks should pass.</li>
+      </ol>
+      <div class="callout note"><span class="callout-title">Note</span><p>Supporting detail that doesn't fit the steps.</p></div>
+      <h3>Repository layout</h3>
+<div class="tree"><span class="dir">project/</span>
+├── <span class="dir">src/</span>
+│   ├── <span class="file">handler.py</span>      <span class="comment"># entry point</span>
+│   └── <span class="file">service.py</span>      <span class="comment"># business logic</span>
+├── <span class="dir">tests/</span>
+└── <span class="file">Makefile</span></div>
+    </section>
+
+    <footer class="footer">Project Name · Design Decisions · Updated YYYY-MM-DD</footer>
+  </main>
+</div>
+</body>
+</html>
