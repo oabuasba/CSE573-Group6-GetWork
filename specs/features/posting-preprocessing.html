@@ -311,7 +311,7 @@ ol.steps > li > strong:first-child { display: block; }
         <div class="constraint"><strong>LLM calls:</strong> none</div>
         <div class="constraint"><strong>Rows:</strong> 123,849 in</div>
         <div class="constraint"><strong>Expected kept:</strong> about 7k–9k</div>
-        <div class="constraint"><strong>Output:</strong> data/processed/, committed</div>
+        <div class="constraint"><strong>Output:</strong> data/processed/postings/, committed</div>
       </div>
     </section>
 
@@ -322,7 +322,7 @@ ol.steps > li > strong:first-child { display: block; }
         <li>Loading <code>postings.csv</code> and joining each posting's industry names from <code>job_industries.csv</code> and <code>industries.csv</code>.</li>
         <li>The domain filter: six title families, title exclusions, and the project-manager industry/title rule.</li>
         <li>Posting text cleaning that preserves paragraph structure, quality filtering (too short, corrupted, non-English) by reusing the resume feature's filter code, and deduplication.</li>
-        <li>Writing <code>data/processed/postings_clean.parquet</code>, <code>postings_raw.parquet</code>, <code>postings_drop_log.csv</code>, <code>postings_domain_review.csv</code>, and <code>postings_summary.json</code>.</li>
+        <li>Writing <code>data/processed/postings/postings_clean.parquet</code>, <code>postings_raw.parquet</code>, <code>postings_drop_log.csv</code>, <code>postings_domain_review.csv</code>, and <code>postings_summary.json</code>.</li>
         <li>A command-line entry point, tests, and a validation test of the real outputs.</li>
       </ul>
       <h3>Out of scope</h3>
@@ -438,7 +438,7 @@ def drop_duplicate_postings(df: pd.DataFrame) -&gt; tuple[pd.DataFrame, pd.DataF
     detail "duplicate_of=&lt;kept id&gt;"."""</code></pre>
 <pre><code># src/getwork/preprocess/run_postings.py
 DEFAULT_DATA: Path = Path("data/job_postings")
-DEFAULT_OUT: Path = Path("data/processed")
+DEFAULT_OUT: Path = Path("data/processed/postings")
 REVIEW_SAMPLE_SIZE: int = 100
 
 def run(data_dir: Path, out_dir: Path, cfg: ResumeFilterConfig = ResumeFilterConfig()) -&gt; dict:
@@ -481,7 +481,7 @@ def main(argv: list[str] | None = None) -&gt; int:
 │       ├── <span class="file">test_posting_dedup.py</span>        <span class="comment"># new</span>
 │       ├── <span class="file">test_run_postings.py</span>         <span class="comment"># new</span>
 │       └── <span class="file">test_posting_outputs.py</span>      <span class="comment"># new: validates real outputs; skipped if absent</span>
-└── <span class="dir">data/processed/</span>                       <span class="comment"># generated, committed (the five posting output files)</span></div>
+└── <span class="dir">data/processed/postings/</span>                       <span class="comment"># generated, committed (the five posting output files)</span></div>
     </section>
 
     <section id="acceptance">
@@ -502,7 +502,7 @@ def main(argv: list[str] | None = None) -&gt; int:
         <li id="AC-12"><strong>AC-12</strong>: <code>postings_domain_review.csv</code> has at most <code>REVIEW_SAMPLE_SIZE</code> rows per decision; every <code>dropped</code> row has at least one industry in <code>TECH_INDUSTRIES</code> and was dropped as <code>not_in_domain</code>; with fewer eligible rows than the limit, all of them appear. <em>Test:</em> <code>src/tests/test_run_postings.py::test_domain_review_sample</code></li>
         <li id="AC-13"><strong>AC-13</strong>: Running <code>run</code> twice on the same input produces identical output tables, review sample, and summary. <em>Test:</em> <code>src/tests/test_run_postings.py::test_run_is_deterministic</code></li>
         <li id="AC-14"><strong>AC-14</strong>: <code>main(["--data", D, "--out", O])</code> returns 0, writes the outputs, and prints the summary as JSON. <em>Test:</em> <code>src/tests/test_run_postings.py::test_main_cli</code></li>
-        <li id="AC-15"><strong>AC-15</strong>: On the real outputs in <code>data/processed/</code>: summary <code>loaded == 123849</code>; ids unique; <code>5000 &lt;= kept &lt;= 12000</code>; each of the six families has at least 100 kept postings; the sum of the quality-filter and duplicate drops is at most 20% of <code>in_domain</code>; each Parquet file is under 90 MB. The test is skipped when the outputs are absent. <em>Test:</em> <code>src/tests/test_posting_outputs.py::test_real_outputs</code>, run after <code>uv run python -m getwork.preprocess.run_postings</code></li>
+        <li id="AC-15"><strong>AC-15</strong>: On the real outputs in <code>data/processed/postings/</code>: summary <code>loaded == 123849</code>; ids unique; <code>5000 &lt;= kept &lt;= 12000</code>; each of the six families has at least 100 kept postings; the sum of the quality-filter and duplicate drops is at most 20% of <code>in_domain</code>; each Parquet file is under 90 MB. The test is skipped when the outputs are absent. <em>Test:</em> <code>src/tests/test_posting_outputs.py::test_real_outputs</code>, run after <code>uv run python -m getwork.preprocess.run_postings</code></li>
         <li id="AC-16"><strong>AC-16</strong>: Every name in <code>TECH_INDUSTRIES</code> exists in <code>data/job_postings/mappings/industries.csv</code> (a typo would silently weaken the project-manager rule). The test is skipped when the CSV is absent. <em>Test:</em> <code>src/tests/test_posting_outputs.py::test_tech_industries_exist_in_data</code></li>
       </ol>
     </section>
@@ -608,7 +608,7 @@ def drop_duplicate_postings(df: pd.DataFrame) -&gt; tuple[pd.DataFrame, pd.DataF
         <p><strong>Interfaces (verbatim from Design):</strong></p>
 <pre><code># src/getwork/preprocess/run_postings.py
 DEFAULT_DATA: Path = Path("data/job_postings")
-DEFAULT_OUT: Path = Path("data/processed")
+DEFAULT_OUT: Path = Path("data/processed/postings")
 REVIEW_SAMPLE_SIZE: int = 100
 
 def run(data_dir: Path, out_dir: Path, cfg: ResumeFilterConfig = ResumeFilterConfig()) -&gt; dict:
@@ -632,14 +632,14 @@ def main(argv: list[str] | None = None) -&gt; int:
 
       <section id="T-5" class="card">
         <div class="card-header"><span class="badge badge-info">T-5</span><h3>Real-data validation tests and generated outputs</h3></div>
-        <p><strong>Files:</strong> <code>src/tests/test_posting_outputs.py</code> (new), then the generated files in <code>data/processed/</code>.</p>
+        <p><strong>Files:</strong> <code>src/tests/test_posting_outputs.py</code> (new), then the generated files in <code>data/processed/postings/</code>.</p>
         <p><strong>Depends on:</strong> T-4. <strong>Satisfies:</strong> AC-15, AC-16.</p>
         <p><strong>Instructions:</strong></p>
         <ul>
-          <li><code>test_real_outputs</code> calls <code>pytest.skip</code> when <code>data/processed/postings_summary.json</code> does not exist, and otherwise checks every condition in AC-15. Resolve paths from the repo root: from <code>src/tests/test_posting_outputs.py</code> the root is <code>Path(__file__).resolve().parents[2]</code>.</li>
+          <li><code>test_real_outputs</code> calls <code>pytest.skip</code> when <code>data/processed/postings/postings_summary.json</code> does not exist, and otherwise checks every condition in AC-15. Resolve paths from the repo root: from <code>src/tests/test_posting_outputs.py</code> the root is <code>Path(__file__).resolve().parents[2]</code>.</li>
           <li><code>test_tech_industries_exist_in_data</code> skips when <code>data/job_postings/mappings/industries.csv</code> is missing, and otherwise asserts every name in <code>TECH_INDUSTRIES</code> appears in the <code>industry_name</code> column.</li>
           <li>Real run: <code>uv run python -m getwork.preprocess.run_postings</code>, then <code>uv run pytest src/tests/test_posting_outputs.py</code>. If a check fails, do not loosen thresholds or patterns silently. Stop and report the summary and which check failed. If the kept count is outside 5,000–12,000 or a family is under 100, a pattern is wrong. Otherwise record the printed summary in the pull request description.</li>
-          <li>After the run, open <code>data/processed/postings_domain_review.csv</code> and list in the pull request description 10 kept titles that look wrong and 10 dropped titles that look right, if any. This is a reviewer aid, not a pass/fail check.</li>
+          <li>After the run, open <code>data/processed/postings/postings_domain_review.csv</code> and list in the pull request description 10 kept titles that look wrong and 10 dropped titles that look right, if any. This is a reviewer aid, not a pass/fail check.</li>
         </ul>
       </section>
     </section>
