@@ -1,0 +1,27 @@
+[project]
+name = "getwork"
+version = "0.1.0"
+description = "GetWork: resume and job data pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langdetect",
+    "pandas",
+    "pyarrow",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["getwork*"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
