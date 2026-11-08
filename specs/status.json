@@ -122,6 +122,249 @@
           "notes": "Reviewer domain-rule observations: project_manager rule too loose (any TECH_INDUSTRIES hit), programmer/systems engineer broad; recall gaps for data engineer/architect, cloud admin, NOC, infrastructure, technical lead"
         }
       }
+    },
+    "structurer": {
+      "spec": "specs/features/structurer.html",
+      "phase": "done",
+      "planner_agent": "a9adedc8bb1f248cb",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "a34c7a1c7142ac9fa",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: missing type hints in test_structure_offline.py (lines 30,39,43)"
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "worktree": ".",
+          "developer_agent": "ad2c63e66af42734a",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: extra public names REDACTION/TRANSIENT_STATUSES/FATAL_STATUSES"
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "a9ce9c8c208c8c6ed",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "a6acf5782b375017d",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: tests use local ScriptedClient instead of FakeLLMClient; test helper annotations"
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "ad2454ef2b5c33046",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: scheme check case-sensitivity, malformed port accepted, test calls other tests directly"
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "T-5"
+          ],
+          "worktree": ".",
+          "developer_agent": "a326aef07c6399ad8",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: positional multi-arg calls in voyager.py; untested default timeout/describe_model 401; SPEC: AC-33/T-6 should scope empty-choices/missing-fields shapes to complete only (describe_model: non-JSON -> PermanentLLMError, empty/missing data -> found False)"
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "worktree": ".",
+          "developer_agent": "ada75c9f8795c880e",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: schema.py MAX_ERROR_CHARS duplicates llm/client.py (T-8 should import the client one or rename); test helper order; optional extra limit tests"
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-3",
+            "T-7"
+          ],
+          "worktree": ".",
+          "developer_agent": "ad9f39437f9a1ba6e",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: add _drop_keywords unit test with nested synthetic dict; test FAILURE_STAGES/FAILURE_COLUMNS/Failure fields; spec reuses name MAX_ERROR_CHARS for 500 and 300"
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "worktree": ".",
+          "developer_agent": "aca3e5aab5fc81637",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: prompt.py MAX_ERROR_CHARS=300 name clashes with llm.client (rename e.g. RETRY_FEEDBACK_CHARS); no docstrings on two builders"
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "T-4",
+            "T-8",
+            "T-9"
+          ],
+          "worktree": ".",
+          "developer_agent": "a8cba8818299c12e3",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: assert third attempt user text built from original (no growth); T-11 must apply final [:MAX_ERROR_CHARS] on all Failure paths"
+        },
+        "T-11": {
+          "phase": "merged",
+          "deps": [
+            "T-10"
+          ],
+          "worktree": ".",
+          "developer_agent": "ab2db4db84024bea9",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: add redaction test with secret straddling offset 500 and rate_limit stage; long parametrize line; minimal annotations in tests"
+        },
+        "T-12": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "worktree": ".",
+          "developer_agent": "ab1d0e82b617ff989",
+          "fix_rounds": 1,
+          "notes": "Passed after fix round 1 (different-seed test). Optional: int(suffix) accepts \"-1\"; null id raises AttributeError; two long test lines"
+        },
+        "T-13": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "worktree": ".",
+          "developer_agent": "a03b3a669095758fb",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: file handle leaks if flock raises OSError other than BlockingIOError; ruff SIM115/PYI034 style; no test for append-after-close"
+        },
+        "T-14": {
+          "phase": "merged",
+          "deps": [
+            "T-8",
+            "T-12",
+            "T-13"
+          ],
+          "worktree": ".",
+          "developer_agent": "a0964f2c9158b3bc0",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: mkstemp gives outputs mode 0600 (restore 0666&~umask computed once at import, or document); no test of _atomic_write error path; flock OSError branch untested; a few lines >100 chars"
+        },
+        "T-15": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "worktree": ".",
+          "developer_agent": "aa554335d4c084be8",
+          "fix_rounds": 1,
+          "notes": "Passed after fix round 1. SPEC: reword T-15 abort text (already-claimed items may start; at most one per worker) and concurrency test text (peak == 2); record workers<1 ValueError. Optional: drop trivial list(generator)==[] assert"
+        },
+        "T-16": {
+          "phase": "merged",
+          "deps": [
+            "T-11"
+          ],
+          "worktree": ".",
+          "developer_agent": "ad282bf6f4abafda0",
+          "fix_rounds": 0,
+          "notes": "Reviewer non-blocking: Counters.add silently tolerates unknown stage (prefer ValueError); no test for failures_by_stage key order or max_rate_limit_waits default 5; SPEC: D-16 text names only workers/progress_every but Design/AC-21 also exclude allow_mixed"
+        },
+        "T-17": {
+          "phase": "merged",
+          "deps": [
+            "T-11",
+            "T-12",
+            "T-14",
+            "T-15",
+            "T-16"
+          ],
+          "worktree": ".",
+          "developer_agent": "a47570d6df1c89af6",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: _consume 6 params, _finalize 5 (group state for T-19); positional calls runner.py:143-147; long test lines 115,221; status/abort_reason set inside finally."
+        },
+        "T-18": {
+          "phase": "merged",
+          "deps": [
+            "T-17"
+          ],
+          "worktree": ".",
+          "developer_agent": "a73617a9b55f9d86e",
+          "fix_rounds": 1,
+          "notes": "Pass after fix round 1. Non-blocking: run_pool positional args runner.py:187; exception in finally could mask original."
+        },
+        "T-19": {
+          "phase": "merged",
+          "deps": [
+            "T-18"
+          ],
+          "worktree": ".",
+          "developer_agent": "a837a9d571e36a77d",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: run() ~45 lines; no test for fatal abort reason redaction; runner.py 266 lines."
+        },
+        "T-20": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-9",
+            "T-12",
+            "T-13"
+          ],
+          "worktree": ".",
+          "developer_agent": "a8f89aa61097cd82c",
+          "fix_rounds": 1,
+          "notes": "Passed after fix round 1 (--temperature omit). Optional: _temperature accepts nan/inf/negative (spec-compliant); T-21 must map --reasoning-effort omit -> None and add ProvenanceMismatchError to handler"
+        },
+        "T-21": {
+          "phase": "merged",
+          "deps": [
+            "T-6",
+            "T-19",
+            "T-20"
+          ],
+          "worktree": ".",
+          "developer_agent": "ac5636c1c508c7f44",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: guard signal.signal previous None; run() positional args; bare ValueError maps to exit 2 (spec-compliant)."
+        },
+        "T-22": {
+          "phase": "merged",
+          "deps": [
+            "T-21"
+          ],
+          "worktree": ".",
+          "developer_agent": "a75778d890f2ff01b",
+          "fix_rounds": 1,
+          "notes": "Pass after fix round 1. Non-blocking: README U-6 line wrap."
+        }
+      },
+      "notes": "Revised spec ready (22 tasks); building with planner a9adedc8bb1f248cb. User pre-approved build once plan is ready (in place on dev, no commits). RULES: no agent may call any Voyager endpoint (incl. /v1/models, preflight), read .env, or create keys; tests use fake client only; package installs (uv add/sync) allowed; real-API steps are user-run only, with user observing. Ask user before any task flagged large."
     }
   }
 }
