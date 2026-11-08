@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 import openai
 
 from getwork.llm import client as llm_client
-from getwork.llm.client import LLMError, LLMRequest, PermanentLLMError
+from getwork.llm.client import FatalLLMError, LLMError, LLMRequest, PermanentLLMError
 from getwork.llm.settings import Settings
+
+if TYPE_CHECKING:
+    from getwork.llm.settings import BackendSettings
 
 DEFAULT_TIMEOUT_S: float = 1800.0
 SCHEMA_NAME = "structured_document"
@@ -29,8 +33,11 @@ class VoyagerClient:
         settings: Settings,
         timeout_s: float = DEFAULT_TIMEOUT_S,
         http_client: object | None = None,
+        connection_errors_fatal: bool = False,
     ) -> None:
         self._api_key = settings.api_key
+        self._base_url = settings.base_url
+        self._connection_errors_fatal = connection_errors_fatal
         self._sdk = openai.OpenAI(
             base_url=settings.base_url,
             api_key=settings.api_key,
@@ -48,7 +55,16 @@ class VoyagerClient:
             raise llm_client.error_from_http(
                 e.status_code, dict(e.response.headers), str(e), secrets
             ) from None
+        except openai.APITimeoutError as e:
+            raise llm_client.error_from_http(None, None, str(e), secrets) from None
         except openai.APIConnectionError as e:
+            if self._connection_errors_fatal:
+                detail = llm_client.describe_exception(e, secrets)
+                raise FatalLLMError(
+                    llm_client.redact_secrets(
+                        f"cannot reach the LLM server at {self._base_url}: {detail}", secrets
+                    )[: llm_client.MAX_ERROR_CHARS]
+                ) from None
             raise llm_client.error_from_http(None, None, str(e), secrets) from None
         except LLMError:
             raise
@@ -66,8 +82,11 @@ class VoyagerClient:
         }
         if request.temperature is not None:
             kwargs["temperature"] = request.temperature
+        extra = dict(request.extra_body or {})
         if request.reasoning_effort is not None:
-            kwargs["extra_body"] = {"reasoning_effort": request.reasoning_effort}
+            extra["reasoning_effort"] = request.reasoning_effort
+        if extra:
+            kwargs["extra_body"] = extra
         if request.response_schema is not None:
             kwargs["response_format"] = {
                 "type": "json_schema",
@@ -94,3 +113,13 @@ class VoyagerClient:
 
 def build_client(settings: Settings, timeout_s: float = DEFAULT_TIMEOUT_S) -> VoyagerClient:
     return VoyagerClient(settings, timeout_s=timeout_s)
+
+
+def build_llm_client(
+    settings: "BackendSettings", timeout_s: float = DEFAULT_TIMEOUT_S
+) -> VoyagerClient:
+    return VoyagerClient(
+        Settings(api_key=settings.api_key, base_url=settings.base_url, model=settings.model),
+        timeout_s=timeout_s,
+        connection_errors_fatal=(settings.backend == "local"),
+    )

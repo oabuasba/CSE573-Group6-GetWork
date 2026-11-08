@@ -33,7 +33,15 @@ def test_apply_offline_unsets_env_set_earlier_and_changes_cwd(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    names = ("VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL")
+    names = (
+        "VOYAGER_API_KEY",
+        "VOYAGER_BASE_URL",
+        "VOYAGER_MODEL",
+        "LLM_BACKEND",
+        "LOCAL_LLM_BASE_URL",
+        "LOCAL_LLM_MODEL",
+        "LOCAL_LLM_API_KEY",
+    )
     for name in names:
         monkeypatch.setenv(name, "x")
     _load_conftest().apply_offline(monkeypatch, tmp_path)

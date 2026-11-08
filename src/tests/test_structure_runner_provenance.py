@@ -32,11 +32,15 @@ def _paths(out_dir: Path) -> store.OutputPaths:
     return store.output_paths(source="resumes", out_dir=out_dir)
 
 
-def _seed(out_dir: Path, schema_version: str = schema.SCHEMA_VERSION) -> None:
+def _seed(
+    out_dir: Path, schema_version: str = schema.SCHEMA_VERSION, legacy: bool = False
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     output = schema.parse_model_output(make_output_json(title="T"))
     record = schema.to_record(output, "r-00001", "resumes", MODEL, "extract_v1")
     record["schema_version"] = schema_version
+    if legacy:
+        del record["backend"]
     _paths(out_dir).jsonl.write_text(json.dumps(record) + "\n" + PARTIAL_TAIL)
 
 
@@ -80,6 +84,73 @@ def test_provenance_mismatch_refuses_and_writes_nothing(
     assert _snapshot(out_dir) == before
     assert client.calls == []
     assert all(value in str(info.value) for value in named)
+
+
+def test_backend_mismatch_refuses_and_writes_nothing(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
+    in_dir = write_clean_parquet("resumes", _rows(["r-00001", "r-00002"]))
+    out_dir = tmp_path / "out"
+    _seed(out_dir=out_dir)
+    before = _snapshot(out_dir)
+    client = FakeLLMClient(handler=_ok)
+    extract = ExtractConfig(model=MODEL, backend="local")
+    with pytest.raises(runner.ProvenanceMismatchError) as info:
+        runner.run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir, extract=extract), client=client)
+    assert _snapshot(out_dir) == before
+    assert client.calls == []
+    assert "backend" in str(info.value)
+
+
+def test_legacy_records_count_as_voyager(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
+    in_dir = write_clean_parquet("resumes", _rows(["r-00001", "r-00002"]))
+    out_dir = tmp_path / "out"
+    _seed(out_dir=out_dir, legacy=True)
+    local = ExtractConfig(model=MODEL, backend="local")
+    before = _snapshot(out_dir)
+    refused = FakeLLMClient(handler=_ok)
+    with pytest.raises(runner.ProvenanceMismatchError, match="backend"):
+        runner.run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir, extract=local), client=refused)
+    assert _snapshot(out_dir) == before and refused.calls == []
+    result = runner.run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir), client=FakeLLMClient(handler=_ok))
+    assert result.exit_code == 0
+    records = store.read_checkpoint(_paths(out_dir).jsonl)
+    assert len(records) == 2
+    assert {r["backend"] for r in records.values()} == {"voyager"}
+
+
+def test_legacy_records_with_allow_mixed_do_not_crash_write_final(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
+    in_dir = write_clean_parquet("resumes", _rows(["r-00001", "r-00002"]))
+    out_dir = tmp_path / "out"
+    _seed(out_dir=out_dir, legacy=True)
+    extract = ExtractConfig(model=MODEL, backend="local")
+    cfg = _cfg(in_dir=in_dir, out_dir=out_dir, extract=extract, allow_mixed=True)
+    result = runner.run(cfg=cfg, client=FakeLLMClient(handler=_ok))
+    assert result.exit_code == 0
+    backends = {r["id"]: r["backend"] for r in pq.read_table(_paths(out_dir).parquet).to_pylist()}
+    assert backends == {"r-00001": "voyager", "r-00002": "local"}
+
+
+def test_final_outputs_contain_backend_for_every_record(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
+    in_dir = write_clean_parquet("resumes", _rows(["r-00001", "r-00002", "r-00003"]))
+    out_dir = tmp_path / "out"
+    _seed(out_dir=out_dir, legacy=True)
+    runner.run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir), client=FakeLLMClient(handler=_ok))
+    paths = _paths(out_dir)
+    lines = [json.loads(line) for line in paths.jsonl.read_text().splitlines()]
+    rows = pq.read_table(paths.parquet).to_pylist()
+    assert len(lines) == len(rows) == 3
+    assert all(r["backend"] == "voyager" for r in lines + rows)
 
 
 def test_allow_mixed_proceeds(

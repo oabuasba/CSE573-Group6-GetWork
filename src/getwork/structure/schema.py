@@ -2,6 +2,7 @@
 
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, mo
 from getwork.llm.client import MAX_ERROR_CHARS
 
 SCHEMA_VERSION: str = "1"
+LEGACY_BACKEND: str = "voyager"
 SOURCES: tuple[str, ...] = ("resumes", "postings")
 SOURCE_PREFIX: dict[str, str] = {"resumes": "r-", "postings": "j-"}
 
@@ -237,7 +239,7 @@ def response_schema() -> dict:
 
 RECORD_KEYS: tuple[str, ...] = (
     "id", "source", "title", "skills", "experience", "education",
-    "years_experience", "model", "prompt_version", "schema_version",
+    "years_experience", "model", "prompt_version", "schema_version", "backend",
 )
 
 PARQUET_SCHEMA: pa.Schema = pa.schema([
@@ -249,11 +251,17 @@ PARQUET_SCHEMA: pa.Schema = pa.schema([
                                       ("institution", pa.string())]))),
     ("years_experience", pa.float64()),
     ("model", pa.string()), ("prompt_version", pa.string()), ("schema_version", pa.string()),
+    ("backend", pa.string()),
 ])
 
 
 def to_record(
-    output: ModelOutput, record_id: str, source: str, model: str, prompt_version: str
+    output: ModelOutput,
+    record_id: str,
+    source: str,
+    model: str,
+    prompt_version: str,
+    backend: str = LEGACY_BACKEND,
 ) -> dict:
     fields = output.model_dump()
     return {
@@ -267,7 +275,13 @@ def to_record(
         "model": model,
         "prompt_version": prompt_version,
         "schema_version": SCHEMA_VERSION,
+        "backend": backend,
     }
+
+
+def upgrade_record(record: Mapping[str, object]) -> dict:
+    """Records written before the backend field existed all came from Voyager."""
+    return {**record, "backend": record.get("backend", LEGACY_BACKEND)}
 
 
 FAILURE_STAGES: tuple[str, ...] = ("validation", "transient", "rate_limit", "permanent")

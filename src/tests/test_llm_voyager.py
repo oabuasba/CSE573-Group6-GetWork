@@ -1,5 +1,6 @@
 import json
 from collections.abc import Callable
+from types import SimpleNamespace
 
 import httpx2
 import pytest
@@ -12,7 +13,7 @@ from getwork.llm.client import (
     TransientLLMError,
 )
 from getwork.llm.settings import Settings
-from getwork.llm.voyager import VoyagerClient
+from getwork.llm.voyager import VoyagerClient, build_llm_client
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -22,6 +23,7 @@ SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
 
 def make_client(
     handler: Callable[[httpx2.Request], httpx2.Response],
+    connection_errors_fatal: bool = False,
 ) -> tuple[VoyagerClient, list[httpx2.Request]]:
     seen: list[httpx2.Request] = []
 
@@ -31,13 +33,17 @@ def make_client(
 
     settings = Settings(api_key=KEY, base_url="https://example.test/v1", model="m")
     http_client = httpx2.Client(transport=httpx2.MockTransport(recording))
-    return VoyagerClient(settings, http_client=http_client), seen
+    client = VoyagerClient(
+        settings, http_client=http_client, connection_errors_fatal=connection_errors_fatal
+    )
+    return client, seen
 
 
 def make_request(
     temperature: float | None = 0.2,
     reasoning_effort: str | None = "none",
     response_schema: dict | None = SCHEMA,
+    extra_body: dict | None = None,
 ) -> LLMRequest:
     return LLMRequest(
         system="sys",
@@ -47,6 +53,7 @@ def make_request(
         max_tokens=100,
         reasoning_effort=reasoning_effort,
         response_schema=response_schema,
+        extra_body=extra_body,
     )
 
 
@@ -188,3 +195,72 @@ def test_describe_model_unexpected_shapes_become_permanent_errors(
     with pytest.raises(PermanentLLMError) as info:
         client.describe_model("m")
     assert KEY not in str(info.value)
+
+
+def raise_connect_error(request: httpx2.Request) -> httpx2.Response:
+    raise httpx2.ConnectError("connection refused", request=request)
+
+
+def test_extra_body_merged_and_reasoning_effort_field_wins() -> None:
+    client, seen = make_client(ok(completion()))
+    client.complete(
+        make_request(extra_body={"top_k": 5, "reasoning_effort": "x"}, reasoning_effort="none")
+    )
+    body = json.loads(seen[0].content)
+    assert body["top_k"] == 5
+    assert body["reasoning_effort"] == "none"
+
+
+def test_no_extra_body_sent_when_nothing_set() -> None:
+    client, seen = make_client(ok(completion()))
+    client.complete(make_request(reasoning_effort=None, extra_body=None))
+    body = json.loads(seen[0].content)
+    assert set(body) == {"model", "messages", "max_tokens", "temperature", "response_format"}
+
+
+def test_connection_refused_is_fatal_when_flag_set() -> None:
+    client, _ = make_client(raise_connect_error, connection_errors_fatal=True)
+    with pytest.raises(FatalLLMError) as info:
+        client.complete(make_request())
+    assert "https://example.test/v1" in str(info.value)
+    assert KEY not in str(info.value)
+    with pytest.raises(FatalLLMError) as info:
+        client.describe_model("m")
+    assert "https://example.test/v1" in str(info.value)
+    assert KEY not in str(info.value)
+
+
+def test_timeout_stays_transient_when_flag_set() -> None:
+    def slow(request: httpx2.Request) -> httpx2.Response:
+        raise httpx2.ReadTimeout("timed out", request=request)
+
+    client, _ = make_client(slow, connection_errors_fatal=True)
+    with pytest.raises(TransientLLMError):
+        client.complete(make_request())
+    with pytest.raises(TransientLLMError):
+        client.describe_model("m")
+
+
+def test_build_llm_client_local_flag_and_placeholder_key() -> None:
+    seen: list[httpx2.Request] = []
+
+    def recording(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request)
+        return raise_connect_error(request)
+
+    def stand_in(backend: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            backend=backend, base_url="http://localhost:8000/v1", model="m", api_key="local-no-key"
+        )
+
+    http = httpx2.Client(transport=httpx2.MockTransport(recording))
+    local = build_llm_client(stand_in("local"))
+    local._sdk = local._sdk.with_options(http_client=http)
+    with pytest.raises(FatalLLMError):
+        local.complete(make_request())
+    assert seen[0].headers["authorization"] == "Bearer local-no-key"
+
+    remote = build_llm_client(stand_in("voyager"))
+    remote._sdk = remote._sdk.with_options(http_client=http)
+    with pytest.raises(TransientLLMError):
+        remote.complete(make_request())

@@ -23,6 +23,7 @@ class LLMRequest:
     max_tokens: int
     reasoning_effort: str | None  # "none" | "low" | "medium" | "high"; None = do not send
     response_schema: dict | None  # JSON Schema for strict structured output; None = plain text
+    extra_body: Mapping[str, object] | None = None  # merged into the SDK extra_body; None = nothing
 
 
 class LLMError(Exception):

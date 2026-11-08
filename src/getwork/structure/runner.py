@@ -14,7 +14,7 @@ from getwork.llm.retry import CallStats, Throttle
 from getwork.structure import inputs, pool, runstate, store
 from getwork.structure.extract import Outcome, SourceDoc, structure_one
 from getwork.structure.runstate import Counters, RunConfig, RunFacts, RunResult
-from getwork.structure.schema import SCHEMA_VERSION, Failure
+from getwork.structure.schema import LEGACY_BACKEND, SCHEMA_VERSION, Failure, upgrade_record
 
 
 class ProvenanceMismatchError(RuntimeError):
@@ -146,19 +146,21 @@ class _Plan:
 
 
 def _check_provenance(cfg: RunConfig, paths: store.OutputPaths) -> None:
-    """Refuse to mix records made with different model, prompt or schema versions."""
+    """Refuse to mix records made with different model, prompt, schema version or backend."""
     if cfg.allow_mixed:
         return
     expected = {
         "model": cfg.extract.model,
         "prompt_version": cfg.extract.prompt_version,
         "schema_version": SCHEMA_VERSION,
+        "backend": cfg.extract.backend,
     }
     differing: set[str] = set()
     for record in store.read_checkpoint(paths.jsonl, repair=False).values():
         for key, value in expected.items():
-            if record.get(key) != value:
-                differing.add(f"{key}={record.get(key)!r} (expected {value!r})")
+            actual = record.get(key, LEGACY_BACKEND) if key == "backend" else record.get(key)
+            if actual != value:
+                differing.add(f"{key}={actual!r} (expected {value!r})")
     if differing:
         raise ProvenanceMismatchError(
             "checkpoint provenance differs: " + "; ".join(sorted(differing))
@@ -167,7 +169,10 @@ def _check_provenance(cfg: RunConfig, paths: store.OutputPaths) -> None:
 
 def _prepare(cfg: RunConfig, paths: store.OutputPaths, docs: dict[str, SourceDoc]) -> _Plan:
     _check_provenance(cfg=cfg, paths=paths)
-    done = store.read_checkpoint(paths.jsonl, repair=True)
+    done = {
+        record_id: upgrade_record(record)
+        for record_id, record in store.read_checkpoint(paths.jsonl, repair=True).items()
+    }
     universe = inputs.select_universe(
         all_ids=list(docs), limit=cfg.limit, sample=cfg.sample, seed=cfg.seed
     )

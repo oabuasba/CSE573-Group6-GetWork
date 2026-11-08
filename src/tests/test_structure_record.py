@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 
 from getwork.llm.fake import make_output_json
@@ -60,6 +61,22 @@ def test_to_record_key_order_and_provenance() -> None:
     assert record["prompt_version"] == "extract_v1"
     assert record["schema_version"] == schema.SCHEMA_VERSION
     assert record["skills"] == ["Python"]
+    assert schema.RECORD_KEYS[-1] == "backend" and record["backend"] == "voyager"
+    local = schema.to_record(
+        output, record_id="r-1", source="resumes", model="m", prompt_version="extract_v1",
+        backend="local",
+    )
+    assert list(local) == list(schema.RECORD_KEYS) and local["backend"] == "local"
+    assert schema.PARQUET_SCHEMA.names[-1] == "backend"
+    assert schema.PARQUET_SCHEMA.field("backend").type == pa.string()
+
+
+def test_upgrade_record_defaults_backend() -> None:
+    legacy = {"id": "r-1", "model": "m"}
+    upgraded = schema.upgrade_record(legacy)
+    assert upgraded == {"id": "r-1", "model": "m", "backend": "voyager"}
+    assert legacy == {"id": "r-1", "model": "m"}
+    assert schema.upgrade_record({"id": "r-1", "backend": "local"})["backend"] == "local"
 
 
 def test_make_output_json_parses() -> None:

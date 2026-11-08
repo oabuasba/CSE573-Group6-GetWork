@@ -7,7 +7,7 @@ import pytest
 
 from getwork.llm.client import FatalLLMError, LLMRequest
 from getwork.llm.fake import FakeLLMClient, make_output_json
-from getwork.structure import cli, store
+from getwork.structure import cli, runner, runstate, store
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -209,3 +209,95 @@ def test_sigint_restore_falls_back_to_default_when_previous_handler_is_unknown(
     monkeypatch.setattr(cli.signal, "signal", fake_signal)
     assert cli.main(_argv(tmp_path), client=_fake()) == 0
     assert installed[-1] == cli.signal.SIG_DFL
+
+
+def _local_argv(tmp_path: Path, *extra: str) -> list[str]:
+    return _argv(tmp_path, "--backend", "local", *extra)
+
+
+def _capture_run_config(monkeypatch: pytest.MonkeyPatch) -> list[runstate.RunConfig]:
+    seen: list[runstate.RunConfig] = []
+
+    def capture(*, cfg: runstate.RunConfig, **_: Any) -> runstate.RunResult:
+        seen.append(cfg)
+        return runstate.RunResult(exit_code=0, summary={})
+
+    monkeypatch.setattr(runner, "run", capture)
+    return seen
+
+
+def test_backend_defaults_voyager(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    seen = _capture_run_config(monkeypatch)
+    assert cli.main(_argv(tmp_path), client=_fake()) == 0
+    assert cli.main(_argv(tmp_path, "--backend", "voyager"), client=_fake()) == 0
+    for cfg in seen:
+        assert cfg.workers == 4
+        assert cfg.extract.backend == "voyager"
+        assert cfg.extract.reasoning_effort == "none"
+        assert cfg.extract.use_response_schema is True
+
+
+def test_backend_defaults_local(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with monkeypatch.context() as patch:
+        seen = _capture_run_config(patch)
+        assert cli.main(_local_argv(tmp_path), client=_fake()) == 0
+    assert seen[0].workers == 2
+    assert seen[0].extract.backend == "local"
+    assert seen[0].extract.reasoning_effort is None
+    assert seen[0].extract.use_response_schema is False
+    write_clean_parquet("resumes", _rows(1))
+    fake = _fake()
+    capsys.readouterr()
+    assert cli.main(_local_argv(tmp_path), client=fake) == 0
+    assert fake.calls[0].reasoning_effort is None
+    assert fake.calls[0].response_schema is None
+    assert json.loads(capsys.readouterr().out)["backend"] == "local"
+    assert json.loads(_jsonl(tmp_path).read_text().splitlines()[0])["backend"] == "local"
+
+
+def test_explicit_options_override_backend_defaults(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen = _capture_run_config(monkeypatch)
+    local = _local_argv(
+        tmp_path, "--workers", "3", "--reasoning-effort", "low", "--response-schema"
+    )
+    assert cli.main(local, client=_fake()) == 0
+    voyager = _argv(
+        tmp_path, "--workers", "1", "--reasoning-effort", "omit", "--no-response-schema"
+    )
+    assert cli.main(voyager, client=_fake()) == 0
+    assert (seen[0].workers, seen[0].extract.reasoning_effort) == (3, "low")
+    assert seen[0].extract.use_response_schema is True
+    assert (seen[1].workers, seen[1].extract.reasoning_effort) == (1, None)
+    assert seen[1].extract.use_response_schema is False
+
+
+def test_extra_body_reaches_requests_and_summary(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_clean_parquet("resumes", _rows(1))
+    fake = _fake()
+    body = '{"chat_template_kwargs": {"enable_thinking": false}}'
+    assert cli.main(_local_argv(tmp_path, "--extra-body", body), client=fake) == 0
+    expected = {"chat_template_kwargs": {"enable_thinking": False}}
+    assert fake.calls[0].extra_body == expected
+    assert json.loads(capsys.readouterr().out)["config"]["extra_body"] == expected
+
+
+def test_preflight_local_connection_refused_exits_3(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Refused(FakeLLMClient):
+        def describe_model(self, model: str) -> dict:
+            raise FatalLLMError("cannot reach the LLM server at http://localhost:8000/v1")
+
+    assert cli.main(_local_argv(tmp_path, "--preflight"), client=Refused(handler=_ok)) == 3
+    assert "error: preflight failed: " in capsys.readouterr().err

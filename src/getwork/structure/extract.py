@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 from getwork.llm.client import (
@@ -29,6 +29,7 @@ from getwork.structure.prompt import (
     load_system_prompt,
 )
 from getwork.structure.schema import (
+    LEGACY_BACKEND,
     Failure,
     OutputValidationError,
     parse_model_output,
@@ -56,6 +57,8 @@ class ExtractConfig:
     max_validation_attempts: int = 3
     max_input_chars: int = 48000
     retry: RetryConfig = RetryConfig()
+    backend: str = LEGACY_BACKEND
+    extra_body: Mapping[str, object] | None = None
 
 
 @dataclass
@@ -76,6 +79,7 @@ def _build_request(cfg: ExtractConfig, system: str, user: str, schema: dict | No
         max_tokens=cfg.max_tokens,
         reasoning_effort=cfg.reasoning_effort,
         response_schema=schema,
+        extra_body=cfg.extra_body,
     )
 
 
@@ -113,7 +117,7 @@ def _run_attempts(
         except OutputValidationError as exc:
             last_error = str(exc)
             continue
-        return to_record(output, doc.id, doc.source, cfg.model, cfg.prompt_version)
+        return to_record(output, doc.id, doc.source, cfg.model, cfg.prompt_version, cfg.backend)
     return last_error
 
 

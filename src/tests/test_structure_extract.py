@@ -70,3 +70,16 @@ def test_request_fields_follow_config(
     assert (request.response_schema is not None) is use_schema
     assert outcome.record["prompt_version"] == cfg.prompt_version
     assert outcome.record["model"] == "m-x"
+
+
+def test_backend_in_record_and_extra_body_in_requests() -> None:
+    extra = {"chat_template_kwargs": {"enable_thinking": False}}
+    cfg = ExtractConfig(model="m", backend="local", extra_body=extra)
+    client = FakeLLMClient(script=["not json", make_output_json()])
+    outcome = _run(client, cfg)
+    assert outcome.record["backend"] == "local"
+    assert len(client.calls) == 2
+    assert all(call.extra_body == extra for call in client.calls)
+    assert _run(FakeLLMClient(script=[make_output_json()]), ExtractConfig(model="m")).record[
+        "backend"
+    ] == "voyager"

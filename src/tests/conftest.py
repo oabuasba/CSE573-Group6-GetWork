@@ -19,7 +19,15 @@ def make_resume_zip(tmp_path: Path) -> Callable[[dict[str, bytes]], Path]:
     return build
 
 
-ENV_VARS = ("VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL")
+ENV_VARS = (
+    "VOYAGER_API_KEY",
+    "VOYAGER_BASE_URL",
+    "VOYAGER_MODEL",
+    "LLM_BACKEND",
+    "LOCAL_LLM_BASE_URL",
+    "LOCAL_LLM_MODEL",
+    "LOCAL_LLM_API_KEY",
+)
 
 
 def apply_offline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

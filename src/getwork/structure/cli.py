@@ -9,6 +9,7 @@ import threading
 from collections.abc import Mapping
 from pathlib import Path
 
+from getwork.llm import factory
 from getwork.llm import settings as llm_settings
 from getwork.llm.client import LLMClient, LLMError, describe_exception
 from getwork.structure import extract, inputs, prompt, runner, runstate, store
@@ -19,6 +20,10 @@ EXIT_ABORTED = runstate.EXIT_ABORTED
 EXIT_INTERRUPTED = runstate.EXIT_INTERRUPTED
 EXAMPLE_MESSAGE_CHARS = 500
 REASONING_CHOICES = ["none", "low", "medium", "high", "omit"]
+LOCAL_BACKEND = "local"
+DEFAULT_WORKERS = 4
+LOCAL_WORKERS = 2
+VOYAGER_REASONING_EFFORT = "none"
 
 
 def _positive_int(value: str) -> int:
@@ -47,20 +52,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--source", required=True, choices=["resumes", "postings"])
     p.add_argument("--in-dir", type=Path, default=None)
     p.add_argument("--out-dir", type=Path, default=None)
-    p.add_argument("--model", default=None)
+    factory.add_llm_args(p)
     p.add_argument("--prompt-version", default=prompt.PROMPT_VERSION)
-    p.add_argument("--workers", type=_positive_int, default=4)
+    p.add_argument("--workers", type=_positive_int, default=None)
     p.add_argument("--limit", type=_positive_int, default=None)
     p.add_argument("--sample", type=_positive_int, default=None)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--max-tokens", type=_positive_int, default=4096)
     p.add_argument("--max-input-chars", type=_positive_int, default=48000)
     p.add_argument("--temperature", type=_temperature, default=0.0)
-    p.add_argument("--reasoning-effort", choices=REASONING_CHOICES, default="none")
-    p.add_argument("--no-response-schema", action="store_true")
+    p.add_argument("--reasoning-effort", choices=REASONING_CHOICES, default=None)
+    p.add_argument("--response-schema", action=argparse.BooleanOptionalAction, default=None)
     p.add_argument("--max-consecutive-failures", type=int, default=25)
     p.add_argument("--allow-mixed", action="store_true")
-    p.add_argument("--env-file", default=".env")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--preflight", action="store_true")
     return p
@@ -112,17 +116,6 @@ def _dry_run(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _build_real_client(
-    args: argparse.Namespace, environ: Mapping[str, str]
-) -> tuple[LLMClient, str, list[str]]:
-    settings = llm_settings.load_settings(
-        environ=environ, dotenv_path=Path(args.env_file), model_override=args.model
-    )
-    from getwork.llm import voyager  # lazy: keeps openai out of module import (AC-30)
-
-    return voyager.build_client(settings), settings.model, [settings.api_key]
-
-
 def _preflight(client: LLMClient, model: str, secrets: list[str]) -> int:
     describe = getattr(client, "describe_model", None)
     if describe is None:
@@ -136,22 +129,38 @@ def _preflight(client: LLMClient, model: str, secrets: list[str]) -> int:
     return EXIT_OK if info.get("found") else EXIT_ABORTED
 
 
-def _build_run_config(args: argparse.Namespace, model: str) -> runstate.RunConfig:
+def _resolve_reasoning_effort(args: argparse.Namespace, backend: str) -> str | None:
+    if args.reasoning_effort is not None:
+        return None if args.reasoning_effort == "omit" else args.reasoning_effort
+    return None if backend == LOCAL_BACKEND else VOYAGER_REASONING_EFFORT
+
+
+def _resolve_use_response_schema(args: argparse.Namespace, backend: str) -> bool:
+    if args.response_schema is not None:
+        return args.response_schema
+    return backend != LOCAL_BACKEND
+
+
+def _build_run_config(args: argparse.Namespace, bundle: factory.ClientBundle) -> runstate.RunConfig:
+    backend = bundle.backend
     extract_cfg = extract.ExtractConfig(
-        model=model,
+        model=bundle.model,
         prompt_version=args.prompt_version,
         temperature=args.temperature,
         max_tokens=args.max_tokens,
-        reasoning_effort=None if args.reasoning_effort == "omit" else args.reasoning_effort,
-        use_response_schema=not args.no_response_schema,
+        reasoning_effort=_resolve_reasoning_effort(args=args, backend=backend),
+        use_response_schema=_resolve_use_response_schema(args=args, backend=backend),
         max_input_chars=args.max_input_chars,
+        backend=backend,
+        extra_body=factory.parse_extra_body(args.extra_body),
     )
+    default_workers = LOCAL_WORKERS if backend == LOCAL_BACKEND else DEFAULT_WORKERS
     return runstate.RunConfig(
         source=args.source,
         in_dir=args.in_dir,
         out_dir=args.out_dir,
         extract=extract_cfg,
-        workers=args.workers,
+        workers=args.workers or default_workers,
         limit=args.limit,
         sample=args.sample,
         seed=args.seed,
@@ -164,10 +173,11 @@ def _log(message: str) -> None:
     print(message, file=sys.stderr)
 
 
-def _execute(args: argparse.Namespace, client: LLMClient, model: str, secrets: list[str]) -> int:
+def _execute(args: argparse.Namespace, bundle: factory.ClientBundle) -> int:
+    client, secrets = bundle.client, bundle.secrets
     if args.preflight:
-        return _preflight(client=client, model=model, secrets=secrets)
-    cfg = _build_run_config(args=args, model=model)
+        return _preflight(client=client, model=bundle.model, secrets=secrets)
+    cfg = _build_run_config(args=args, bundle=bundle)
     stop = threading.Event()
     previous = None
     is_main = threading.current_thread() is threading.main_thread()
@@ -200,16 +210,14 @@ def _run(
         return _error(f"unknown prompt version: {args.prompt_version}")
     if args.dry_run:
         return _dry_run(args)
-    secrets: list[str] = []
-    if client is None:
-        client, model, secrets = _build_real_client(
-            args=args, environ=os.environ if environ is None else environ
-        )
-    elif not args.model:
-        return _error("--model is required")
-    else:
-        model = args.model
-    return _execute(args=args, client=client, model=model, secrets=secrets)
+    bundle = factory.make_client(
+        backend=args.backend,
+        model=args.model,
+        env_file=Path(args.env_file),
+        environ=os.environ if environ is None else environ,
+        client=client,
+    )
+    return _execute(args=args, bundle=bundle)
 
 
 def main(

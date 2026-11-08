@@ -87,3 +87,16 @@ def test_describe_exception_redacts_and_truncates() -> None:
     assert long.startswith("RuntimeError: ")
     assert len(long) <= 500
     assert SECRET not in long
+
+
+def test_llm_request_extra_body_defaults_to_none() -> None:
+    request = llm_client.LLMRequest(
+        system="s",
+        user="u",
+        model="m",
+        temperature=None,
+        max_tokens=1,
+        reasoning_effort=None,
+        response_schema=None,
+    )
+    assert request.extra_body is None

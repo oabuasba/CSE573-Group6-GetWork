@@ -205,3 +205,26 @@ def test_worker_exceptions_count_toward_breaker(
     assert result.exit_code == 3
     assert result.summary["status"] == "aborted"
     assert result.summary["abort_reason"] == "2 consecutive record failures"
+
+
+def test_connection_style_fatal_error_aborts_and_resumes(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
+    in_dir = write_clean_parquet("resumes", _rows(5))
+    out_dir = tmp_path / "out"
+    calls: list[str] = []
+
+    def down(request: LLMRequest) -> str:
+        calls.append(_id_of(request))
+        if len(calls) == 3:
+            raise FatalLLMError("cannot reach the LLM server at http://localhost:8000/v1")
+        return _ok(request)
+
+    result = _run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir), handler=down)
+    assert result.exit_code == 3
+    assert "http://localhost:8000/v1" in result.summary["abort_reason"]
+    assert len(_jsonl_ids(out_dir)) == 2
+    resumed = _run(cfg=_cfg(in_dir=in_dir, out_dir=out_dir), handler=_ok)
+    assert resumed.exit_code == 0
+    assert len(_jsonl_ids(out_dir)) == 5

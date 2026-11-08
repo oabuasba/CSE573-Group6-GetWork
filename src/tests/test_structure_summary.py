@@ -11,15 +11,15 @@ from getwork.structure.schema import Failure
 pytestmark = pytest.mark.usefixtures("offline")
 
 TOP_KEYS = {
-    "source", "model", "prompt_version", "schema_version", "status", "abort_reason",
+    "source", "model", "backend", "prompt_version", "schema_version", "status", "abort_reason",
     "total_in_source", "selected", "already_done", "attempted", "succeeded", "failed",
     "not_attempted", "done_total", "failures_total", "failures_by_stage", "calls",
     "retries", "rate_limited", "truncated_inputs", "config",
 }  # fmt: skip
 CONFIG_KEYS = {
     "limit", "sample", "seed", "temperature", "max_tokens", "reasoning_effort",
-    "use_response_schema", "max_validation_attempts", "max_input_chars", "max_attempts",
-    "max_rate_limit_waits", "max_consecutive_failures",
+    "extra_body", "use_response_schema", "max_validation_attempts", "max_input_chars",
+    "max_attempts", "max_rate_limit_waits", "max_consecutive_failures",
 }  # fmt: skip
 
 
@@ -54,6 +54,7 @@ def test_build_summary_key_set_and_values() -> None:
     assert "workers" not in s["config"]
     assert s["not_attempted"] == 5
     assert s["model"] == "m1"
+    assert s["backend"] == "voyager" and s["config"]["extra_body"] is None
     assert s["schema_version"] == schema.SCHEMA_VERSION
     assert s["status"] == "aborted" and s["abort_reason"] == "boom"
     assert s["config"]["limit"] == 10 and s["config"]["max_consecutive_failures"] == 25

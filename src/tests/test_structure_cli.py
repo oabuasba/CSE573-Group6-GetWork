@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from getwork.llm import factory
 from getwork.llm.fake import FakeLLMClient, make_output_json
 from getwork.structure import cli, store
 
@@ -150,3 +151,58 @@ def test_dry_run_bad_checkpoint_exits_2(
     (out / "resumes_structured.jsonl").write_text("garbage\n")
     assert cli.main(_args(tmp_path, "--dry-run")) == 2
     assert "error:" in capsys.readouterr().err
+
+
+def _assert_config_error_before_work(tmp_path: Path, code: int) -> None:
+    assert code == 2
+    assert not (tmp_path / "out").exists()
+    assert not (tmp_path / "in").exists()
+
+
+def test_local_backend_missing_settings_exits_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    argv = _args(tmp_path, "--backend", "local", "--env-file", str(tmp_path / "nope.env"))
+    argv.remove("--model")
+    argv.remove("m")
+    _assert_config_error_before_work(tmp_path, cli.main(argv, environ={}))
+    err = capsys.readouterr().err
+    assert "LOCAL_LLM_BASE_URL" in err
+    assert "LOCAL_LLM_MODEL" in err
+
+
+def test_unknown_backend_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as info:
+        cli.main(_args(tmp_path, "--backend", "nope"), client=_fake())
+    assert info.value.code == 2
+    env_file = tmp_path / "bad.env"
+    env_file.write_text("LLM_BACKEND=nope\n")
+    code = cli.main(_args(tmp_path, "--env-file", str(env_file)), environ={})
+    _assert_config_error_before_work(tmp_path, code)
+    assert "local" in capsys.readouterr().err
+
+
+def test_invalid_extra_body_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    for bad in ["{not json", "[1]", "3"]:
+        code = cli.main(_args(tmp_path, "--extra-body", bad), client=_fake())
+        _assert_config_error_before_work(tmp_path, code)
+        assert "--extra-body" in capsys.readouterr().err
+
+
+def test_backend_from_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    env_file = tmp_path / "local.env"
+    env_file.write_text(
+        "LLM_BACKEND=local\nLOCAL_LLM_BASE_URL=http://localhost:8000/v1\nLOCAL_LLM_MODEL=qwen\n"
+    )
+    received = []
+
+    def fake_real_client(settings: object, timeout_s: float) -> FakeLLMClient:
+        received.append(settings)
+        return _fake()
+
+    monkeypatch.setattr(factory, "_real_client", fake_real_client)
+    argv = ["--source", "resumes", "--in-dir", str(tmp_path / "in"),
+            "--out-dir", str(tmp_path / "out"), "--env-file", str(env_file)]  # fmt: skip
+    assert cli.main(argv, environ={}) == 2  # input file missing, so settings were accepted
+    assert received[0].backend == "local"
+    assert received[0].model == "qwen"

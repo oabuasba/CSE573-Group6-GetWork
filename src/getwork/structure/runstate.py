@@ -86,6 +86,7 @@ def build_summary(
     return {
         "source": cfg.source,
         "model": ex.model,
+        "backend": ex.backend,
         "prompt_version": ex.prompt_version,
         "schema_version": schema.SCHEMA_VERSION,
         "status": status,
@@ -111,6 +112,7 @@ def build_summary(
             "temperature": ex.temperature,
             "max_tokens": ex.max_tokens,
             "reasoning_effort": ex.reasoning_effort,
+            "extra_body": ex.extra_body,
             "use_response_schema": ex.use_response_schema,
             "max_validation_attempts": ex.max_validation_attempts,
             "max_input_chars": ex.max_input_chars,

@@ -225,3 +225,6 @@ data/resume_corpus/
 
 # Trial and sample structurer runs (never committed; real outputs go in data/structured/)
 data/structured_trial/
+
+# Local-backend trial runs (never committed)
+data/structured_trial_*/
