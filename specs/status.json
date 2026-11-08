@@ -572,11 +572,121 @@
     },
     "embedding-client": {
       "spec": "specs/features/embedding-client.html",
-      "phase": "awaiting-approval",
+      "phase": "done",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
-      "tasks": {},
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: positional multi-arg calls (EmbeddingInfo(model,\"fake\",dim) is spec form)."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: no test for corrupt/wrong-shaped chunk file overwrite; positional calls, _chunk_path 4 params/bare dict; embed_cached does not validate client output shape."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: no test for meta n/dim mismatch in read_vectors; ids not checked as strings; positional calls."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: _local_settings 6 kw-only params; assert used for type narrowing in settings.py (stripped under -O)."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "T-4"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: no test that empty_cache is skipped on cpu."
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "SPEC (held for planner): structurer guard test_structure_offline.py::test_openai_imported_only_in_voyager_module_and_its_test allowlist must include embed/voyager_embed.py and test_embed_voyager.py; spec did not list that file in T-6 (or retire the test in favour of test_pipeline_offline.py). Pre-review fix sent to dev. Reviewer pass; guard-test edit judged minimal and correct. Non-blocking: no test for 429 wait budget exhaustion; awkward lambda in test_short_response_is_error."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "T-7-T-8",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: no redaction/LLMError-branch test in test_embed_cli; _build_report bare dict."
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-6",
+            "T-7"
+          ],
+          "batch": "T-7-T-8",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "uv.lock NOT regenerated (needs online `uv lock`); plain `uv run --offline` fails until then (stale lock + new embed extra); dev ran tests with --frozen. USER ACTION: run `uv lock` online before next plain uv run. Reviewer pass. AC-15 literal command user-run after online uv lock. Non-blocking: redundant assertion in test_embed_docs.py:26; README uses headings not table; heading regex could be stricter."
+        }
+      },
+      "notes": "User approved build 2026-11-08. In place on dev; commits only when user says. No model download, no embed extra install, no .env, no network, no Voyager calls. Do not touch data/ (structurer run may be in progress) or run alias-table.",
+      "batches": {
+        "T-1-T-3": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": "a3463d451aa74fdc1",
+          "fix_rounds": 0
+        },
+        "T-4-T-6": {
+          "tasks": [
+            "T-4",
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "aa9a4e446e23926cd",
+          "fix_rounds": 0
+        },
+        "T-7-T-8": {
+          "tasks": [
+            "T-7",
+            "T-8"
+          ],
+          "developer_agent": "a76046b1348a38793",
+          "fix_rounds": 0
+        }
+      }
     },
     "skill-taxonomy": {
       "spec": "specs/features/skill-taxonomy.html",
@@ -612,12 +722,260 @@
     },
     "web-app": {
       "spec": "specs/features/web-app.html",
-      "phase": "awaiting-approval",
+      "phase": "building",
       "planner_agent": "a8e7495744e8a281a",
       "researcher_agent": "a928d94874d183f6f",
       "branch": "dev",
-      "tasks": {},
-      "notes": "User asked for frontend/backend workflow plan themed on ASU brand guide (brandguide.asu.edu); must not reference any ASU GitHub repos. Researcher fetching brand tokens; forward result to planner via SendMessage. Spec ready (18 tasks, 41 ACs). Large flags: T-4, T-8, T-10, T-12, T-13, T-14, T-15, T-16 (ask user). Backend T-3+ depends on unbuilt upstream specs; frontend T-10..T-17 and backend T-1,T-2 can start now. Questions pending: ADR-15, logo (A-6), move chat/blind labeling out (A-1)."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "large": false,
+          "batch": "T-1-T-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass; I-1 verified identical by AST except required FormQuery.skills validator. pyproject/conftest hunks mixed with embedding-client batch (commit together or attribute)."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "large": false,
+          "batch": "T-1-T-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. SPEC (held for planner): T-2 wording for query view clusters unsatisfiable literally (\"Vue, CSS, JavaScript, SQL, Excel under Other\"); correct to Vue/CSS/JavaScript under Front-end, SQL+Excel under Other (also contradicts AC-4 example). Fixture follow-up sent to dev: match 2 related/gaps/title_overlap per I-2; query incomplete_reason."
+        },
+        "T-3": {
+          "phase": "held",
+          "deps": [
+            "T-1",
+            "U-docembed-levels",
+            "U-b1plus",
+            "U-taxonomy"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-4": {
+          "phase": "held",
+          "deps": [
+            "T-1",
+            "T-3"
+          ],
+          "large": true,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: ask user HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-5": {
+          "phase": "held",
+          "deps": [
+            "T-3",
+            "T-4"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-6": {
+          "phase": "held",
+          "deps": [
+            "T-5"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-7": {
+          "phase": "held",
+          "deps": [
+            "T-4",
+            "U-pipeline"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-8": {
+          "phase": "held",
+          "deps": [
+            "T-7"
+          ],
+          "large": true,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: ask user HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-9": {
+          "phase": "held",
+          "deps": [
+            "T-6",
+            "T-8",
+            "T-1"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [],
+          "large": true,
+          "batch": "T-10-T-12",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: user approved (2026-11-08) splitting inside the developer batch (sub-parts a/b), no planner"
+        },
+        "T-11": {
+          "phase": "merged",
+          "deps": [
+            "T-10"
+          ],
+          "large": false,
+          "batch": "T-10-T-12",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. SPEC (held): engines \">=20\" admits Node 20.0-20.10 where import.meta.dirname is undefined; say \">=20.11\"."
+        },
+        "T-12": {
+          "phase": "merged",
+          "deps": [
+            "T-11"
+          ],
+          "large": true,
+          "batch": "T-10-T-12",
+          "worktree": ".",
+          "fix_rounds": 1,
+          "notes": "Review fail: .site-header has no rule in components.css (blocking). Non-blocking: 318 lines vs ~300; semantic-token use; isLinkSelector a.<class> too loose; button hover filter; text-decoration-line; main a vs a.btn. Fix round 1 landed; re-review pass (323 lines vs ~220/300 target; spec cosmetic). Non-blocking: nothing guards .site-nav/.site-footer links text-decoration:none. SPEC (held): web-app engines >=20.11; T-12 \"about 220 lines\"."
+        },
+        "T-13": {
+          "phase": "merged",
+          "deps": [
+            "T-10",
+            "T-2",
+            "T-12"
+          ],
+          "large": true,
+          "batch": "T-13-T-15",
+          "worktree": ".",
+          "fix_rounds": 1,
+          "notes": "Review fail: App default fetchImpl creates new fn each render -> useHealth effect loops forever when rendered via main.jsx (blocking, hangs tab). Non-blocking: alerts/banner lack symbol+label. Fix round 1 re-review pass (loop fixed; verified with/without StrictMode; new tests fail on old code). Non-blocking: Notice.jsx not in file lists (SPEC held); QueryForm default fn 87 lines, long line 239; stubGlobal cleanup in QueryForm.test.jsx; App.test.jsx wait."
+        },
+        "T-14": {
+          "phase": "merged",
+          "deps": [
+            "T-13"
+          ],
+          "large": true,
+          "batch": "T-13-T-15",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: QueryForm ~137-line fn, long lines, FileReader error uncaught, privacy line position, aria-describedby, key form by direction in T-16."
+        },
+        "T-15": {
+          "phase": "merged",
+          "deps": [
+            "T-13"
+          ],
+          "large": true,
+          "batch": "T-13-T-15",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. SPEC (held): \"every chip also has the word as visible text\" ambiguous (row heading vs on chip)."
+        },
+        "T-16": {
+          "phase": "merged",
+          "deps": [
+            "T-14",
+            "T-15"
+          ],
+          "large": true,
+          "batch": "T-16-T-17",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: user approved (2026-11-08) splitting inside the developer batch (sub-parts a/b), no planner SPEC (held): \"Collapsing keeps the loaded text\" conflicts with AC-33 (children only when expanded) - collapsing unmounts ExplainPanel; re-expanding refetches. Reviewer pass. Non-blocking: network_unreachable alert text duplicated; notes/understood-card assertions weak."
+        },
+        "T-17": {
+          "phase": "merged",
+          "deps": [
+            "T-16"
+          ],
+          "large": false,
+          "batch": "T-16-T-17",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: Privacy sentence ungrammatical when structure unavailable; vite.config.js http://127.0.0.1:8000 may trip AC-39 scan in T-18; version rows unasserted. SPEC (held): collapse-keeps-text vs AC-33/AC-34 conflict."
+        },
+        "T-18": {
+          "phase": "held",
+          "deps": [
+            "T-9",
+            "T-17"
+          ],
+          "large": false,
+          "batch": null,
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": " HELD by user 2026-11-08 (UI only for now)."
+        }
+      },
+      "notes": "User said build (2026-11-08). In place on dev; no commits unless user says. Started T-1,T-2 (not large, no upstream). Large tasks (T-4,T-8,T-10,T-12..T-16) need user decision before dispatch. T-3,T-5..T-9 wait on upstream specs (docembed levels, b1plus, taxonomy, pipeline). Open questions unanswered: ADR-15 demo model, logo (default none), scope split. User (2026-11-08): split large tasks into sub-tasks, each developer gets >=3 subtasks, avoid planner. Done by batching and instructing developers to split large tasks internally into reported sub-parts (a/b); spec unchanged. Frontend batches F1 T-10..T-12, F2 T-13..T-15, F3 T-16a,T-16b,T-17 run in sequence. Backend T-3+ waits on upstream specs. npm install from public registry allowed (no ASU packages, --ignore-scripts). USER (2026-11-08): backend ON HOLD; wants to see the UI only. Frontend batches F2/F3 continue. Plan: add an off-spec dev-only mock of /api (serving contract.json) in F2 so the UI is viewable without a backend; record as deviation. SPEC (held): dev-mock.js and dev-mock.test.js are off-spec files (record as task); dev-mock.js http://localhost URL must be removed before T-18 guardrail AC-39. FRONTEND COMPLETE (T-10..T-17 merged; T-1,T-2 merged). Backend T-3..T-9 and T-18 held by user.",
+      "batches": {
+        "T-1-T-2": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "ace653ffba05debd8",
+          "fix_rounds": 0
+        },
+        "T-10-T-12": {
+          "tasks": [
+            "T-10",
+            "T-11",
+            "T-12"
+          ],
+          "developer_agent": "a2b15a38650ad1a4b",
+          "fix_rounds": 1
+        },
+        "T-13-T-15": {
+          "tasks": [
+            "T-13",
+            "T-14",
+            "T-15"
+          ],
+          "developer_agent": "a766e5f173394a202",
+          "fix_rounds": 1
+        },
+        "T-16-T-17": {
+          "tasks": [
+            "T-16",
+            "T-17"
+          ],
+          "subparts": [
+            "T-16a",
+            "T-16b",
+            "T-17"
+          ],
+          "developer_agent": "a766e5f173394a202",
+          "fix_rounds": 0
+        }
+      }
     },
     "project-foundation": {
       "spec": null,
