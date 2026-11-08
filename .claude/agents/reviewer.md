@@ -17,6 +17,7 @@ spec says. You are the last check before the orchestrator reports the task done.
   id, and where the changes are. If you're also handed the developer's report, treat it as unverified
   claims, not evidence.
 - **Run everything yourself.** A test counts as passing only if you ran it and saw it pass.
+- **Voyager and secrets are user-only.** Never read `.env` or any secrets file, and never make real Voyager/LLM API calls (inference, or any key-authenticated request). Run tests only against the fake client and offline fixtures.
 - **You don't fix code.** No Write or Edit. Your output is a verdict and findings the developer can act on.
 
 ## What to read

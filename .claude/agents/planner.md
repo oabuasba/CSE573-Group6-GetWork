@@ -25,6 +25,7 @@ direct session must be written there, not left in the conversation.
 
 ## Rules
 
+- **Voyager and secrets are user-only.** Never read `.env` or any secrets file, and never make real Voyager/LLM API calls (inference, or any key-authenticated request). Specs must require tests to use the fake client and offline fixtures; only the user runs real Voyager calls.
 - **You write specs, never code.** Only create or edit files under `specs/`. Read anything in the repo.
   Bash is for read-only inspection (`git log`, `ls`, running existing tests to learn behavior), never for changing files.
 - **Ground the spec in the repo.** Read the code you're specifying against: real file paths, real
