@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetWork — Feature: web-app</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#goal">Goal</a>
+      <a href="#scope">Scope</a>
+      <a href="#design">Design</a>
+      <a href="#theme">Theme tokens</a>
+      <a href="#acceptance">Acceptance criteria</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#edge-cases">Edge cases &amp; risks</a>
+      <a href="#open-questions">Open questions</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>Web app</h1>
+      <p class="subtitle">A local FastAPI service and a React UI, themed from the public ASU brand guide, where a candidate pastes a resume to get ranked postings, or a recruiter pastes a posting to get ranked candidates, each with an evidence-based explanation.</p>
+      <div class="meta"><span><strong>Status:</strong> draft</span><span><strong>Updated:</strong> 2026-11-08</span><span><strong>Pipeline step:</strong> app (steps 2, 5, 6, 7 at query time; 8 through a seam)</span><span><strong>Master:</strong> <a href="../architecture.html">architecture.html</a></span></div>
+      <span class="product-badge">web-app</span>
+    </header>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>The pipeline built so far ends in artifacts on disk: canonical records, a taxonomy, document texts and vectors, and precomputed top-k rankings. Nobody can use them yet. This feature puts a user interface on them. A candidate gives a resume (pasted text, a short form, or an example from the corpus) and gets the top-k postings; a recruiter gives a posting and gets the top-k candidates. A new text goes through the same steps as the corpus (structure, canonicalize with the alias table, label with the taxonomy, serialize, embed) and is ranked against the stored vectors of the other side with the same exact cosine top-k as the offline run (<a href="../architecture.html#ADR-2">ADR-2</a>, <a href="../architecture.html#ADR-7">ADR-7</a>). Every match carries explanation evidence computed from the two final skill sets: shared skills, related skills grouped under their cluster (the React and Vue case), and skills the posting asks for that the resume does not show. A narrative is produced by an <code>Explainer</code> behind a protocol; this feature ships a deterministic, faithful-by-construction explainer, and <code>match-agent</code> will plug its LangGraph agent into the same seam (<a href="../architecture.html#ADR-16">ADR-16</a>). The UI follows the ASU brand guide using plain CSS custom properties and Arial, with no ASU logos and no code taken from any ASU repository (<a href="../architecture.html#ADR-18">ADR-18</a>). It runs on one user's machine with their own keys (<a href="../architecture.html#ADR-15">ADR-15</a>) and can run on built-in demo data with no artifacts, no key and no GPU.</p>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <h3>In scope</h3>
+      <ul>
+        <li>Backend package <code>getwork.webapp</code>: API models, an <code>Engine</code> protocol with a <code>DemoEngine</code> (built-in data) and an <code>ArtifactEngine</code> (real artifacts under <code>artifacts_trial/</code> or <code>artifacts/</code>), the evidence builder and <code>TemplateExplainer</code>, the FastAPI app, and the <code>webapp</code> command (<code>serve</code>, <code>check</code>).</li>
+        <li>Three ways to supply a query: a corpus document by id (the "example" flow), a short structured form, and free text structured by the LLM at query time (<a href="../architecture.html#ADR-15">ADR-15</a>).</li>
+        <li>Frontend <code>src/web</code>: React 18 + Vite, JavaScript, three screens (Find jobs, Find candidates, About), hand-written CSS themed with the ASU brand-guide tokens (Theme tokens section), accessibility to WCAG 2.1 AA as far as it can be tested offline.</li>
+        <li>Error, empty, loading and capability-unavailable states; local run instructions; offline tests on both sides (pytest with <code>FakeLLMClient</code> and <code>FakeEmbeddingClient</code>; Vitest with injected <code>fetch</code>).</li>
+        <li>Guardrail tests: no ASU GitHub reference or dependency, no ASU logo or image assets, no external network loads from the page.</li>
+      </ul>
+      <h3>Out of scope</h3>
+      <ul>
+        <li>The LangGraph explanation agent, its tools, and chat follow-ups: <code>match-agent</code> (ADR-10). This feature only defines the seam and ships the deterministic explainer. The master's old index row said "chat"; that is moved there.</li>
+        <li>Blind pair labeling (<a href="../architecture.html#CC-8">CC-8</a>, <a href="../architecture.html#ADR-9">ADR-9</a>): a new row <code>labeling-ui</code> needs <code>eval-sampling-pooling</code> first. It will reuse this feature's server, theme and API conventions.</li>
+        <li>Accounts, login, saved searches, a database, query logging, multi-user hosting, deployment, HTTPS. The server binds to loopback and keeps no state.</li>
+        <li>PDF or DOCX parsing. Text is pasted, or a <code>.txt</code>/<code>.md</code> file is read in the browser into the text box.</li>
+        <li>Rebuilding the taxonomy or any artifact from the UI; relabeling unseen skills with the LLM at query time (lookup-only, see assumptions); tuning B1+ weights.</li>
+        <li>Dark mode (the brand guide gives no dark palette), internationalization, mobile-app packaging.</li>
+        <li>ASU logos, the sun devil, Sparky, and any official ASU web header or footer component (<a href="../architecture.html#ADR-18">ADR-18</a>).</li>
+      </ul>
+    </section>
+
+    <section id="design">
+      <h2>Design</h2>
+      <p>One stateless JSON API in front of an <code>Engine</code> that hides where documents and vectors come from. Cites <a href="../architecture.html#ADR-2">ADR-2</a>, <a href="../architecture.html#ADR-4">ADR-4</a>, <a href="../architecture.html#ADR-5">ADR-5</a>, <a href="../architecture.html#ADR-7">ADR-7</a>, <a href="../architecture.html#ADR-8">ADR-8</a>, <a href="../architecture.html#ADR-11">ADR-11</a>, <a href="../architecture.html#ADR-12">ADR-12</a>, <a href="../architecture.html#ADR-13">ADR-13</a>, <a href="../architecture.html#ADR-14">ADR-14</a>, and adds <a href="../architecture.html#ADR-15">ADR-15</a> (query-time hosting, answers Q-1), <a href="../architecture.html#ADR-16">ADR-16</a> (explainer seam), <a href="../architecture.html#ADR-17">ADR-17</a> (stack) and <a href="../architecture.html#ADR-18">ADR-18</a> (ASU theming). Contracts used: <a href="../architecture.html#CC-1">CC-1</a>, <a href="../architecture.html#CC-2">CC-2</a>, <a href="../architecture.html#CC-4">CC-4</a>, <a href="../architecture.html#CC-5">CC-5</a>, <a href="../architecture.html#CC-6">CC-6</a>, <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-11">CC-11</a>, <a href="../architecture.html#CC-12">CC-12</a>, <a href="../architecture.html#CC-13">CC-13</a>, <a href="../architecture.html#CC-14">CC-14</a>, <a href="../architecture.html#CC-15">CC-15</a>, <a href="../architecture.html#CC-16">CC-16</a>; adds <a href="../architecture.html#CC-18">CC-18</a> (web API and Explainer).</p>
+
+      <h3>Stack and why</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Layer</th><th>Choice</th><th>Why (light for a student team)</th></tr></thead>
+        <tbody>
+          <tr><td>Backend</td><td>FastAPI + uvicorn, pydantic v2 models, synchronous <code>def</code> endpoints (run in a thread pool). Added to <code>dependencies</code> in <code>pyproject.toml</code>; <code>httpx</code> added to the <code>dev</code> group for <code>TestClient</code>.</td><td>Named in the proposal and presentation; pydantic is already a dependency and gives validation plus an OpenAPI page at <code>/docs</code> for free. Pure-Python wheels, so it installs with <code>uv sync</code> on Linux and WSL.</td></tr>
+          <tr><td>Frontend</td><td>React 18, Vite, plain JavaScript (JSX), no TypeScript, no router, no state library, no UI kit, no CSS framework. Vitest + Testing Library + <code>vitest-axe</code> for tests. Node 20 or newer (the machine has v20.20.2).</td><td>The proposal and presentation promise a React UI. The dependency list stays at: react, react-dom (runtime) and vite, @vitejs/plugin-react, vitest, jsdom, @testing-library/react, @testing-library/user-event, @testing-library/jest-dom, vitest-axe (dev). Hash-based routing is 20 lines, so no router.</td></tr>
+          <tr><td>Styling</td><td>One hand-written theme: <code>tokens.css</code> (CSS custom properties) and <code>components.css</code>.</td><td>Brand-guide values alone, no third-party design system (<a href="../architecture.html#ADR-18">ADR-18</a>).</td></tr>
+          <tr><td>Dev / prod</td><td>Dev: <code>webapp serve</code> on :8000 plus <code>npm run dev</code> on :5173 with a Vite proxy for <code>/api</code> (so no CORS). Single process: <code>npm run build</code> writes <code>src/web/dist</code>, which <code>webapp serve</code> serves at <code>/</code>.</td><td>No CORS surface, no committed build output. Backend and its tests need no Node.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Layout note: the master's proposed convention (Q-6, unconfirmed) says <code>src/app/</code> and <code>src/web/</code>. The repo actually keeps every Python stage under <code>src/getwork/&lt;stage&gt;/</code> with console scripts, so the backend is <code>src/getwork/webapp/</code>; the frontend is <code>src/web/</code> as proposed.</p>
+
+      <h3>Component map and query-time data flow</h3>
+<pre><code>Browser (React, src/web) --JSON /api--&gt; FastAPI app (api.py) --&gt; Engine --&gt; Explainer
+                                                                  |
+        DemoEngine (built-in 6 + 6 documents, no model)           |
+        ArtifactEngine.load(artifacts_trial/ | artifacts/)        v
+          loads once at start: alias table, taxonomy, documents tables, vector sets (Full, B2)
+          query kinds:
+            corpus  id           -&gt; stored row + stored vector                    (no model needed)
+            form    fields       -&gt; record -&gt; steps 2b-6 -&gt; embed (lazy client)   (no LLM)
+            text    raw text     -&gt; structure_one (LLM, lazy) -&gt; steps 2b-6 -&gt; embed
+          steps 2b-6 at query time:
+            canonicalize_record(record, AliasTable)            # CC-2
+            split_known + OTHER/"default" for unseen skills     # lookup-only relabel, CC-15
+            build_relabel_record(..., relabeler=None)
+            build_document(record, listed_level, taxonomy, bands, b2_order)   # CC-4, CC-16
+            EmbeddingClient.embed([text_full | text_b2])        # one row, checked with check_same_embedding
+          rank: topk_from_blocks(matrix_block(q, other_side_vectors)) (Full, B2)
+                or b1plus_score over the other side then the same stable top-k (B1+)</code></pre>
+      <p>The corpus-id flow is the safe path for demos: it needs neither a key nor a GPU. Form and text flows load the structuring client and the embedding model lazily and report in <code>/api/health</code> whether they can run. Everything the engine loads is read-only; the server writes nothing and logs no query text.</p>
+
+      <h3>User flows and screens</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Screen (hash route)</th><th>Purpose and content</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Find jobs</strong> (<code>#/jobs</code>, default)</td><td>For a candidate. h1 "Find jobs for your resume". Input panel (see below), then results: "What we understood" card (title, level, skills grouped under cluster names), optional notes, and the ranked list of postings as cards. Direction <code>resume_to_posting</code>.</td></tr>
+          <tr><td><strong>Find candidates</strong> (<code>#/candidates</code>)</td><td>For a recruiter. h1 "Find candidates for your posting". Same layout, direction <code>posting_to_resume</code>; the posting form has an experience-level select, the resume form a years field.</td></tr>
+          <tr><td><strong>About</strong> (<code>#/about</code>)</td><td>h1 "About GetWork". What the three ranking methods are, data in use (counts, artifacts directory, demo banner), versions and embedding model from <code>/api/health</code>, capability status with reasons, privacy note, authors, course-project disclaimer.</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Input panel</strong> (Find jobs and Find candidates). A group of three radio-style buttons chooses the method: "Paste text" (a textarea with label, a "Load a .txt or .md file" file input that fills the textarea client-side, and for postings an optional title field), "Fill in a form" (title, years of experience for resumes or experience level for postings, skills one per line or comma-separated), "Pick an example" (a list from <code>/api/examples</code> with title, level and skill count; choose one). Below: "Number of results" select (5, 10, 20), "Ranking method" select (GetWork skill clusters = <code>Full</code>, Embeddings only = <code>B2</code>, Keywords only = <code>B1+</code>), and the one gold call-to-action "Find matches" (or "Find candidates"/"Find jobs" as the page requires; a single gold button per page). A method that the server cannot run (health capabilities) is disabled with its reason shown as text next to it. Validation messages appear inline before any request: empty text, a form with neither title nor skills.</p>
+      <p><strong>Result card.</strong> Rank number, title (h3), level, similarity score to 3 decimals (label "Similarity" for Full and B2, "Keyword score" for B1+), the evidence chips (see below), and a button "Why this match?" (<code>aria-expanded</code>). Expanding fetches <code>POST /api/explain</code> and shows the summary, bullets, the full skill list grouped by cluster, and a line naming the explainer ("Explained by rules, no language model" or the agent model). Collapsing keeps the loaded text.</p>
+      <p><strong>Evidence chips.</strong> Each chip carries a text label and a symbol, never color alone: "Shared: Python" (check mark, gold), "Related: Vue and React in Front-end" (approx sign, white with maroon border), "Missing: Kubernetes" (cross, gray). Skills under "Other" never form a related chip (noise earns no partial credit, see the master's key design points).</p>
+      <p><strong>States.</strong></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>State</th><th>What the user sees</th></tr></thead>
+        <tbody>
+          <tr><td>Loading health</td><td>Full-page "Starting GetWork" status; replaced by the app or by the "server unreachable" state.</td></tr>
+          <tr><td>Server unreachable (network error)</td><td>Alert "Cannot reach the GetWork server" with the command <code>uv run webapp serve</code> and a Retry button. No results area.</td></tr>
+          <tr><td>Demo mode</td><td>Persistent banner "Demo data: 6 sample resumes and 6 sample postings. Results are illustrative." on every page.</td></tr>
+          <tr><td>Matching in progress</td><td>Submit disabled, <code>role="status"</code> text "Finding matches..."; for the text method also "Reading your document with the language model can take up to a minute."</td></tr>
+          <tr><td>Results</td><td>Focus moves to the results heading; a polite live region announces "10 postings found". Notes (<code>sparse_query</code>, <code>unknown_skills</code>, ...) appear as warning alerts above the list.</td></tr>
+          <tr><td>Empty (zero matches or zero skills understood)</td><td>"No matches" panel with advice: add skills or choose another method. A query with zero skills still ranks by title and level; the note says so.</td></tr>
+          <tr><td>API error</td><td><code>role="alert"</code> alert with a title chosen by <code>error.code</code> (table in the JS interfaces), the server's message, and its hint. The form keeps its input.</td></tr>
+          <tr><td>Explain error</td><td>Inside the expanded card only: the error and a "Try again" button; the rest of the page keeps working.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>HTTP API (CC-18)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Request</th><th>Response</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /api/health</code></td><td>200 <code>HealthResponse</code></td><td>Never fails once the app is up (the engine is loaded before serving).</td></tr>
+          <tr><td><code>GET /api/examples?side=resume|posting&amp;limit=6</code></td><td>200 <code>ExamplesResponse</code></td><td><code>limit</code> 1 to 20, default 6; the first N documents in id order. Bad parameters: 422.</td></tr>
+          <tr><td><code>POST /api/match</code> body <code>MatchRequest</code></td><td>200 <code>MatchResponse</code></td><td>Errors: 400 <code>empty_query</code>, <code>text_too_long</code>, <code>side_mismatch</code>; 404 <code>not_found</code>; 409 <code>embedding_mismatch</code>; 422 <code>invalid_request</code>; 502 <code>structuring_failed</code>, <code>embedding_failed</code>; 503 <code>capability_unavailable</code>.</td></tr>
+          <tr><td><code>POST /api/explain</code> body <code>ExplainRequest</code></td><td>200 <code>Explanation</code></td><td>Stateless: the client sends back the <code>query</code> document view it received from <code>/api/match</code> and the <code>match_id</code>; the server loads the match document by id. 404 <code>not_found</code>, 422.</td></tr>
+          <tr><td><code>GET /</code>, <code>GET /assets/*</code></td><td>The built UI, or a one-paragraph HTML page "Frontend not built" naming the build command and <code>/docs</code></td><td>Only when mounted; see T-6.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Every non-2xx response is <code>{"error": {"code", "message", "hint", "field"}}</code> (<code>ErrorEnvelope</code>), including validation errors and unknown <code>/api/*</code> paths (404 <code>not_found</code>). An unexpected exception is 500 <code>internal</code> with the fixed message "Something went wrong on the server" and no traceback or exception text; the traceback goes to the server log with configured secrets redacted. Neither request bodies nor query text are logged. The app adds no CORS middleware.</p>
+
+      <h3>Interfaces</h3>
+      <p>Signatures are final; tasks copy the block they implement verbatim and name the blocks they consume (the producing task is merged first, so its code is the source of truth for consumers). Python 3.11, pydantic v2. Existing names used: <code>AliasTable</code>, <code>load_table</code> (<code>getwork.alias.table</code>); <code>canonicalize_record</code> (<code>getwork.alias.apply</code>); <code>normalize_key</code> (<code>getwork.alias.normalize</code>); <code>ExtractConfig</code>, <code>SourceDoc</code>, <code>structure_one</code> (<code>getwork.structure.extract</code>); <code>RECORD_KEYS</code>, <code>SCHEMA_VERSION</code> (<code>getwork.structure.schema</code>); <code>Throttle</code> (<code>getwork.llm.retry</code>); <code>LLMClient</code>, <code>FatalLLMError</code>, <code>redact_secrets</code> (<code>getwork.llm.client</code>); <code>make_client</code>, <code>add_llm_args</code> (<code>getwork.llm.factory</code>); <code>ConfigError</code> (<code>getwork.llm.settings</code>); <code>paths</code> (<code>getwork.paths</code>); <code>TABLE_FILE</code> (<code>getwork.alias.cli</code>). Names from draft specs, to be merged first: <code>Taxonomy</code>, <code>OTHER</code>, <code>load_taxonomy</code> (skill-taxonomy); <code>split_known</code>, <code>known_fraction</code>, <code>incomplete_reason</code>, <code>SkillAssignment</code>, <code>build_relabel_record</code> (cluster-relabeling); <code>level_rank</code>, <code>LEVELS</code>, <code>NOT_SPECIFIED</code>, <code>build_document</code> (document-embedding); <code>EmbeddingClient</code>, <code>EmbeddingError</code>, <code>EmbeddingMismatchError</code>, <code>check_same_embedding</code>, <code>make_embedding_client</code>, <code>add_embed_args</code> (embedding-client); <code>load_inputs</code>, <code>RetrievalInputs</code>, <code>topk_from_blocks</code>, <code>matrix_block</code>, <code>b1plus_score</code>, <code>title_tokens</code>, <code>B1PlusWeights</code>, <code>DEFAULT_WEIGHTS</code>, <code>load_weights</code>, <code>query_matches</code> (two-way-retrieval).</p>
+
+      <h3 id="I-1">I-1 · models.py (pydantic API types)</h3>
+<pre><code># src/getwork/webapp/models.py
+from typing import Annotated, Literal, Union
+from pydantic import BaseModel, ConfigDict, Field
+
+Side = Literal["resume", "posting"]
+Direction = Literal["resume_to_posting", "posting_to_resume"]
+SystemId = Literal["B1+", "B2", "Full"]                    # CC-6 ids
+Via = Literal["taxonomy", "noise", "llm", "default"]
+DEFAULT_K: int = 10
+MAX_K: int = 50
+MAX_SKILLS: int = 100
+MAX_SKILL_CHARS: int = 80
+MAX_EXAMPLES: int = 20
+DEFAULT_MAX_QUERY_CHARS: int = 20000
+ERROR_CODES: dict[str, int] = {
+    "invalid_request": 422, "empty_query": 400, "text_too_long": 400, "side_mismatch": 400,
+    "not_found": 404, "embedding_mismatch": 409, "structuring_failed": 502, "embedding_failed": 502,
+    "capability_unavailable": 503, "internal": 500,
+}
+
+class _Req(BaseModel):                       # request models: unknown fields are rejected
+    model_config = ConfigDict(extra="forbid")
+
+class CorpusQuery(_Req):
+    kind: Literal["corpus"]
+    id: str = Field(min_length=1, max_length=64)
+class TextQuery(_Req):
+    kind: Literal["text"]
+    text: str                                # length checked by the engine (text_too_long), not here
+    title: str | None = Field(default=None, max_length=200)      # postings only; ignored for resumes
+class FormQuery(_Req):
+    kind: Literal["form"]
+    title: str = Field(default="", max_length=200)
+    level: str | None = Field(default=None, max_length=40)       # used for postings only (CC-16 DE-3)
+    years_experience: float | None = Field(default=None, ge=0, le=60)
+    skills: list[str] = Field(default_factory=list, max_length=MAX_SKILLS)   # each at most MAX_SKILL_CHARS chars
+Query = Annotated[Union[CorpusQuery, TextQuery, FormQuery], Field(discriminator="kind")]
+class MatchRequest(_Req):
+    direction: Direction
+    query: Query
+    k: int = Field(default=DEFAULT_K, ge=1, le=MAX_K)
+    system: SystemId = "Full"
+
+class DocSkill(BaseModel):
+    skill: str
+    cluster: str                             # a cluster name or "Other"
+    via: Via
+class DocumentView(BaseModel):
+    id: str | None                           # None for a document built from the query
+    side: Side
+    title: str | None
+    level: str                               # a CC-16 level or "Not specified"
+    level_source: str | None                 # "listed" | "years" | "missing" | None
+    years_experience: float | None
+    skills: list[DocSkill] = Field(max_length=200)
+    incomplete_reason: str | None = None     # "no_skills" | "few_skills" | "low_coverage" | None
+class SharedSkill(BaseModel):
+    skill: str
+    cluster: str
+class RelatedGroup(BaseModel):
+    cluster: str                             # never "Other"
+    resume_skills: list[str]
+    posting_skills: list[str]
+class GapSkill(BaseModel):
+    skill: str
+    cluster: str
+class LevelComparison(BaseModel):
+    resume: str
+    posting: str
+    relation: Literal["same", "adjacent", "different", "unknown"]
+class Evidence(BaseModel):
+    shared: list[SharedSkill]
+    related: list[RelatedGroup]
+    gaps: list[GapSkill]                     # posting skills with no shared or related counterpart
+    level: LevelComparison
+    title_overlap: list[str]                 # sorted common title tokens
+class Match(BaseModel):
+    rank: int                                # 1-based
+    id: str
+    score: float
+    document: DocumentView
+    evidence: Evidence
+class Note(BaseModel):
+    code: Literal["no_skills", "sparse_query", "unknown_skills", "relabel_mode_differs"]
+    message: str
+class EmbeddingIdentity(BaseModel):
+    model: str
+    backend: str
+    dim: int
+class Provenance(BaseModel):
+    alias_table_version: str | None
+    taxonomy_version: str | None
+    serialization_version: str | None
+    relabel_mode: str | None
+    embedding: EmbeddingIdentity | None
+    demo: bool = False
+class MatchResponse(BaseModel):
+    direction: Direction
+    system: SystemId
+    query_kind: Literal["corpus", "text", "form"]
+    k: int                                   # requested
+    k_effective: int                         # min(k, number of documents on the other side)
+    query: DocumentView
+    matches: list[Match]
+    notes: list[Note]
+    provenance: Provenance
+class Capability(BaseModel):
+    available: bool
+    reason: str | None = None                # why not, naming the missing setting (never its value)
+    detail: str | None = None                # e.g. "voyager, model-id" for the privacy notice
+class EngineHealth(BaseModel):
+    mode: Literal["demo", "artifacts"]
+    artifacts_dir: str | None
+    counts: dict[str, int]                   # {"resumes": n, "postings": n}
+    systems: list[SystemId]                  # systems this server can rank with
+    levels: list[str]                        # LEVELS plus "Not specified"
+    versions: Provenance
+    capabilities: dict[str, Capability]      # keys "structure" and "embed"
+class ExplainerInfo(BaseModel):
+    kind: Literal["template", "agent"]
+    model: str | None = None
+class HealthResponse(EngineHealth):
+    status: Literal["ok"] = "ok"
+    explainer: ExplainerInfo
+class ExamplesResponse(BaseModel):
+    items: list[DocumentView]
+class ExplainRequest(_Req):
+    direction: Direction
+    query: DocumentView
+    match_id: str = Field(min_length=1, max_length=64)
+class Explanation(BaseModel):
+    summary: str
+    bullets: list[str]
+    evidence: Evidence
+    explainer: ExplainerInfo
+class ErrorBody(BaseModel):
+    code: str
+    message: str
+    hint: str | None = None
+    field: str | None = None
+class ErrorEnvelope(BaseModel):
+    error: ErrorBody</code></pre>
+
+      <h3 id="I-2">I-2 · explain.py (evidence and the explainer seam)</h3>
+<pre><code># src/getwork/webapp/explain.py
+from typing import Protocol
+def build_evidence(direction: Direction, query: DocumentView, match: DocumentView) -&gt; Evidence:
+    """resume, posting = (query, match) for resume_to_posting, else (match, query). Skills are compared by
+    normalize_key. Key order is the order of first appearance.
+    shared: posting skills whose key is among the resume's keys, in posting order, SharedSkill(skill=posting
+      spelling, cluster=posting-side cluster).
+    related: for posting skills not shared and whose cluster is not OTHER, group by cluster in order of the first
+      posting skill of each cluster; the group's resume_skills are the resume skills not shared whose cluster equals
+      that cluster; a group is emitted only if both lists are non-empty.
+    gaps: posting skills not shared and not in any emitted related group, GapSkill in posting order.
+    level: LevelComparison(resume=resume.level, posting=posting.level, relation) with relation "unknown" when either
+      level_rank is None, else "same" (equal rank), "adjacent" (difference 1), "different" (2 or more).
+    title_overlap: sorted(title_tokens(resume.title) &amp; title_tokens(posting.title)).
+    The result is the same for both directions when the same two documents are given swapped."""
+class Explainer(Protocol):
+    @property
+    def info(self) -&gt; ExplainerInfo: ...
+    def explain(self, direction: Direction, query: DocumentView, match: DocumentView) -&gt; Explanation: ...
+class TemplateExplainer:
+    info: ExplainerInfo                      # ExplainerInfo(kind="template", model=None)
+    def explain(self, direction: Direction, query: DocumentView, match: DocumentView) -&gt; Explanation:
+        """evidence = build_evidence(...). summary = f"{n(S, 'shared skill')}, {n(R, 'related group')}, {n(G, 'gap')}."
+        where n(c, w) is f"{c} {w}" for c == 1 and f"{c} {w}s" otherwise, S, R, G the lengths of shared, related, gaps.
+        bullets, in this order, each only when applicable:
+        1 "Shared skills: A, B, C." (at most 8 names, then " and N more" before the period);
+        2 per related group: f"Related through {cluster}: the resume lists {resume skills joined by ', '}, the
+          posting asks for {posting skills joined by ', '}.";
+        3 "The posting asks for skills the resume does not show: X, Y." (gaps, at most 8 names, same overflow rule);
+        4 level by relation: same -&gt; f"Experience level is the same ({level})."; adjacent -&gt; f"Experience levels are
+          adjacent (resume: {r}, posting: {p})."; different -&gt; f"Experience levels differ (resume: {r}, posting: {p}).";
+          unknown -&gt; omitted;
+        5 "Shared title words: a, b." when title_overlap is non-empty;
+        6 if bullets is empty: "No shared or related skills were found; this match comes from overall document
+          similarity." Every skill name that appears comes from the two documents' skill lists."""</code></pre>
+
+      <h3 id="I-3">I-3 · engine.py and demo.py</h3>
+<pre><code># src/getwork/webapp/engine.py
+from dataclasses import dataclass
+class EngineError(Exception):
+    code: str; message: str; hint: str | None; field: str | None; status: int
+    def __init__(self, code: str, message: str, *, hint: str | None = None, field: str | None = None) -&gt; None:
+        """ValueError if code is not in ERROR_CODES. status = ERROR_CODES[code]. str(self) is message."""
+class EngineLoadError(RuntimeError): ...            # artifacts missing or inconsistent at startup; message has the fix hint
+@dataclass(frozen=True)
+class MatchResult:
+    query: DocumentView
+    matches: list[tuple[DocumentView, float]]       # rank order, rank = position + 1
+    notes: list[Note]
+    provenance: Provenance
+    k_effective: int
+class Engine(Protocol):
+    def health(self) -&gt; EngineHealth: ...
+    def examples(self, side: Side, limit: int) -&gt; list[DocumentView]: ...
+    def get_document(self, doc_id: str) -&gt; DocumentView:
+        """EngineError("not_found") naming the id."""
+    def match(self, request: MatchRequest) -&gt; MatchResult:
+        """Raises EngineError only (codes in ERROR_CODES); any other exception is a bug (500)."""
+
+# src/getwork/webapp/demo.py
+DEMO_RESUMES: list[dict]       # 6 rows, ids "r-1".."r-6"; keys: id, title, level, years_experience, skills: list[tuple[str, str]] (skill, cluster)
+DEMO_POSTINGS: list[dict]      # 6 rows, ids "j-1".."j-6"; same keys
+DEMO_ALIASES: dict[str, str]   # normalized key -> canonical spelling, e.g. {"js": "JavaScript", "k8s": "Kubernetes"}
+DEMO_CLUSTERS: dict[str, str]  # normalized key -&gt; cluster name for every skill used in the demo rows
+class DemoEngine:
+    def __init__(self) -&gt; None: ...
+    # implements Engine. health(): mode "demo", artifacts_dir None, counts 6 and 6, systems ["B1+", "B2", "Full"],
+    # capabilities: structure Capability(available=False, reason="Demo mode has no language model."),
+    # embed Capability(available=True, detail="demo scoring, no embedding model") so form queries are enabled in the UI.
+    # Scores (demo only): resume skills R and posting skills P as normalized-key sets; S = |R and P|; Rp = number of
+    # posting skills not in R whose cluster is not "Other" and equals the cluster of some resume skill not in P.
+    # Full: (S + 0.5 * Rp) / max(1, |P|); B2: S / max(1, |P|); B1+: S / max(1, |R or P|). Rounded to 4 decimals.
+    # Order: score descending, then document position. Query kinds: corpus and form (form skills canonicalized with
+    # DEMO_ALIASES and clustered with DEMO_CLUSTERS, unknown skills "Other"/"default"); text -&gt; EngineError("capability_unavailable").</code></pre>
+      <p>Required demo content (so tests and the UI show the motivating example): r-1 "Front-end developer" with Vue, CSS, JavaScript under Front-end; j-1 "React developer" with React, JavaScript, CSS under Front-end; j-2 "Java backend engineer" with Java, Spring, SQL (Back-end, Back-end, Data); r-2 a Java developer; at least one resume and one posting with a skill under "Other"; at least one level pair that is adjacent and one that differs by two or more; every document has 3 to 6 skills. The developer chooses the remaining rows.</p>
+
+      <h3 id="I-4">I-4 · api.py</h3>
+<pre><code># src/getwork/webapp/api.py
+from pathlib import Path
+from fastapi import FastAPI
+def create_app(engine: Engine, explainer: Explainer, *, static_dir: Path | None = None,
+               secrets: Sequence[str] = ()) -&gt; FastAPI:
+    """Routes in the HTTP API table. /api/match: result = engine.match(request); each Match is built with
+    evidence = build_evidence(request.direction, result.query, document). /api/explain: match =
+    engine.get_document(match_id); explainer.explain(direction, query, match); the side of match_id must be the
+    opposite side of query.side else 400 side_mismatch. Handlers: EngineError -&gt; ErrorEnvelope with its status;
+    RequestValidationError -&gt; 422 invalid_request with field = the first error's dotted location; unknown /api/*
+    path -&gt; 404 not_found; any other Exception -&gt; 500 internal (fixed message), logged with redact_secrets(secrets).
+    No CORS middleware. static_dir None: GET / returns the "Frontend not built" page (see T-6)."""</code></pre>
+
+      <h3 id="I-5">I-5 · artifacts.py (ArtifactEngine)</h3>
+<pre><code># src/getwork/webapp/artifacts.py
+@dataclass(frozen=True)
+class StructureResources:
+    client: LLMClient
+    cfg: ExtractConfig                       # model and backend filled in by the CLI from make_client's bundle
+    secrets: Sequence[str] = ()
+@dataclass(frozen=True)
+class EmbedResources:
+    factory: Callable[[], EmbeddingClient]   # called lazily on first use, once, under a lock; result cached
+    describe: str                            # shown in health, e.g. "local, Qwen/Qwen3-Embedding-4B"
+class ArtifactEngine:
+    @classmethod
+    def load(cls, root: Path, *, systems: Sequence[str] = ("B1+", "B2", "Full"),
+             weights: B1PlusWeights = DEFAULT_WEIGHTS,
+             structure: StructureResources | None = None, structure_reason: str | None = None,
+             embed: EmbedResources | None = None, embed_reason: str | None = None,
+             max_query_chars: int = DEFAULT_MAX_QUERY_CHARS) -&gt; "ArtifactEngine":
+        """Reads, once: alias table (paths.alias_dir(root) / TABLE_FILE), taxonomy (paths.taxonomy_dir(root) /
+        "taxonomy.json"), load_inputs(root, systems) (both documents tables, summaries, requested vector sets), the
+        p10 threshold of each source from relabeled/&lt;source&gt;/&lt;source&gt;_relabeled_summary.json ("p10_threshold"; 0 if the
+        file is absent). Raises EngineLoadError (message contains the fix hint) for: missing files (FileNotFoundError
+        text), stale or mismatched vectors (DocEmbedMismatchError, EmbeddingMismatchError text), alias table version
+        != taxonomy.alias_table_version, or taxonomy.version != summaries["resumes"]["taxonomy_version"] (CC-12),
+        an unknown system, or an empty systems list."""
+    def health(self) -&gt; EngineHealth: ...
+    def examples(self, side: Side, limit: int) -&gt; list[DocumentView]: ...
+    def get_document(self, doc_id: str) -&gt; DocumentView: ...
+    def match(self, request: MatchRequest) -&gt; MatchResult: ...
+    # match(): system not loaded -&gt; EngineError("capability_unavailable"); corpus kind: id must be in the query side's
+    # table (not_found) and of the right side (side_mismatch, resume ids start "r-", posting ids "j-"); form/text: see T-8.</code></pre>
+
+      <h3 id="I-6">I-6 · cli.py</h3>
+<pre><code># src/getwork/webapp/cli.py   (script: webapp)
+WEB_DIST: Path                               # Path(__file__).resolve().parents[2] / "web" / "dist"
+def main(argv: list[str] | None = None, *, environ: Mapping[str, str] | None = None,
+         llm_client: LLMClient | None = None, embedding_client: EmbeddingClient | None = None,
+         run: Callable[..., None] | None = None) -&gt; int:
+    """Subcommands serve and check. run replaces uvicorn.run (tests). Exit codes: 0 ok, 2 usage, configuration or
+    artifact error. Never prints a key; startup messages name only variable names."""</code></pre>
+      <p>Options (both subcommands unless noted): <code>--artifacts-dir PATH</code> (default <code>artifacts_trial</code>, <a href="../architecture.html#CC-11">CC-11</a>; <code>artifacts</code> for the full corpus), <code>--demo</code> (ignore artifacts, use <code>DemoEngine</code>), <code>--systems all|B1+,B2,Full</code> (default all; fewer systems load fewer vector sets), <code>--b1plus-weights PATH</code> (JSON for <code>load_weights</code>), <code>--max-query-chars N</code> (default 20000), <code>--no-structure</code>, <code>--no-embed</code>, the LLM options from <code>add_llm_args</code> (<code>--backend</code>, <code>--model</code>, <code>--env-file</code>, <code>--extra-body</code>) and the embedding options from <code>add_embed_args(parser, with_env_file=False)</code>. <code>serve</code> only: <code>--host</code> (default 127.0.0.1), <code>--port</code> (default 8000), <code>--static-dir PATH</code> (default <code>WEB_DIST</code> when it contains <code>index.html</code>, else none). <code>check</code> loads everything, prints <code>HealthResponse</code> as JSON and exits without starting a server, calling the LLM, or loading the embedding model.</p>
+
+      <h3 id="I-7">I-7 · JavaScript modules (src/web/src)</h3>
+<pre><code>// api.js
+export class ApiError extends Error {
+  constructor({ status, code, message, hint = null, field = null })   // status 0 for network failures
+}
+export const NETWORK_ERROR_CODE = "network_unreachable";
+export const BAD_RESPONSE_CODE = "bad_response";
+export async function getHealth(fetchImpl = fetch)                     // GET /api/health
+export async function getExamples(side, limit = 6, fetchImpl = fetch)  // GET /api/examples
+export async function postMatch(request, fetchImpl = fetch)            // POST /api/match
+export async function postExplain(request, fetchImpl = fetch)          // POST /api/explain
+// Non-2xx with a valid ErrorEnvelope -&gt; throw ApiError from it. fetch rejection -&gt; ApiError(status 0,
+// code NETWORK_ERROR_CODE). 2xx or non-2xx with a body that is not the expected JSON -&gt; ApiError(code BAD_RESPONSE_CODE).
+export function describeError(err)   // -&gt; { title, body, hint } ; title by code, see table below
+export const SYSTEM_LABELS = { "Full": "GetWork (skill clusters)", "B2": "Embeddings only", "B1+": "Keywords only" };
+
+// routes.js
+export const ROUTES = ["jobs", "candidates", "about"];
+export const DIRECTION_BY_ROUTE = { jobs: "resume_to_posting", candidates: "posting_to_resume" };
+export function parseRoute(hash)     // "#/candidates" -&gt; "candidates"; anything unknown or empty -&gt; "jobs"
+export function hrefFor(route)       // "jobs" -&gt; "#/jobs"
+
+// capabilities.js
+export function parseSkills(text)    // split on newline, comma, semicolon; trim; drop blanks; case-insensitive dedupe keeping first; at most 100
+export function canRun(kind, system, capabilities)
+  // kind "corpus" -&gt; { ok: true }. "form" -&gt; ok when system === "B1+" or capabilities.embed.available.
+  // "text" -&gt; ok when capabilities.structure.available and (system === "B1+" or capabilities.embed.available).
+  // Not ok -&gt; { ok: false, reason } using the capability's reason text.
+// Components (default exports; props)
+// Layout({ route, health, children })
+// QueryForm({ direction, health, busy, onSubmit, fetchImpl })       onSubmit(matchRequest)
+// GroupedSkills({ skills })               skills: DocSkill[]; groups by cluster in first-appearance order, "Other" last
+// EvidenceChips({ evidence })
+// MatchCard({ match, system, expanded, onToggle, children })
+// ExplainPanel({ direction, query, matchId, fetchImpl })
+// FindPage({ direction, health, fetchImpl })
+// AboutPage({ health })</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>error.code</th><th>Alert title</th></tr></thead>
+        <tbody>
+          <tr><td><code>network_unreachable</code></td><td>Cannot reach the GetWork server</td></tr>
+          <tr><td><code>bad_response</code></td><td>The server sent an unexpected reply</td></tr>
+          <tr><td><code>empty_query</code></td><td>Add some text or skills first</td></tr>
+          <tr><td><code>text_too_long</code></td><td>That text is too long</td></tr>
+          <tr><td><code>side_mismatch</code></td><td>That document is on the wrong side</td></tr>
+          <tr><td><code>not_found</code></td><td>We could not find that document</td></tr>
+          <tr><td><code>embedding_mismatch</code></td><td>The embedding model does not match the stored data</td></tr>
+          <tr><td><code>structuring_failed</code></td><td>The language model could not read that document</td></tr>
+          <tr><td><code>embedding_failed</code></td><td>The embedding step failed</td></tr>
+          <tr><td><code>capability_unavailable</code></td><td>That option is not available on this server</td></tr>
+          <tr><td><code>invalid_request</code></td><td>Please check the form</td></tr>
+          <tr><td><code>internal</code> and any other code</td><td>Something went wrong</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Query-time rules (ArtifactEngine)</h3>
+      <ol>
+        <li><strong>Side.</strong> <code>resume_to_posting</code> queries are resumes (source <code>resumes</code>, ids <code>r-</code>); <code>posting_to_resume</code> queries are postings (<code>postings</code>, <code>j-</code>).</li>
+        <li><strong>Form.</strong> Skills are trimmed; blanks dropped; the record is a dict with exactly <code>schema.RECORD_KEYS</code> (<code>id "q-1"</code>, the side's source, <code>experience</code> and <code>education</code> empty, <code>model "form"</code>, <code>prompt_version "form_v1"</code>, <code>schema_version SCHEMA_VERSION</code>, <code>backend "form"</code>). Title and skills both empty: <code>empty_query</code>. Then <code>canonicalize_record</code>.</li>
+        <li><strong>Text.</strong> Blank after strip: <code>empty_query</code>; longer than <code>max_query_chars</code>: <code>text_too_long</code> (message contains the limit). Otherwise <code>structure_one(client, cfg, Throttle(), SourceDoc("q-1", source, title, text), secrets)</code> once; <code>Outcome.failure</code> becomes <code>structuring_failed</code> with the failure's redacted message; <code>FatalLLMError</code> becomes <code>structuring_failed</code> with the generic message "The model service rejected the request" and the same status. The text is never stored or logged.</li>
+        <li><strong>Label.</strong> <code>split_known</code> against the taxonomy; each unseen skill becomes <code>SkillAssignment(skill, OTHER, "default")</code> (lookup-only, assumption A-2); <code>incomplete_reason</code> from <code>known_fraction</code> and the source's p10; <code>build_relabel_record(record, assignments, [], incomplete, False, tax, None)</code>.</li>
+        <li><strong>Document.</strong> <code>build_document(relabeled, listed_level, tax, bands, b2_order)</code> where <code>bands</code> and <code>b2_order</code> come from that side's documents summary (<code>level_bands</code>, <code>b2_order</code>) so the text is serialized exactly like the corpus; <code>listed_level</code> is the form's level for postings and <code>None</code> otherwise.</li>
+        <li><strong>Embed.</strong> Full uses <code>text_full</code>, B2 <code>text_b2</code>, B1+ none. The client comes from <code>embed.factory()</code> (lazy, cached, one call at a time under a lock). Its identity is checked against the loaded vector meta with <code>check_same_embedding</code>; a difference is <code>embedding_mismatch</code> (409). Client errors become <code>embedding_failed</code>. Without <code>embed</code>: <code>capability_unavailable</code> with <code>embed_reason</code>, except for B1+.</li>
+        <li><strong>Rank.</strong> Full and B2: <code>topk_from_blocks(matrix_block(q, other_side_vectors), 1, n, k)</code>. B1+: <code>b1plus_score(resume_doc, posting_doc, weights)</code> for each document of the other side, then the same stable top-k, so ties break by document position everywhere (RT-2).</li>
+        <li><strong>Notes.</strong> <code>no_skills</code> when the final skill list is empty; <code>sparse_query</code> when <code>incomplete_reason</code> is set and skills are non-empty; <code>unknown_skills</code> when every skill is under Other and there is at least one; <code>relabel_mode_differs</code> when the corpus summaries say <code>relabel_mode == "llm"</code> (the query was labeled lookup-only).</li>
+        <li><strong>Concurrency.</strong> One lock serializes lazy embedder construction and <code>embed()</code>; structuring calls may overlap.</li>
+      </ol>
+
+      <h3 id="theme">Theme tokens (ASU brand guide)</h3>
+      <p>Source: the public ASU brand guide (brandguide.asu.edu), pages on color, fonts, web standards checklist, logos and trademarks, collected by the researcher on 2026-11-08. Every value below is marked <strong>guide</strong> (stated by the guide), <strong>team</strong> (the guide pages we could reach do not state it, so this is our decision, to be revisited if the Figma UI kit is obtained), or <strong>WCAG</strong> (general accessibility knowledge, not from the guide). Contrast ratios in the last table were computed by the planner from the hex values with the WCAG relative-luminance formula; a Vitest test recomputes them (AC-27). Implementation uses only these values in plain CSS custom properties: no ASU repository, package, stylesheet or script (<a href="../architecture.html#ADR-18">ADR-18</a>).</p>
+      <div class="callout danger"><span class="callout-title">Hard rules</span><p>(1) No reference to, link to, copy from, or dependency on any ASU GitHub repository or ASU-published design-system or web-standards package. (2) No ASU logo, sun devil, Sparky or other ASU mark anywhere in the app, assets or favicon: the guide limits ASU logos to faculty, staff and units for university business and most student organizations may not use them. (3) Do not put "ASU" or "Arizona State" before the product name; "at Arizona State University" after a name is acceptable. (4) No external font or script loads: Arial is a system font.</p></div>
+      <h3>Palette</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Token</th><th>Value</th><th>Source</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td><code>--color-maroon</code></td><td>#8C1D40</td><td>guide</td><td>Links, primary button, wordmark, related chip, error rule</td></tr>
+          <tr><td><code>--color-gold</code></td><td>#FFC627</td><td>guide</td><td>The single call-to-action button per page, shared chip, current-nav rule, footer links</td></tr>
+          <tr><td><code>--color-black</code>, <code>--color-white</code></td><td>#000000, #FFFFFF</td><td>guide</td><td>White surfaces and text on maroon. Black is replaced by Gray 1 for text (the guide says asu.edu does this)</td></tr>
+          <tr><td><code>--color-gray-1</code> to <code>--color-gray-7</code></td><td>#191919, #484848, #747474, #BFBFBF, #D0D0D0, #E8E8E8, #FAFAFA</td><td>guide</td><td>Text, secondary text, muted text and control borders, decorative borders, header bar, page background</td></tr>
+          <tr><td><code>--color-green</code>, <code>--color-blue</code>, <code>--color-orange</code></td><td>#78BE20, #00A3E0, #FF7F32</td><td>guide</td><td>Alert rules only (success, info, warning), always with an icon and a text label, never as text color</td></tr>
+          <tr><td><code>--color-copper</code>, <code>--color-turquoise</code>, <code>--color-pink</code></td><td>#AF674B, #4AB7C4, #E74973</td><td>guide</td><td>Defined, unused in v1 (secondary accents: about 20% at most, never without maroon or gold)</td></tr>
+          <tr><td><code>--color-maroon-hover</code></td><td>#A8214B</td><td>team</td><td>Button hover background (the guide mentions a brighter maroon on hover, no value found); white on it is 7.04:1</td></tr>
+          <tr><td><code>--color-maroon-pressed</code></td><td>#6B1530</td><td>team</td><td>Link hover and pressed state; this value is already used by the project's spec template</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Typography, spacing, shape</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Token or rule</th><th>Value</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><code>--font-stack</code></td><td>Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif (exactly this string). No other family anywhere; no serif, script or decorative fonts. Neue Haas Grotesk is not used.</td><td>guide</td></tr>
+          <tr><td>Rules</td><td>No italics; underline only on links; no all-caps text (no <code>text-transform: uppercase</code>); headlines in sentence case in Gray 1, white, gold or maroon; text left-aligned; one h1 per page with logical order</td><td>guide</td></tr>
+          <tr><td><code>--text-base</code></td><td>1rem (16px) for all body text; line-height 1.5</td><td>guide (16px minimum), team (1.5)</td></tr>
+          <tr><td><code>--measure</code></td><td>43.75rem (700px) maximum width of any running-text container</td><td>guide</td></tr>
+          <tr><td><code>--text-small</code></td><td>0.875rem (14px), only for chip labels and score captions</td><td>team (the guide states 16px for body text)</td></tr>
+          <tr><td><code>--text-h1</code>, <code>--text-h2</code>, <code>--text-h3</code></td><td>2rem, 1.5rem, 1.25rem, bold</td><td>team (heading scale not found)</td></tr>
+          <tr><td><code>--space-1</code> to <code>--space-8</code></td><td>0.5rem, 1rem, 1.5rem, 2rem, 2.5rem, 3rem, 4rem (there is no --space-7): every value a multiple of 0.5rem (8px)</td><td>guide (multiples of 8px)</td></tr>
+          <tr><td><code>--radius-button</code>, <code>--radius-control</code>, <code>--radius-card</code></td><td>2rem, 4px, 8px</td><td>team (shape not found)</td></tr>
+          <tr><td><code>--focus-width</code>, <code>--focus-ring</code>, <code>--focus-ring-on-dark</code></td><td>3px solid Gray 1 with a 2px offset on light backgrounds; gold on the dark footer</td><td>team (focus style not found), WCAG 2.4.7 and 1.4.11 (3:1)</td></tr>
+          <tr><td><code>--scale-hover</code></td><td>1.05 (buttons grow 5% on hover; no shadow; text color and underline do not change; disabled under <code>prefers-reduced-motion</code>)</td><td>guide</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Components and patterns</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Pattern</th><th>Rule</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Buttons</td><td>No drop shadows. Primary: maroon background, white text; hover: <code>--color-maroon-hover</code> background and scale 1.05. Call-to-action: gold background, Gray 1 text, at most one per page (the main submit). Secondary: white background, 2px maroon border, maroon text. Sentence-case labels, one line, left-aligned text, specific verbs ("Find matches", "Why this match?", never "Learn more").</td><td>guide for shadows, scale, gold reservation, labels; team for the exact variant colors</td></tr>
+          <tr><td>Links</td><td>Inline links underlined, maroon, different from surrounding text. Navigation and footer links not underlined.</td><td>guide</td></tr>
+          <tr><td>Forms</td><td>A visible label above every input, associated by <code>for</code>/<code>id</code>; required fields get a maroon dot before the label plus the word "required" for screen readers; input border Gray 3 (3:1 against white).</td><td>guide (label, dot), WCAG (border contrast)</td></tr>
+          <tr><td>Header</td><td>A top bar (Gray 6 background, Gray 1 text) reading "Course project: CSE 573, Group 6" with the About link; below it the primary bar on white: a text wordmark "GetWork" (maroon, bold, upper left, not a logo image) and the main navigation; the current page has a 4px gold rule under it and <code>aria-current="page"</code>.</td><td>guide (gray top bar, nav on white, logo upper-left), team (content)</td></tr>
+          <tr><td>Footer</td><td>Gray 1 background, white text, gold ununderlined links: "GetWork is a CSE 573 course project at Arizona State University (Group 6). It is not an official ASU website." and a "Contact the team" link to the About page. No gold Support button (it would be a second gold call-to-action).</td><td>guide (footer layout idea, no-underline links), team (wording; the guide gave no disclaimer text)</td></tr>
+          <tr><td>Cards and chips</td><td>White card, 1px Gray 5 border, 8px radius, no shadow. Chips: shared = gold with Gray 1 text; related = white with 2px maroon border and maroon text; missing = Gray 6 with Gray 1 text and a dashed Gray 3 border; each with a symbol and a word.</td><td>team (the guide has no card spec)</td></tr>
+          <tr><td>Alerts</td><td>White background, Gray 1 text, 4px left rule (info blue, success green, warning orange, error maroon), a symbol and a bold label ("Error", "Note", "Warning").</td><td>team; colors from the guide, used for rules only because blue, green and orange fail 3:1 or 4.5:1 as text</td></tr>
+          <tr><td>Icons</td><td>Unicode symbols and inline SVG authored in-repo. Font Awesome Free is allowed by the guide but not needed in v1.</td><td>guide, team</td></tr>
+          <tr><td>Accessibility</td><td>WCAG 2.1 AA target; no accessibility overlay; skip-to-content link is the first tab stop; every control keyboard-operable; unique link text; one h1; landmarks <code>header</code>, <code>nav</code>, <code>main</code>, <code>footer</code>; usable at 200% zoom (no fixed pixel widths on text containers); no color-only meaning; <code>aria-live</code> for results; no text over images or patterns.</td><td>guide (checklist)</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Contrast pairs the test enforces</h3>
+      <p>Minimum 4.5:1 for text and 3:1 for the focus ring, control borders and large text (the guide requires AA; the thresholds are WCAG). Ratios computed by the planner:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Foreground on background</th><th>Ratio</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td>Gray 1 on white / on Gray 7 / on Gray 6</td><td>17.58 / 16.84 / 14.35</td><td>Body text, header bar</td></tr>
+          <tr><td>Gray 2 on white / on Gray 7 / on Gray 6</td><td>9.15 / 8.76 / 7.46</td><td>Secondary text, other chip</td></tr>
+          <tr><td>Gray 3 on white</td><td>4.67</td><td>Muted text, only on white surfaces. On Gray 7 it is 4.48 and fails, so muted text is never placed on the page background.</td></tr>
+          <tr><td>Maroon on white / on Gray 7 / on Gray 6</td><td>8.88 / 8.51 / 7.25</td><td>Links, related chip, secondary button, wordmark</td></tr>
+          <tr><td>White on maroon / on maroon-hover / on maroon-pressed</td><td>8.88 / 7.04 / 11.83</td><td>Primary button states</td></tr>
+          <tr><td>Gray 1 on gold</td><td>11.18</td><td>Call-to-action, shared chip</td></tr>
+          <tr><td>White on Gray 1; gold on Gray 1</td><td>17.58; 11.18</td><td>Footer text; footer links and footer focus ring</td></tr>
+          <tr><td>Gray 3 on white (control border); Gray 1 on white (focus ring)</td><td>4.67; 17.58</td><td>Non-text contrast, 3:1 required</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Forbidden by the guide, asserted absent from the declared pairs:</strong> gold text on white, white text on gold, maroon text on black, black or Gray 1 text on maroon. (Gold on maroon, 5.65, is not on the guide's avoid list and is not used in v1 anyway.)</p>
+      <h3>tokens.css (verbatim for T-11)</h3>
+<pre><code>/* src/web/src/theme/tokens.css */
+:root {
+  /* Palette: guide, color page */
+  --color-maroon: #8C1D40;
+  --color-gold: #FFC627;
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+  --color-green: #78BE20;
+  --color-blue: #00A3E0;
+  --color-orange: #FF7F32;
+  --color-copper: #AF674B;
+  --color-turquoise: #4AB7C4;
+  --color-pink: #E74973;
+  --color-gray-1: #191919;
+  --color-gray-2: #484848;
+  --color-gray-3: #747474;
+  --color-gray-4: #BFBFBF;
+  --color-gray-5: #D0D0D0;
+  --color-gray-6: #E8E8E8;
+  --color-gray-7: #FAFAFA;
+  /* Team decisions: the guide gives no value */
+  --color-maroon-hover: #A8214B;
+  --color-maroon-pressed: #6B1530;
+
+  /* Semantic roles: components reference only these */
+  --bg: var(--color-gray-7);
+  --surface: var(--color-white);
+  --text: var(--color-gray-1);
+  --text-secondary: var(--color-gray-2);
+  --text-muted: var(--color-gray-3);
+  --border: var(--color-gray-5);
+  --border-strong: var(--color-gray-3);
+  --link: var(--color-maroon);
+  --link-hover: var(--color-maroon-pressed);
+  --header-top-bg: var(--color-gray-6);
+  --header-top-fg: var(--color-gray-1);
+  --header-bg: var(--color-white);
+  --header-fg: var(--color-gray-1);
+  --wordmark: var(--color-maroon);
+  --nav-current-rule: var(--color-gold);
+  --footer-bg: var(--color-gray-1);
+  --footer-fg: var(--color-white);
+  --footer-link: var(--color-gold);
+  --btn-primary-bg: var(--color-maroon);
+  --btn-primary-fg: var(--color-white);
+  --btn-primary-hover-bg: var(--color-maroon-hover);
+  --btn-cta-bg: var(--color-gold);
+  --btn-cta-fg: var(--color-gray-1);
+  --btn-secondary-bg: var(--color-white);
+  --btn-secondary-fg: var(--color-maroon);
+  --btn-secondary-border: var(--color-maroon);
+  --chip-shared-bg: var(--color-gold);
+  --chip-shared-fg: var(--color-gray-1);
+  --chip-related-bg: var(--color-white);
+  --chip-related-fg: var(--color-maroon);
+  --chip-related-border: var(--color-maroon);
+  --chip-gap-bg: var(--color-gray-6);
+  --chip-gap-fg: var(--color-gray-1);
+  --chip-other-bg: var(--color-gray-6);
+  --chip-other-fg: var(--color-gray-2);
+  --alert-info-rule: var(--color-blue);
+  --alert-success-rule: var(--color-green);
+  --alert-warning-rule: var(--color-orange);
+  --alert-error-rule: var(--color-maroon);
+  --focus-ring: var(--color-gray-1);
+  --focus-ring-on-dark: var(--color-gold);
+  --focus-width: 3px;
+  --scale-hover: 1.05;
+
+  /* Type */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --text-base: 1rem;
+  --text-small: 0.875rem;
+  --text-h1: 2rem;
+  --text-h2: 1.5rem;
+  --text-h3: 1.25rem;
+  --line-height: 1.5;
+  --measure: 43.75rem;
+
+  /* Space: multiples of 8px */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 2.5rem;
+  --space-6: 3rem;
+  --space-8: 4rem;
+  --content-max: 72rem;
+
+  /* Shape */
+  --radius-button: 2rem;
+  --radius-control: 4px;
+  --radius-card: 8px;
+}</code></pre>
+
+      <h3>Running locally</h3>
+<pre><code># one-time
+uv sync                                   # installs fastapi, uvicorn and the rest
+npm --prefix src/web ci                   # frontend dependencies (needs network once; Node 20+)
+
+# 1. Try it with built-in demo data: no artifacts, no key, no GPU
+uv run webapp serve --demo                # API on http://127.0.0.1:8000  (docs at /docs)
+npm --prefix src/web run dev              # UI on http://localhost:5173 (proxies /api to :8000)
+
+# 2. Single process: build the UI once, then one server serves both
+npm --prefix src/web run build            # writes src/web/dist
+uv run webapp serve --demo                # open http://127.0.0.1:8000
+
+# 3. Real trial artifacts (after the pipeline chain has run)
+uv run webapp check                       # loads artifacts_trial/, prints health JSON, exit 0 or 2 with the fix hint
+uv run webapp serve                       # example-document queries work with no key and no GPU
+#   form queries need the embedding model (EMBED_BACKEND, local by default; first query loads it);
+#   text queries also need the structuring model (.env with your own VOYAGER_* or LOCAL_LLM_* values)
+# 4. Full corpus
+uv run webapp serve --artifacts-dir artifacts</code></pre>
+      <p>Keys stay in the user's git-ignored <code>.env</code> (<a href="../architecture.html#CC-10">CC-10</a>); no agent reads it. The 12 GB card cannot hold a local LLM server and the embedding model together (embedding-client E-9): for text queries on one GPU use <code>--backend voyager</code> for structuring and the local embedding model, or stop the LLM server and use the form. Query text is sent to whichever structuring service is configured; the UI says so next to the "Paste text" method (from the <code>structure</code> capability's <code>detail</code>).</p>
+
+      <h3>Testing approach</h3>
+      <ul>
+        <li><strong>Python</strong> (<code>uv run pytest</code>): every new test file starts with <code>pytestmark = pytest.mark.usefixtures("offline")</code> (sockets blocked, <code>VOYAGER_*</code>/<code>LLM_BACKEND</code>/<code>LOCAL_LLM_*</code> unset, cwd = <code>tmp_path</code>, so use absolute paths). API tests use Starlette's <code>TestClient</code> over <code>create_app(DemoEngine(), TemplateExplainer())</code> or a hand-written fake engine. <code>ArtifactEngine</code> tests build the synthetic artifact chain with the helper <code>src/tests/retrieval_helpers.py</code> (created by two-way-retrieval T-4: documents tables and vector sets from <code>FakeEmbeddingClient(dim=16)</code>), plus a synthetic alias table and taxonomy, and inject <code>FakeLLMClient</code> and <code>FakeEmbeddingClient</code>. No test loads a real model, reads <code>.env</code>, or touches the network.</li>
+        <li><strong>JavaScript</strong> (<code>npm --prefix src/web test</code>, Vitest + jsdom): components get an injected <code>fetchImpl</code> returning fixtures from <code>src/web/src/fixtures/contract.json</code>, the same file the Python contract test validates against the pydantic models, so frontend mocks cannot drift from the real API shapes. <code>vitest-axe</code> checks rendered pages for accessibility violations (jsdom cannot compute color contrast; that is covered by the token test).</li>
+        <li><strong>Guardrails</strong> (Python, so <code>uv run pytest</code> catches them without Node): no ASU GitHub reference, no logo or image assets, no external URLs in the page sources.</li>
+        <li><strong>Real runs</strong> (user-run, not acceptance criteria): checklist WA-1 to WA-6 in the runbook.</li>
+      </ul>
+
+      <h3>Files</h3>
+<div class="tree"><span class="dir">pyproject.toml</span>              <span class="comment"># modify: fastapi, uvicorn deps; httpx dev; webapp script (T-1, T-9)</span>
+<span class="dir">.gitignore</span>                  <span class="comment"># modify: node_modules, src/web/dist (T-10)</span>
+<span class="dir">README.md</span>                   <span class="comment"># modify: status table, run instructions (T-18)</span>
+<span class="dir">src/getwork/webapp/</span>
+├── <span class="file">__init__.py</span>             <span class="comment"># new (T-1)</span>
+├── <span class="file">models.py</span>               <span class="comment"># new (T-1)</span>
+├── <span class="file">explain.py</span>              <span class="comment"># new (T-3)</span>
+├── <span class="file">engine.py</span>               <span class="comment"># new (T-4)</span>
+├── <span class="file">demo.py</span>                 <span class="comment"># new (T-4)</span>
+├── <span class="file">api.py</span>                  <span class="comment"># new (T-5), static serving (T-6)</span>
+├── <span class="file">artifacts.py</span>            <span class="comment"># new (T-7), query-time path (T-8)</span>
+├── <span class="file">cli.py</span>                  <span class="comment"># new (T-9)</span>
+└── <span class="file">README.md</span>               <span class="comment"># new (T-18)</span>
+<span class="dir">src/web/</span>
+├── <span class="file">package.json, package-lock.json, vite.config.js, index.html</span>   <span class="comment"># new (T-10)</span>
+├── <span class="dir">public/</span><span class="file">favicon.svg</span>   <span class="comment"># new (T-10): in-repo text-only icon, no ASU mark</span>
+└── <span class="dir">src/</span>
+    ├── <span class="file">main.jsx, App.jsx</span>            <span class="comment"># new (T-10); App.jsx modified T-13, T-16, T-17</span>
+    ├── <span class="file">api.js, routes.js, Layout.jsx</span>  <span class="comment"># new (T-13)</span>
+    ├── <span class="file">capabilities.js, components/QueryForm.jsx</span>   <span class="comment"># new (T-14)</span>
+    ├── <span class="file">components/GroupedSkills.jsx, EvidenceChips.jsx, MatchCard.jsx</span>   <span class="comment"># new (T-15)</span>
+    ├── <span class="file">components/ExplainPanel.jsx, pages/FindPage.jsx</span>   <span class="comment"># new (T-16)</span>
+    ├── <span class="file">pages/AboutPage.jsx</span>          <span class="comment"># new (T-17)</span>
+    ├── <span class="dir">theme/</span><span class="file">tokens.css, pairs.js</span> <span class="comment"># new (T-11); components.css (T-12)</span>
+    ├── <span class="dir">fixtures/</span><span class="file">contract.json</span>        <span class="comment"># new (T-2)</span>
+    └── <span class="dir">test/</span><span class="file">setup.js</span>                  <span class="comment"># new (T-10); tests sit beside their modules</span>
+<span class="dir">src/tests/</span>
+└── <span class="file">test_webapp_models.py, test_webapp_contract.py, test_webapp_explain.py, test_webapp_engine.py,
+    test_webapp_api.py, test_webapp_static.py, test_webapp_artifacts.py, test_webapp_query.py,
+    test_webapp_cli.py, test_webapp_guardrails.py, test_webapp_docs.py</span>   <span class="comment"># new</span></div>
+    </section>
+
+    <section id="acceptance">
+      <h2>Acceptance criteria</h2>
+      <p>Each criterion states an observable behavior and the test that proves it. Ids are stable: append new ones, and mark removed ones with <code>&lt;del&gt;</code> instead of renumbering. Python tests live in <code>src/tests/</code> and run with <code>uv run pytest</code>; JavaScript tests sit beside their modules under <code>src/web/src/</code> and run with <code>npm --prefix src/web test</code>, written as <code>file :: test name</code>.</p>
+      <ol>
+        <li id="AC-1"><strong>AC-1</strong>: <code>MatchRequest</code> parses the three query kinds through the <code>kind</code> discriminator, defaults to <code>k=10</code> and <code>system="Full"</code>, accepts <code>k</code> 1 to 50 and rejects 0 and 51, rejects unknown <code>kind</code>, <code>direction</code>, <code>system</code>, extra fields, more than 100 skills, a skill longer than 80 characters, <code>years_experience</code> below 0 or above 60. <em>Test:</em> <code>src/tests/test_webapp_models.py::test_match_request_variants</code>, <code>::test_match_request_rejects_invalid</code></li>
+        <li id="AC-2"><strong>AC-2</strong>: Every response model round-trips through <code>model_dump</code>/<code>model_validate</code>; <code>ERROR_CODES</code> has exactly the ten documented codes with the documented statuses; <code>ErrorEnvelope</code> requires <code>error.code</code> and <code>error.message</code>. <em>Test:</em> <code>src/tests/test_webapp_models.py::test_response_models_round_trip</code>, <code>::test_error_codes_table</code></li>
+        <li id="AC-3"><strong>AC-3</strong>: <code>src/web/src/fixtures/contract.json</code> has top-level keys <code>health</code>, <code>examples</code>, <code>match</code>, <code>explain</code>, <code>error</code>, each validating against <code>HealthResponse</code>, <code>ExamplesResponse</code>, <code>MatchResponse</code>, <code>Explanation</code>, <code>ErrorEnvelope</code>; the match fixture has at least 3 matches and at least one match whose evidence has non-empty <code>shared</code>, <code>related</code> and <code>gaps</code>; the health fixture has <code>mode</code> "demo", both capability keys (<code>structure</code>, <code>embed</code>), and <code>levels</code>. <em>Test:</em> <code>src/tests/test_webapp_contract.py::test_contract_fixture_validates</code>, <code>::test_contract_covers_all_evidence_kinds</code></li>
+        <li id="AC-4"><strong>AC-4</strong>: <code>build_evidence</code> on a hand-built pair (resume skills with clusters: Vue, CSS, JavaScript all Front-end, SQL Data, Excel Other; posting skills: React, JavaScript, CSS all Front-end, Kubernetes Cloud, Excel Other) returns shared = [JavaScript, CSS, Excel] (posting order), related = exactly one group, Front-end, with resume_skills [Vue] and posting_skills [React] (no Cloud group, because the resume has no unshared Cloud skill), gaps = [Kubernetes (Cloud)], with these values written out in the test; swapping query and match with the opposite direction returns an equal <code>Evidence</code>. <em>Test:</em> <code>src/tests/test_webapp_explain.py::test_evidence_shared_related_gaps</code>, <code>::test_evidence_direction_independent</code></li>
+        <li id="AC-5"><strong>AC-5</strong>: Skills under "Other" never form a related group; case and punctuation variants ("node.js " vs "Node.js") are shared via <code>normalize_key</code>; empty skill lists give all-empty lists; <code>level.relation</code> is same, adjacent, different, and unknown (either side "Not specified"); <code>title_overlap</code> is sorted and uses <code>title_tokens</code>. <em>Test:</em> <code>src/tests/test_webapp_explain.py::test_evidence_other_never_related</code>, <code>::test_evidence_edge_cases</code>, <code>::test_level_relations</code></li>
+        <li id="AC-6"><strong>AC-6</strong>: <code>TemplateExplainer.explain</code> returns the exact summary and bullets specified in I-2 for the AC-4 pair (including the related bullet, the singular "1 gap", and the "and N more" overflow with 10 shared skills) and the fallback bullet when nothing overlaps; it is deterministic (two calls equal); every skill name in summary, bullets and evidence appears in one of the two documents' skills (a faithfulness check); <code>info</code> is <code>kind="template"</code>, <code>model=None</code>. <em>Test:</em> <code>src/tests/test_webapp_explain.py::test_template_explanation_exact_text</code>, <code>::test_template_overflow_and_fallback</code>, <code>::test_explanation_names_only_known_skills</code></li>
+        <li id="AC-7"><strong>AC-7</strong>: <code>EngineError</code> stores code, message, hint, field and a status equal to <code>ERROR_CODES[code]</code>; an unknown code raises <code>ValueError</code>; <code>str(err)</code> is the message. <em>Test:</em> <code>src/tests/test_webapp_engine.py::test_engine_error_codes</code></li>
+        <li id="AC-8"><strong>AC-8</strong>: <code>DemoEngine</code> satisfies the <code>Engine</code> protocol: <code>health()</code> reports mode "demo", counts 6 and 6, all three systems, <code>levels</code> from <code>LEVELS</code> plus "Not specified", structure unavailable with the reason "Demo mode has no language model." and embed available (so forms are enabled); <code>examples</code> respects side and limit and returns ids in order; <code>get_document</code> returns a <code>DocumentView</code> and raises <code>EngineError("not_found")</code> for an unknown id; demo content meets the required-content list. <em>Test:</em> <code>src/tests/test_webapp_engine.py::test_demo_health_examples_documents</code>, <code>::test_demo_content_requirements</code></li>
+        <li id="AC-9"><strong>AC-9</strong>: <code>DemoEngine.match</code>: corpus query "r-1" returns ranks in score-descending, position-tie order, <code>k_effective = min(k, 6)</code>; under Full "j-1" (React) scores higher than under B2 for r-1 (partial credit) and the evidence for that pair has a Front-end related group; a form query with skills "js", "vue" returns canonical "JavaScript" and "Vue" with clusters; an empty form raises <code>empty_query</code>; a posting id for <code>resume_to_posting</code> raises <code>side_mismatch</code>; a text query raises <code>capability_unavailable</code>. <em>Test:</em> <code>src/tests/test_webapp_engine.py::test_demo_corpus_match_ranking_and_partial_credit</code>, <code>::test_demo_form_match</code>, <code>::test_demo_match_errors</code></li>
+        <li id="AC-10"><strong>AC-10</strong>: <code>GET /api/health</code> returns 200 with a body that validates as <code>HealthResponse</code>, <code>status "ok"</code> and the explainer info passed to <code>create_app</code>. <em>Test:</em> <code>src/tests/test_webapp_api.py::test_health</code></li>
+        <li id="AC-11"><strong>AC-11</strong>: <code>GET /api/examples</code> returns <code>limit</code> items of the requested side (default 6); <code>side=foo</code>, <code>limit=0</code> and <code>limit=21</code> return 422 with an <code>ErrorEnvelope</code> whose code is <code>invalid_request</code> and whose <code>field</code> names the parameter. <em>Test:</em> <code>src/tests/test_webapp_api.py::test_examples</code>, <code>::test_examples_validation</code></li>
+        <li id="AC-12"><strong>AC-12</strong>: <code>POST /api/match</code> returns 200 <code>MatchResponse</code> for both directions and all three systems; ranks are 1..n, every match has evidence equal to <code>build_evidence</code> of the response query and that match's document, <code>k</code> and <code>k_effective</code> are reported, <code>notes</code> and <code>provenance</code> are present. <em>Test:</em> <code>src/tests/test_webapp_api.py::test_match_both_directions_all_systems</code>, <code>::test_match_evidence_matches_builder</code></li>
+        <li id="AC-13"><strong>AC-13</strong>: Error mapping: invalid body, unknown field and <code>k=0</code> give 422 <code>invalid_request</code> with <code>field</code>; an unknown corpus id gives 404 <code>not_found</code>; empty form gives 400 <code>empty_query</code>; a wrong-side id gives 400 <code>side_mismatch</code>; a text query on the demo engine gives 503 <code>capability_unavailable</code>; an unknown <code>/api/nope</code> gives 404 <code>not_found</code> as JSON; an engine that raises <code>RuntimeError("secret-key-123 leaked")</code> gives 500 <code>internal</code> with the fixed message, the response body does not contain "secret-key-123", and the log record (<code>caplog</code>) does not either when it was passed in <code>secrets</code>. <em>Test:</em> <code>src/tests/test_webapp_api.py::test_error_envelopes</code>, <code>::test_internal_error_is_generic_and_redacted</code></li>
+        <li id="AC-14"><strong>AC-14</strong>: <code>POST /api/explain</code> returns an <code>Explanation</code> for a query view taken from a match response and a match id; unknown <code>match_id</code> gives 404; a match id on the query's own side gives 400 <code>side_mismatch</code>; a query view with more than 200 skills gives 422; an injected fake <code>Explainer</code> is the one called and its <code>info</code> is returned in <code>explainer</code> (the match-agent seam). <em>Test:</em> <code>src/tests/test_webapp_api.py::test_explain</code>, <code>::test_explain_errors</code>, <code>::test_explain_uses_injected_explainer</code></li>
+        <li id="AC-15"><strong>AC-15</strong>: With a <code>static_dir</code> holding <code>index.html</code> and <code>assets/app.js</code>, <code>GET /</code> returns the index and <code>GET /assets/app.js</code> returns the file with a JavaScript content type; without a <code>static_dir</code> (or a directory with no <code>index.html</code>) <code>GET /</code> returns 200 HTML containing "Frontend not built" and the command <code>npm --prefix src/web run build</code>; <code>/api/*</code> routes still work in both cases. <em>Test:</em> <code>src/tests/test_webapp_static.py::test_serves_built_frontend</code>, <code>::test_placeholder_without_build</code></li>
+        <li id="AC-16"><strong>AC-16</strong>: The app sends no CORS headers: a request with an <code>Origin</code> header gets no <code>access-control-allow-origin</code> in the response, and no CORS middleware is installed. <em>Test:</em> <code>src/tests/test_webapp_api.py::test_no_cors</code></li>
+        <li id="AC-17"><strong>AC-17</strong>: <code>ArtifactEngine.load</code> on the synthetic chain succeeds and <code>health()</code> reports counts, systems, versions (alias, taxonomy, serialization, relabel mode, embedding identity), <code>artifacts_dir</code>, and capabilities derived from the passed resources (with reasons when absent); with <code>systems=["B1+"]</code> it loads without vector files; it raises <code>EngineLoadError</code> whose message contains the hint (<code>doc-embed build</code> or <code>doc-embed embed</code>) for missing documents or vectors, the stale-vector text for a changed document text, and the version names for an alias-table vs taxonomy mismatch and a taxonomy vs documents mismatch; an unknown or empty systems list raises <code>EngineLoadError</code>. <em>Test:</em> <code>src/tests/test_webapp_artifacts.py::test_load_and_health</code>, <code>::test_load_b1plus_only</code>, <code>::test_load_errors_have_hints</code></li>
+        <li id="AC-18"><strong>AC-18</strong>: Corpus queries: for every system loaded and both directions, <code>match(CorpusQuery(id))</code> returns the same ids and scores (within 1e-6) as <code>getwork.retrieval.query.query_matches</code> for the same inputs; the embedding factory is never called; a system that was not loaded gives <code>capability_unavailable</code>; <code>examples</code> and <code>get_document</code> return views built from the documents table (skills with clusters and via); <code>k</code> larger than the other side is clipped (<code>k_effective</code>). <em>Test:</em> <code>src/tests/test_webapp_artifacts.py::test_corpus_match_equals_query_matches</code>, <code>::test_corpus_match_needs_no_embedder</code>, <code>::test_documents_views_and_k_clipping</code></li>
+        <li id="AC-19"><strong>AC-19</strong>: Form queries: a form that reproduces the fields of corpus document r-1 (its title, years, final skills) returns the same top-k ids as the corpus query r-1 for Full, B2 and B1+; an alias in the synthetic table ("js") appears canonicalized in the returned query view; a skill unknown to the taxonomy is under Other with via "default"; resume forms ignore <code>level</code>, posting forms use it as the listed level; an empty form is <code>empty_query</code>; no embedder with system Full is <code>capability_unavailable</code> carrying <code>embed_reason</code>, while B1+ works; an embedder whose identity differs from the stored vectors is <code>embedding_mismatch</code>; notes <code>no_skills</code>, <code>sparse_query</code>, <code>unknown_skills</code> appear for the inputs that trigger them. <em>Test:</em> <code>src/tests/test_webapp_query.py::test_form_reproduces_corpus_ranking</code>, <code>::test_form_canonicalizes_and_labels</code>, <code>::test_form_capability_and_mismatch_errors</code>, <code>::test_query_notes</code></li>
+        <li id="AC-20"><strong>AC-20</strong>: Text queries with a <code>FakeLLMClient</code> that returns a valid structurer JSON reply: the client is called once with the configured model, the returned query view has the structured title and canonicalized, clustered skills, and the ranking equals the form query with the same fields; invalid JSON on every attempt gives 502 <code>structuring_failed</code> whose message does not contain the configured secret; <code>FatalLLMError</code> gives <code>structuring_failed</code> with the generic message; blank text is <code>empty_query</code>; text over <code>max_query_chars</code> is <code>text_too_long</code> and the client is not called; no structure resources is <code>capability_unavailable</code> with <code>structure_reason</code>; the query text appears in no log record (<code>caplog</code>). <em>Test:</em> <code>src/tests/test_webapp_query.py::test_text_query_pipeline</code>, <code>::test_text_query_failures</code>, <code>::test_text_query_limits_and_privacy</code></li>
+        <li id="AC-21"><strong>AC-21</strong>: The embedder factory runs once across several queries, and two concurrent queries (threads) never run <code>embed()</code> at the same time (a fake client records overlap). <em>Test:</em> <code>src/tests/test_webapp_query.py::test_embedder_lazy_once_and_serialized</code></li>
+        <li id="AC-22"><strong>AC-22</strong>: <code>webapp check --demo</code> via <code>cli.main</code> prints a <code>HealthResponse</code> JSON with mode "demo" and returns 0; <code>check</code> on a synthetic artifact tree returns 0 without calling the LLM or embedding factory; missing artifacts return 2 with the hint in stderr; the default <code>--artifacts-dir</code> is <code>artifacts_trial</code> and a default run from an empty directory returns 2 and creates no files; unknown <code>--systems</code> or <code>--b1plus-weights</code> with a bad file return 2. <em>Test:</em> <code>src/tests/test_webapp_cli.py::test_check_demo_and_artifacts</code>, <code>::test_check_errors_exit_2</code>, <code>::test_default_artifacts_dir_is_trial</code></li>
+        <li id="AC-23"><strong>AC-23</strong>: <code>webapp serve --demo</code> calls the injected <code>run</code> once with an app, host "127.0.0.1" and port 8000 by default; <code>--host</code> and <code>--port</code> take effect; a non-loopback host prints a stderr warning containing "no authentication"; <code>--static-dir</code> is passed to <code>create_app</code>, and by default <code>WEB_DIST</code> is used only when it contains <code>index.html</code>; <code>WEB_DIST</code> equals <code>&lt;repo&gt;/src/web/dist</code>. <em>Test:</em> <code>src/tests/test_webapp_cli.py::test_serve_defaults_and_options</code>, <code>::test_serve_warns_on_public_host</code>, <code>::test_web_dist_location</code></li>
+        <li id="AC-24"><strong>AC-24</strong>: Without any key in <code>environ</code> and no injected client, <code>serve</code> still starts and health shows structure unavailable with a reason naming the missing variable (<code>VOYAGER_API_KEY</code>) and never a value; with an injected fake LLM client and <code>--model</code>, structure is available and <code>detail</code> names backend and model but not the key; <code>--no-structure</code> and <code>--no-embed</code> mark the capability unavailable with a reason; an injected fake embedding client makes embed available; stdout and stderr never contain the fake secret used in the test. <em>Test:</em> <code>src/tests/test_webapp_cli.py::test_capabilities_from_environment</code>, <code>::test_no_secret_in_output</code></li>
+        <li id="AC-25"><strong>AC-25</strong>: <code>pyproject.toml</code> lists <code>fastapi</code> and <code>uvicorn</code> in dependencies, <code>httpx</code> in the dev group and the script <code>webapp = "getwork.webapp.cli:main"</code>; no module under <code>src/getwork/webapp/</code> imports <code>torch</code>, <code>sentence_transformers</code> or <code>openai</code>, and importing <code>getwork.webapp.api</code> leaves those names out of <code>sys.modules</code> (checked in a subprocess). <em>Test:</em> <code>src/tests/test_webapp_cli.py::test_pyproject_script_and_deps</code>, <code>::test_no_heavy_imports</code></li>
+        <li id="AC-26"><strong>AC-26</strong>: The frontend project installs and builds: <code>npm --prefix src/web ci</code> succeeds, <code>npm --prefix src/web test</code> exits 0 offline, and <code>npm --prefix src/web run build</code> writes <code>src/web/dist/index.html</code>; the smoke test renders <code>App</code> with a mocked health reply and finds the h1. <em>Test:</em> <code>src/web/src/App.test.jsx :: renders the shell with a mocked health reply</code>; build check: run <code>npm --prefix src/web run build &amp;&amp; test -f src/web/dist/index.html</code> (not a Vitest test because it exercises the bundler)</li>
+        <li id="AC-27"><strong>AC-27</strong>: <code>tokens.css</code> declares every palette token with the exact guide hex values (primary, secondary, grays); <code>--font-stack</code> equals the guide string exactly; every <code>--space-*</code> is a multiple of 0.5rem; <code>--measure</code> is 43.75rem; <code>--text-base</code> is 1rem; every text pair in <code>pairs.js</code> meets 4.5:1 and every non-text pair 3:1 after resolving <code>var()</code> chains; none of the forbidden combinations (gold on white, white on gold, maroon on black, black or Gray 1 on maroon) appears in <code>pairs.js</code>; <code>--text-muted</code> is never paired with <code>--bg</code>. <em>Test:</em> <code>src/web/src/theme/theme.test.js :: palette matches the brand guide values</code>, <code>:: font stack and spacing rules</code>, <code>:: all declared pairs meet contrast thresholds</code>, <code>:: forbidden pairs are absent</code></li>
+        <li id="AC-28"><strong>AC-28</strong>: Style rules over all <code>.css</code> files in <code>src/web/src</code>: no <code>font-style: italic</code>, no <code>text-transform: uppercase</code>, no <code>font-family</code> other than <code>var(--font-stack)</code>, <code>text-decoration: underline</code> only in rules whose selector is a link (<code>a</code>, <code>.link</code>), no <code>box-shadow</code> in any <code>.btn</code> rule, button hover uses <code>transform: scale(var(--scale-hover))</code> and no hover rule changes <code>color</code> or <code>text-decoration</code> of a button, a <code>:focus-visible</code> rule uses <code>var(--focus-width)</code> and <code>var(--focus-ring)</code>, a <code>prefers-reduced-motion</code> block removes transforms, <code>.measure</code> uses <code>max-width: var(--measure)</code>, no <code>px</code> font sizes, and no <code>http://</code> or <code>https://</code> URL in any CSS. <em>Test:</em> <code>src/web/src/theme/style-rules.test.js :: brand typography rules</code>, <code>:: button rules</code>, <code>:: focus and motion rules</code>, <code>:: no external urls in css</code></li>
+        <li id="AC-29"><strong>AC-29</strong>: <code>api.js</code>: with an injected fetch, <code>getHealth</code>, <code>getExamples</code>, <code>postMatch</code> and <code>postExplain</code> call the documented method, path and JSON body and return parsed data; a non-2xx <code>ErrorEnvelope</code> becomes an <code>ApiError</code> with status, code, message, hint and field; a rejected fetch becomes <code>ApiError</code> with status 0 and code <code>network_unreachable</code>; a non-JSON body becomes <code>bad_response</code>; <code>describeError</code> returns the title from the table in I-7 for every code and the generic title for an unknown code. <em>Test:</em> <code>src/web/src/api.test.js :: calls the documented endpoints</code>, <code>:: maps error envelopes</code>, <code>:: maps network and bad responses</code>, <code>:: describeError titles</code></li>
+        <li id="AC-30"><strong>AC-30</strong>: App shell: the skip link is the first focusable element and targets <code>main</code>; landmarks banner, navigation, main and contentinfo exist; each route renders exactly one h1; navigation links have <code>aria-current="page"</code> on the active route and change <code>window.location.hash</code>; <code>parseRoute</code> falls back to jobs; when <code>getHealth</code> rejects the page shows "Cannot reach the GetWork server" and the command <code>uv run webapp serve</code>, and Retry calls it again; a demo-mode health shows the demo banner on every route; the footer contains the exact disclaimer and no element is an <code>img</code> with an ASU mark (no <code>img</code> at all). <em>Test:</em> <code>src/web/src/App.test.jsx :: skip link and landmarks</code>, <code>:: routing and one h1 per route</code>, <code>:: health failure and retry</code>, <code>:: demo banner</code>, <code>:: footer disclaimer</code>; <code>src/web/src/routes.test.js :: parseRoute and hrefFor</code></li>
+        <li id="AC-31"><strong>AC-31</strong>: <code>QueryForm</code> builds the right <code>MatchRequest</code>: paste method gives <code>{kind:"text", text, title?}</code>, form method gives <code>{kind:"form", title, years_experience | level, skills[]}</code>, example method (examples loaded with <code>getExamples</code>) gives <code>{kind:"corpus", id}</code>; direction, selected <code>k</code> and <code>system</code> are included; empty text, a form with no title and no skills, and no chosen example show an inline error and do not call <code>onSubmit</code>; the resume form shows a years field and the posting form shows a level select filled from <code>health.levels</code>; a method that <code>canRun</code> rejects is disabled and its reason is visible text; every control has an associated label and required fields have the maroon-dot marker plus the visually hidden word "required"; the paste method shows the privacy line with the structure capability's detail; reading a <code>.txt</code> file fills the textarea. <em>Test:</em> <code>src/web/src/components/QueryForm.test.jsx :: builds requests for each method</code>, <code>:: validates before submitting</code>, <code>:: resume and posting fields</code>, <code>:: disables unavailable methods with a reason</code>, <code>:: labels and privacy line</code>, <code>:: loads a text file</code></li>
+        <li id="AC-32"><strong>AC-32</strong>: <code>parseSkills</code> splits on newlines, commas and semicolons, trims, drops blanks, removes case-insensitive duplicates keeping the first spelling, and caps at 100; <code>canRun</code> follows the rules in I-7 for every kind and system combination with and without each capability and returns the capability's reason when not ok. <em>Test:</em> <code>src/web/src/capabilities.test.js :: parseSkills</code>, <code>:: canRun matrix</code></li>
+        <li id="AC-33"><strong>AC-33</strong>: <code>GroupedSkills</code> groups by cluster in first-appearance order with "Other" last and a heading per group; <code>EvidenceChips</code> renders shared, related and missing chips each with its text label and symbol (so meaning is not color-only) and renders nothing for an empty kind; <code>MatchCard</code> shows rank, title, level, the score with 3 decimals, the label "Similarity" (Full, B2) or "Keyword score" (B1+), a "Why this match?" button with <code>aria-expanded</code> that toggles and calls <code>onToggle</code>, and renders <code>children</code> only when expanded. <em>Test:</em> <code>src/web/src/components/GroupedSkills.test.jsx :: groups and orders</code>; <code>src/web/src/components/EvidenceChips.test.jsx :: labels and symbols</code>; <code>src/web/src/components/MatchCard.test.jsx :: card content and toggle</code></li>
+        <li id="AC-34"><strong>AC-34</strong>: <code>ExplainPanel</code> calls <code>postExplain</code> once on mount with <code>{direction, query, match_id}</code>, shows a loading status then the summary, bullets and the explainer line ("Explained by rules, no language model" for kind template, else the model name); on failure shows the described error and a "Try again" button that calls the API again and replaces the error on success; the rest of the page is unaffected. <em>Test:</em> <code>src/web/src/components/ExplainPanel.test.jsx :: loads and renders an explanation</code>, <code>:: shows an error and retries</code></li>
+        <li id="AC-35"><strong>AC-35</strong>: <code>FindPage</code> lifecycle with a mocked fetch: submitting posts the request and shows a status "Finding matches..." with the submit disabled; results show the "What we understood" card, notes as warning alerts, a result count in a live region, one <code>MatchCard</code> per match, and focus moves to the results heading; expanding a card renders its <code>ExplainPanel</code>; an API error shows an alert with the title for its code and the hint, and keeps the form input; <code>network_unreachable</code> shows the server-not-reachable text; zero matches shows the empty state; changing the ranking method and resubmitting sends the new <code>system</code>; at no point (idle, loading, error, results, empty, expanded) does the DOM contain more than one element with class <code>btn-cta</code>. <em>Test:</em> <code>src/web/src/pages/FindPage.test.jsx :: submit, loading and results</code>, <code>:: error states</code>, <code>:: empty state</code>, <code>:: explain expands a card</code>, <code>:: one cta button per page</code></li>
+        <li id="AC-36"><strong>AC-36</strong>: <code>AboutPage</code> shows counts, artifacts directory, versions, embedding identity, the three ranking methods with their CC-6 ids, each capability with availability and reason, the explainer, the privacy note, the author names, and the disclaimer; in demo mode it states that demo data is in use. <em>Test:</em> <code>src/web/src/pages/AboutPage.test.jsx :: shows health data and methods</code>, <code>:: capability reasons and demo</code></li>
+        <li id="AC-37"><strong>AC-37</strong>: <code>vitest-axe</code> finds no violations (jsdom-supported rules) for the App at each route, for FindPage after results, with an error alert, and with an expanded explanation. <em>Test:</em> <code>src/web/src/a11y.test.jsx :: no axe violations on each route</code>, <code>:: no axe violations in result and error states</code></li>
+        <li id="AC-38"><strong>AC-38</strong>: No ASU GitHub reference or dependency: no file under <code>src/web</code> (excluding <code>node_modules</code>, <code>dist</code>) or <code>src/getwork/webapp</code> matches case-insensitively <code>github\.com/[^\s"']*asu</code>, <code>@asu/</code>, <code>asu-web-standards</code>, <code>unity-(react|bootstrap|design)</code>; <code>package.json</code> has no dependency whose name contains "asu" and no dependency spec that is a <code>git</code>, <code>github:</code> or URL spec; every <code>resolved</code> URL in <code>package-lock.json</code> starts with <code>https://registry.npmjs.org/</code>; the new <code>pyproject.toml</code> dependencies contain no git URL. <em>Test:</em> <code>src/tests/test_webapp_guardrails.py::test_no_asu_github_references</code>, <code>::test_dependencies_are_registry_only</code></li>
+        <li id="AC-39"><strong>AC-39</strong>: No ASU marks or external loads: the only non-text asset under <code>src/web</code> (excluding <code>node_modules</code>, <code>dist</code>) is <code>public/favicon.svg</code>; no file name matches <code>asu|sparky|devil|sundevil</code> case-insensitively; <code>index.html</code>, all <code>.css</code> and all non-test <code>.js</code>/<code>.jsx</code> files contain no <code>http://</code> or <code>https://</code> URL except the SVG namespace <code>http://www.w3.org/2000/svg</code>; no <code>&lt;link&gt;</code> or <code>@import</code> to a font host. <em>Test:</em> <code>src/tests/test_webapp_guardrails.py::test_only_authored_assets</code>, <code>::test_no_external_loads</code></li>
+        <li id="AC-40"><strong>AC-40</strong>: Documentation: <code>src/getwork/webapp/README.md</code> has headings WA-1 to WA-6 and the strings <code>webapp serve --demo</code>, <code>webapp check</code>, <code>artifacts_trial</code>, <code>--artifacts-dir artifacts</code>, <code>npm --prefix src/web ci</code>, <code>npm --prefix src/web run build</code>, <code>EMBED_BACKEND</code>, <code>no authentication</code>; the root <code>README.md</code> status table row for the web app says Built and mentions <code>webapp serve --demo</code>; <code>.gitignore</code> ignores <code>node_modules/</code> and <code>src/web/dist/</code>. <em>Test:</em> <code>src/tests/test_webapp_docs.py::test_runbook_headings_and_commands</code>, <code>::test_readme_and_gitignore</code></li>
+        <li id="AC-41"><strong>AC-41</strong>: The whole suite passes with no key, no model and no network, and leaves the tree clean: <code>env -u VOYAGER_API_KEY -u VOYAGER_BASE_URL -u VOYAGER_MODEL -u LLM_BACKEND -u EMBED_BACKEND uv run pytest -q</code> exits 0, <code>npm --prefix src/web test</code> exits 0, and <code>git status --porcelain data/ artifacts_trial/ src/web/dist</code> lists nothing created by the tests. <em>Check:</em> run the three commands (not a test: they cover whole suites and the working tree).</li>
+      </ol>
+    </section>
+
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>Each task is at most about 200 changed lines including tests, touches at most about 4 files, and has one concern. Tasks that touch the same file are sequenced (<code>pyproject.toml</code>: T-1 then T-9; <code>api.py</code>: T-5 then T-6; <code>artifacts.py</code>: T-7 then T-8; <code>main.jsx</code>: T-10, T-11, T-12; <code>App.jsx</code>: T-10, T-13, T-16, T-17). Developers never read <code>.env</code>, never load a real model, never call a real API, and start each new Python test file with <code>pytestmark = pytest.mark.usefixtures("offline")</code>. Upstream prerequisites are named by module because their tasks are numbered in their own specs: <strong>U-docembed-levels</strong> = document-embedding T-1 (<code>getwork.docembed.levels</code>); <strong>U-b1plus</strong> = two-way-retrieval T-2 (<code>getwork.retrieval.b1plus</code> primitives); <strong>U-taxonomy</strong> = skill-taxonomy T-2 (<code>getwork.taxonomy.model</code>); <strong>U-pipeline</strong> = everything else listed in Interfaces (cluster-relabeling records, document-embedding documents and vectors, embedding-client, two-way-retrieval inputs, run, query, topk, and <code>src/tests/retrieval_helpers.py</code>). The frontend tasks T-10 to T-17 have no upstream dependency and can start now.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Summary</th><th>Depends on</th><th>ACs</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#T-1">T-1</a></td><td>API pydantic models, package, Python deps</td><td>none</td><td>AC-1, AC-2</td></tr>
+            <tr><td><a href="#T-2">T-2</a></td><td>Shared contract fixture and its validation test</td><td>T-1</td><td>AC-3</td></tr>
+            <tr><td><a href="#T-3">T-3</a></td><td>Evidence builder and TemplateExplainer</td><td>T-1, U-docembed-levels, U-b1plus, U-taxonomy</td><td>AC-4, AC-5, AC-6</td></tr>
+            <tr><td><a href="#T-4">T-4</a></td><td>Engine protocol, EngineError, DemoEngine</td><td>T-1, T-3</td><td>AC-7, AC-8, AC-9</td></tr>
+            <tr><td><a href="#T-5">T-5</a></td><td>FastAPI app: routes, error envelopes, no CORS</td><td>T-3, T-4</td><td>AC-10 to AC-14, AC-16</td></tr>
+            <tr><td><a href="#T-6">T-6</a></td><td>Serve the built frontend or a placeholder</td><td>T-5</td><td>AC-15</td></tr>
+            <tr><td><a href="#T-7">T-7</a></td><td>ArtifactEngine: load, health, corpus queries</td><td>T-4, U-pipeline</td><td>AC-17, AC-18</td></tr>
+            <tr><td><a href="#T-8">T-8</a></td><td>ArtifactEngine: form and text queries, lazy embedder</td><td>T-7</td><td>AC-19, AC-20, AC-21</td></tr>
+            <tr><td><a href="#T-9">T-9</a></td><td><code>webapp</code> command: serve, check, capabilities</td><td>T-6, T-8, T-1</td><td>AC-22 to AC-25</td></tr>
+            <tr><td><a href="#T-10">T-10</a></td><td>Frontend scaffold (Vite, React, Vitest) and .gitignore</td><td>none</td><td>AC-26</td></tr>
+            <tr><td><a href="#T-11">T-11</a></td><td>Theme tokens and contrast test</td><td>T-10</td><td>AC-27</td></tr>
+            <tr><td><a href="#T-12">T-12</a></td><td>Component styles and brand style-rule tests</td><td>T-11</td><td>AC-28</td></tr>
+            <tr><td><a href="#T-13">T-13</a></td><td>API client, routes, layout, app shell</td><td>T-10, T-2, T-12</td><td>AC-29, AC-30</td></tr>
+            <tr><td><a href="#T-14">T-14</a></td><td>Query form and capability helpers</td><td>T-13</td><td>AC-31, AC-32</td></tr>
+            <tr><td><a href="#T-15">T-15</a></td><td>Skill groups, evidence chips, match card</td><td>T-13</td><td>AC-33</td></tr>
+            <tr><td><a href="#T-16">T-16</a></td><td>Explain panel and Find page lifecycle</td><td>T-14, T-15</td><td>AC-34, AC-35</td></tr>
+            <tr><td><a href="#T-17">T-17</a></td><td>About page and accessibility test</td><td>T-16</td><td>AC-36, AC-37</td></tr>
+            <tr><td><a href="#T-18">T-18</a></td><td>Guardrail tests, runbook, README, final check</td><td>T-9, T-17</td><td>AC-38 to AC-41</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section id="T-1" class="card">
+        <div class="card-header"><span class="badge badge-info">T-1</span><h3>API pydantic models, package, Python dependencies</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/__init__.py</code> (new, empty), <code>src/getwork/webapp/models.py</code> (new), <code>src/tests/test_webapp_models.py</code> (new), <code>pyproject.toml</code> (modify).</p>
+        <p><strong>Depends on:</strong> none. <strong>Satisfies:</strong> AC-1, AC-2. <strong>Cites:</strong> <a href="../architecture.html#CC-6">CC-6</a>, <a href="../architecture.html#CC-18">CC-18</a>, <a href="../architecture.html#ADR-17">ADR-17</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-1">I-1 · models.py</a>, the whole block, copied unchanged into <code>models.py</code> (imports at the top: <code>typing</code>, <code>pydantic</code>).</p>
+        <p><strong>Instructions:</strong> Create the module exactly as I-1. Request models use <code>extra="forbid"</code>; response models use the pydantic default. Add a validator to <code>FormQuery.skills</code> rejecting any item longer than <code>MAX_SKILL_CHARS</code>. Keep the file free of FastAPI imports (the models are also used by tests and the CLI). In <code>pyproject.toml</code> add <code>"fastapi"</code> and <code>"uvicorn"</code> to <code>dependencies</code> and <code>"httpx"</code> to the <code>dev</code> group; do not add the script yet (T-9). Do not touch <code>uv.lock</code> by hand: run <code>uv lock</code> if the repo's workflow expects it and report it. Tests per AC-1 and AC-2: valid and invalid payloads for each kind, bounds for <code>k</code>, a round trip for each response model built from literals, and the exact <code>ERROR_CODES</code> mapping.</p>
+      </section>
+
+      <section id="T-2" class="card">
+        <div class="card-header"><span class="badge badge-info">T-2</span><h3>Shared contract fixture and validation test</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/fixtures/contract.json</code> (new), <code>src/tests/test_webapp_contract.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1. <strong>Satisfies:</strong> AC-3. <strong>Cites:</strong> <a href="../architecture.html#CC-18">CC-18</a>.</p>
+        <p><strong>Interfaces:</strong> consumes I-1 (<code>HealthResponse</code>, <code>ExamplesResponse</code>, <code>MatchResponse</code>, <code>Explanation</code>, <code>ErrorEnvelope</code>). This file is the contract frontend tasks mock against.</p>
+        <p><strong>Instructions:</strong> Write <code>contract.json</code> with the five top-level keys by hand, in the React/Vue story: <code>health</code> (mode "demo", counts 6 and 6, systems all three, levels from the CC-16 scale plus "Not specified", versions with demo true, capabilities: structure unavailable with reason "Demo mode has no language model.", embed available with detail "demo scoring, no embedding model"; explainer template); <code>examples</code> (3 resume views); <code>match</code> (direction resume_to_posting, system Full, query_kind corpus, k 10, k_effective 3, a query view with Vue, CSS, JavaScript, SQL and Excel under Other, three matches ranked 1 to 3 with scores 0.8123, 0.7412, 0.3005, the first with non-empty shared, related (Front-end: Vue / React) and gaps (Kubernetes), one note of code <code>sparse_query</code>, provenance demo true); <code>explain</code> (the Explanation the TemplateExplainer would give for match 1, text as in I-2); <code>error</code> (code <code>capability_unavailable</code> with message and hint). The Python test loads the file from <code>Path(__file__).resolve().parents[1] / "web" / "src" / "fixtures" / "contract.json"</code> and validates each section with <code>model_validate</code>, then asserts the coverage rules of AC-3. Keep the file under 150 lines.</p>
+      </section>
+
+      <section id="T-3" class="card">
+        <div class="card-header"><span class="badge badge-info">T-3</span><h3>Evidence builder and TemplateExplainer</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/explain.py</code> (new), <code>src/tests/test_webapp_explain.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1, U-docembed-levels (<code>level_rank</code>), U-b1plus (<code>title_tokens</code>), U-taxonomy (<code>OTHER</code>). <strong>Satisfies:</strong> AC-4, AC-5, AC-6. <strong>Cites:</strong> <a href="../architecture.html#ADR-16">ADR-16</a>, <a href="../architecture.html#ADR-5">ADR-5</a>, <a href="../architecture.html#CC-2">CC-2</a>, <a href="../architecture.html#CC-18">CC-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-2">I-2 · explain.py</a>: <code>build_evidence</code>, the <code>Explainer</code> protocol and <code>TemplateExplainer</code> exactly as written there (the docstrings are the specification of the algorithm and the sentences).</p>
+        <p><strong>Instructions:</strong> Imports: models from I-1; <code>normalize_key</code> from <code>getwork.alias.normalize</code>; <code>level_rank</code> from <code>getwork.docembed.levels</code>; <code>title_tokens</code> from <code>getwork.retrieval.b1plus</code>; <code>OTHER</code> from <code>getwork.taxonomy.model</code>. Index each side's skills by key keeping the first occurrence; a skill with an empty key is ignored. Implement the pluralization helper <code>n(count, word)</code> privately. Cap name lists at 8 with the suffix <code>f" and {rest} more"</code> placed before the final period. <code>TemplateExplainer.info</code> is a class attribute <code>ExplainerInfo(kind="template", model=None)</code>. Tests: build documents with a tiny helper <code>doc(side, id, title, level, skills)</code> where skills are <code>(skill, cluster)</code> pairs; write the exact expected strings for the AC-4 pair in the test body (not computed with the code under test). Include the faithfulness test: collect every skill name from evidence and from the text (by checking each document skill name appears and by splitting list bullets), asserting the union of names in the output is a subset of the two documents' skills.</p>
+      </section>
+
+      <section id="T-4" class="card">
+        <div class="card-header"><span class="badge badge-info">T-4</span><h3>Engine protocol, EngineError, DemoEngine</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/engine.py</code> (new), <code>src/getwork/webapp/demo.py</code> (new), <code>src/tests/test_webapp_engine.py</code> (new). Likely near 250 lines with the demo data; if it exceeds that, the developer reports it rather than trimming the required demo content. <strong>large</strong> (demo data volume only; one concern).</p>
+        <p><strong>Depends on:</strong> T-1, T-3 (the demo reuses nothing from explain but tests import <code>build_evidence</code>). <strong>Satisfies:</strong> AC-7, AC-8, AC-9. <strong>Cites:</strong> <a href="../architecture.html#ADR-15">ADR-15</a>, <a href="../architecture.html#CC-18">CC-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-3">I-3 · engine.py and demo.py</a>, the whole block, plus the paragraph "Required demo content". Consumes I-1.</p>
+        <p><strong>Instructions:</strong> <code>EngineError</code>, <code>EngineLoadError</code>, <code>MatchResult</code> and <code>Engine</code> in <code>engine.py</code>. In <code>demo.py</code> write the 6 + 6 documents as module constants (plain dicts and tuples) meeting the content list, plus <code>DEMO_ALIASES</code> and <code>DEMO_CLUSTERS</code> keyed by <code>normalize_key</code>. <code>DemoEngine</code>: build <code>DocumentView</code>s once in <code>__init__</code> (via "taxonomy" for clustered skills, "noise" for Other; <code>level_source</code> "listed" for postings and "years" for resumes); levels for <code>health().levels</code> from <code>LEVELS</code> plus <code>NOT_SPECIFIED</code> (<code>getwork.docembed.levels</code>). <code>match</code>: validate side (<code>r-</code>/<code>j-</code>), build the query view (corpus: the stored view; form: canonicalize with <code>DEMO_ALIASES</code> keyed by <code>normalize_key</code>, cluster with <code>DEMO_CLUSTERS</code>, unknown skills Other/"default", title/level handling as in the query-time rules), score with the demo formula, stable sort, clip to <code>k_effective</code>. Notes follow the same rules as the query-time Notes item. Provenance: all version fields <code>"demo"</code>, <code>embedding None</code>, <code>demo True</code>. Tests per AC-7 to AC-9.</p>
+      </section>
+
+      <section id="T-5" class="card">
+        <div class="card-header"><span class="badge badge-info">T-5</span><h3>FastAPI app: routes, error envelopes, no CORS</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/api.py</code> (new), <code>src/tests/test_webapp_api.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-3, T-4. <strong>Satisfies:</strong> AC-10, AC-11, AC-12, AC-13, AC-14, AC-16. <strong>Cites:</strong> <a href="../architecture.html#ADR-16">ADR-16</a>, <a href="../architecture.html#ADR-17">ADR-17</a>, <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-18">CC-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-4">I-4 · api.py</a> (<code>create_app</code>), plus the HTTP API table and the paragraph under it. Consumes I-1, I-2 (<code>build_evidence</code>, <code>Explainer</code>), I-3 (<code>Engine</code>, <code>EngineError</code>).</p>
+        <p><strong>Instructions:</strong> Use <code>def</code> (synchronous) endpoints with <code>response_model</code> set from I-1; parameters of <code>/api/examples</code> declared with <code>Query(...)</code> constraints (<code>side</code> a <code>Literal</code>, <code>limit</code> 1 to <code>MAX_EXAMPLES</code>). Register exception handlers for <code>EngineError</code>, <code>RequestValidationError</code> (field = dotted location without the leading "body"/"query"), Starlette's <code>HTTPException</code> 404 on <code>/api/*</code> (code <code>not_found</code>), and <code>Exception</code>. For the internal error, log with <code>logging.getLogger("getwork.webapp")</code> using <code>redact_secrets(traceback_text, secrets)</code>, and return the fixed message "Something went wrong on the server". Do not log request bodies. Tests use <code>TestClient(create_app(DemoEngine(), TemplateExplainer()))</code>; for the 500 case and the injected explainer use small fake classes in the test file. Check the AC-13 table row by row.</p>
+      </section>
+
+      <section id="T-6" class="card">
+        <div class="card-header"><span class="badge badge-info">T-6</span><h3>Serve the built frontend or a placeholder</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/api.py</code> (modify), <code>src/tests/test_webapp_static.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-5. <strong>Satisfies:</strong> AC-15. <strong>Cites:</strong> <a href="../architecture.html#ADR-17">ADR-17</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> <code>create_app(engine, explainer, *, static_dir: Path | None = None, secrets: Sequence[str] = ()) -&gt; FastAPI</code> (block I-4); this task implements its <code>static_dir</code> behavior.</p>
+        <p><strong>Instructions:</strong> When <code>static_dir</code> is given and contains <code>index.html</code>: <code>GET /</code> returns that file (<code>FileResponse</code>) and <code>/assets</code> is mounted with <code>StaticFiles(directory=static_dir / "assets")</code> if that directory exists. Otherwise <code>GET /</code> returns a small HTML page (inline, Arial, no external resources) saying "Frontend not built. Run <code>npm --prefix src/web run build</code>, or open <code>/docs</code> for the API." Register these routes after the <code>/api</code> routes and make sure unknown <code>/api/*</code> paths still reach the JSON 404 handler (a route <code>/api/{rest:path}</code> raising the not-found envelope, defined last among the API routes). Hash routing means no other fallback is needed. Tests build the directory under <code>tmp_path</code>.</p>
+      </section>
+
+      <section id="T-7" class="card">
+        <div class="card-header"><span class="badge badge-info">T-7</span><h3>ArtifactEngine: load, health, corpus queries</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/artifacts.py</code> (new), <code>src/tests/test_webapp_artifacts.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-4, U-pipeline (<code>load_inputs</code>, <code>RetrievalInputs</code>, <code>query_matches</code>, <code>topk_from_blocks</code>, <code>matrix_block</code>, <code>b1plus_score</code>, <code>load_taxonomy</code>, <code>load_table</code>, <code>retrieval_helpers.py</code>). <strong>Satisfies:</strong> AC-17, AC-18. <strong>Cites:</strong> <a href="../architecture.html#ADR-12">ADR-12</a>, <a href="../architecture.html#ADR-15">ADR-15</a>, <a href="../architecture.html#CC-11">CC-11</a>, <a href="../architecture.html#CC-12">CC-12</a>, <a href="../architecture.html#CC-16">CC-16</a>, <a href="../architecture.html#CC-17">CC-17</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-5">I-5 · artifacts.py</a> (<code>StructureResources</code>, <code>EmbedResources</code>, <code>ArtifactEngine.load</code>, <code>health</code>, <code>examples</code>, <code>get_document</code>, <code>match</code>). This task implements everything except the <code>form</code> and <code>text</code> branches of <code>match</code>, which raise <code>EngineError("capability_unavailable", "Not implemented yet")</code> until T-8.</p>
+        <p><strong>Instructions:</strong> Store the loaded pieces on the instance (inputs, table, taxonomy, per-source p10, summaries, weights, resources). <code>DocumentView</code> from a documents-table row: <code>skills</code> from <code>skill_clusters</code> (dict with skill, cluster, via), <code>side</code> from the source, <code>incomplete_reason None</code>. Corpus ranking: for Full/B2 take the id's row in the query side's <code>VectorSet</code> (<code>ids.index</code>, with a dict built once) and rank against the other side's vectors with <code>topk_from_blocks(matrix_block(q[None, :], docs), 1, n_docs, k)</code>; for B1+ score every document of the other side with <code>b1plus_score</code> (resume row first) and apply the same stable top-k via <code>topk_from_blocks(lambda a, b: scores[None, :], 1, n, k)</code>. Put the ranking in one private method <code>_rank(direction, system, query_row, query_vector, k)</code> that T-8 reuses. Health: counts, systems loaded, <code>levels</code>, <code>versions</code> from the summaries (embedding identity from the resume vector meta when vectors are loaded), capabilities from the resources: structure available iff <code>structure</code> is given (detail f"{backend}, {model}"), embed available iff <code>embed</code> is given (detail <code>embed.describe</code>); otherwise unavailable with the passed reason. Tests build the synthetic chain with <code>retrieval_helpers</code> plus a synthetic alias table and taxonomy saved under <code>tmp_path</code> (absolute paths); the oracle for AC-18 is <code>query_matches</code>.</p>
+      </section>
+
+      <section id="T-8" class="card">
+        <div class="card-header"><span class="badge badge-info">T-8</span><h3>ArtifactEngine: form and text queries, lazy embedder</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/artifacts.py</code> (modify), <code>src/tests/test_webapp_query.py</code> (new). <strong>large</strong>: one concern (the query-time path) but nine rules; if over about 250 lines, split the text branch into a private function in the same file.</p>
+        <p><strong>Depends on:</strong> T-7. <strong>Satisfies:</strong> AC-19, AC-20, AC-21. <strong>Cites:</strong> <a href="../architecture.html#ADR-2">ADR-2</a>, <a href="../architecture.html#ADR-4">ADR-4</a>, <a href="../architecture.html#ADR-11">ADR-11</a>, <a href="../architecture.html#ADR-14">ADR-14</a>, <a href="../architecture.html#ADR-15">ADR-15</a>, <a href="../architecture.html#CC-2">CC-2</a>, <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-13">CC-13</a>, <a href="../architecture.html#CC-15">CC-15</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block I-5 (unchanged) and the section "Query-time rules (ArtifactEngine)", items 1 to 9, which are this task's specification.</p>
+        <p><strong>Instructions:</strong> Implement the rules in order as private methods: <code>_record_from_form</code>, <code>_record_from_text</code> (calls <code>structure_one</code>; map <code>Outcome.failure</code> and <code>FatalLLMError</code>), <code>_label</code> (split_known, OTHER/"default", <code>incomplete_reason</code>, <code>build_relabel_record</code>), <code>_document</code> (bands and b2_order from the side's documents summary), <code>_embed_one</code> (lazy factory under a <code>threading.Lock</code>; cache the client only when construction succeeds; construction errors become <code>capability_unavailable</code>; <code>EmbeddingMismatchError</code> from <code>check_same_embedding</code> becomes <code>embedding_mismatch</code>; other <code>EmbeddingError</code> or <code>LLMError</code> becomes <code>embedding_failed</code>), then reuse <code>_rank</code>. The returned query view has <code>id None</code>. Never log the query text or the record; log only the query kind and the outcome. Tests: reuse the synthetic chain; the fake LLM replies with a hand-written JSON string valid for the structurer schema (title, skills, experience [], education [], years_experience); the fake embedder is <code>FakeEmbeddingClient(dim=16)</code> (same identity as the chain's vectors), a second fake with another <code>model</code> triggers the mismatch; the overlap test uses a recording subclass with a short <code>time.sleep</code> inside <code>embed</code> and two threads; use <code>caplog</code> at DEBUG to prove the query text is absent from logs.</p>
+      </section>
+
+      <section id="T-9" class="card">
+        <div class="card-header"><span class="badge badge-info">T-9</span><h3>webapp command: serve, check, capabilities</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/cli.py</code> (new), <code>src/tests/test_webapp_cli.py</code> (new), <code>pyproject.toml</code> (modify: script only).</p>
+        <p><strong>Depends on:</strong> T-1, T-6, T-8. <strong>Satisfies:</strong> AC-22, AC-23, AC-24, AC-25. <strong>Cites:</strong> <a href="../architecture.html#ADR-12">ADR-12</a>, <a href="../architecture.html#ADR-13">ADR-13</a>, <a href="../architecture.html#ADR-14">ADR-14</a>, <a href="../architecture.html#ADR-15">ADR-15</a>, <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-11">CC-11</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-6">I-6 · cli.py</a> and the options paragraph under it. Consumes <code>ArtifactEngine.load</code>, <code>StructureResources</code>, <code>EmbedResources</code> (I-5), <code>create_app</code> (I-4), <code>DemoEngine</code> (I-3), <code>TemplateExplainer</code> (I-2).</p>
+        <p><strong>Instructions:</strong> Build the parser with subparsers <code>serve</code> and <code>check</code> sharing a parent parser (<code>add_llm_args</code>, <code>add_embed_args(parser, with_env_file=False)</code>, the options paragraph). Order of work, as in other CLIs: arguments (exit 2), then clients and configuration, then loading artifacts. Structuring: unless <code>--demo</code> or <code>--no-structure</code>, call <code>make_client(backend=args.backend, model=args.model, env_file=Path(args.env_file), environ=environ or os.environ, client=llm_client)</code>; <code>ConfigError</code> becomes <code>structure=None</code> with <code>structure_reason=str(exc)</code> (these messages name variables, never values); on success <code>StructureResources(client, ExtractConfig(model=bundle.model, backend=bundle.backend, extra_body=parse_extra_body(args.extra_body)), bundle.secrets)</code>. Embedding: unless <code>--demo</code> or <code>--no-embed</code>, <code>EmbedResources(factory=lambda: make_embedding_client(args=args, environ=env, client=embedding_client).client, describe=...)</code> where describe names the backend and model from args or "configured in .env"; the factory is never called by <code>check</code> or <code>serve</code> startup. Messages for the disabled flags: "Disabled with --no-structure." and "Disabled with --no-embed.". <code>--demo</code> uses <code>DemoEngine()</code>. <code>EngineLoadError</code> and <code>ValueError</code> from option parsing print the message to stderr and return 2. <code>serve</code>: <code>create_app(engine, TemplateExplainer(), static_dir=..., secrets=bundle.secrets)</code>, warn on a non-loopback host ("... binds to a public address and has no authentication ..."), then <code>(run or uvicorn.run)(app, host=..., port=..., log_level="info")</code> (import uvicorn lazily inside <code>serve</code>). Add the script line to <code>pyproject.toml</code>. Tests inject fakes and a recording <code>run</code>; use synthetic artifacts from T-7's helpers for the artifact paths.</p>
+      </section>
+
+      <section id="T-10" class="card">
+        <div class="card-header"><span class="badge badge-info">T-10</span><h3>Frontend scaffold (Vite, React, Vitest) and .gitignore</h3></div>
+        <p><strong>Files:</strong> <code>src/web/package.json</code> (new), <code>src/web/package-lock.json</code> (new, generated), <code>src/web/vite.config.js</code> (new), <code>src/web/index.html</code> (new), <code>src/web/public/favicon.svg</code> (new), <code>src/web/src/main.jsx</code> (new), <code>src/web/src/App.jsx</code> (new), <code>src/web/src/test/setup.js</code> (new), <code>src/web/src/App.test.jsx</code> (new), <code>.gitignore</code> (modify). <strong>large (file count only)</strong>: every file is a few lines of configuration; splitting would create tasks that cannot be verified alone.</p>
+        <p><strong>Depends on:</strong> none. <strong>Satisfies:</strong> AC-26. <strong>Cites:</strong> <a href="../architecture.html#ADR-17">ADR-17</a>, <a href="../architecture.html#ADR-18">ADR-18</a>.</p>
+        <p><strong>Interfaces:</strong> npm scripts <code>dev</code> (<code>vite</code>), <code>build</code> (<code>vite build</code>), <code>test</code> (<code>vitest run</code>), <code>test:watch</code>. Dependencies: react, react-dom (runtime); vite, @vitejs/plugin-react, vitest, jsdom, @testing-library/react, @testing-library/user-event, @testing-library/jest-dom, vitest-axe (dev). <code>engines.node</code> ">=20". No other packages; none from a git URL; none with "asu" in the name.</p>
+        <p><strong>Instructions:</strong> <code>npm init</code>-style package with <code>"private": true</code>, <code>"type": "module"</code>. <code>vite.config.js</code>: React plugin; <code>server.proxy</code> sending <code>/api</code> to <code>http://127.0.0.1:8000</code>; <code>test</code> block with <code>environment: "jsdom"</code>, <code>setupFiles: ["./src/test/setup.js"]</code>, <code>globals: true</code>. <code>setup.js</code>: import <code>@testing-library/jest-dom/vitest</code> and extend <code>expect</code> with <code>vitest-axe/matchers</code>. <code>index.html</code>: <code>lang="en"</code>, title "GetWork", viewport meta, <code>&lt;div id="root"&gt;</code>, module script <code>/src/main.jsx</code>, favicon link; no external URLs. <code>favicon.svg</code>: a 32x32 maroon (#8C1D40) rounded square with the letters "GW" in white Arial (text only, authored here; no ASU mark). <code>main.jsx</code> mounts <code>App</code> in <code>StrictMode</code>. <code>App.jsx</code> (stub): fetches health with a placeholder <code>fetch("/api/health")</code>, renders an h1 "GetWork" (T-13 replaces this). The smoke test mocks <code>fetch</code> with <code>contract.json</code> health if T-2 is merged, else an inline object, and asserts the h1. Add to <code>.gitignore</code>: <code>node_modules/</code> and <code>src/web/dist/</code>. Run <code>npm install</code> once to create the lock file; report the Node and npm versions used.</p>
+      </section>
+
+      <section id="T-11" class="card">
+        <div class="card-header"><span class="badge badge-info">T-11</span><h3>Theme tokens and contrast test</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/theme/tokens.css</code> (new), <code>src/web/src/theme/pairs.js</code> (new), <code>src/web/src/theme/theme.test.js</code> (new), <code>src/web/src/main.jsx</code> (modify: one import).</p>
+        <p><strong>Depends on:</strong> T-10. <strong>Satisfies:</strong> AC-27. <strong>Cites:</strong> <a href="../architecture.html#ADR-18">ADR-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> the block "tokens.css (verbatim for T-11)" in the Theme tokens section, copied unchanged into <code>tokens.css</code>. <code>pairs.js</code> exports <code>TEXT_PAIRS</code> (array of <code>[foregroundToken, backgroundToken, minimumRatio]</code>, ratio 4.5) and <code>NON_TEXT_PAIRS</code> (ratio 3), and <code>FORBIDDEN_PAIRS</code> (array of <code>[foregroundColorToken, backgroundColorToken]</code>).</p>
+        <p><strong>Instructions:</strong> <code>TEXT_PAIRS</code> must include at least: text/surface, text/bg, text-secondary/surface, text-secondary/bg, text-muted/surface, link/surface, link/bg, header-top-fg/header-top-bg, header-fg/header-bg, wordmark/header-bg, footer-fg/footer-bg, footer-link/footer-bg, btn-primary-fg/btn-primary-bg, btn-primary-fg/btn-primary-hover-bg, btn-cta-fg/btn-cta-bg, btn-secondary-fg/btn-secondary-bg, chip-shared-fg/chip-shared-bg, chip-related-fg/chip-related-bg, chip-gap-fg/chip-gap-bg, chip-other-fg/chip-other-bg, text/surface for alerts. <code>NON_TEXT_PAIRS</code>: border-strong/surface, focus-ring/surface, focus-ring/bg, focus-ring-on-dark/footer-bg. <code>FORBIDDEN_PAIRS</code> lists color tokens: [gold, white], [white, gold], [maroon, black], [black, maroon], [gray-1, maroon]. The test reads <code>tokens.css</code> with <code>fs.readFileSync</code>, parses custom properties with a regex, resolves <code>var(--x)</code> chains, computes WCAG relative luminance and the contrast ratio, and asserts each rule of AC-27, including the exact hex list and the exact font-stack string. Add <code>import "./theme/tokens.css";</code> to <code>main.jsx</code>.</p>
+      </section>
+
+      <section id="T-12" class="card">
+        <div class="card-header"><span class="badge badge-info">T-12</span><h3>Component styles and brand style-rule tests</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/theme/components.css</code> (new), <code>src/web/src/theme/style-rules.test.js</code> (new), <code>src/web/src/main.jsx</code> (modify: one import). <strong>large</strong>: the stylesheet itself is about 220 lines; the test is about 60. One concern (all rules come from the Theme tokens section).</p>
+        <p><strong>Depends on:</strong> T-11. <strong>Satisfies:</strong> AC-28. <strong>Cites:</strong> <a href="../architecture.html#ADR-18">ADR-18</a>.</p>
+        <p><strong>Interfaces (class names the components in T-13 to T-17 use; define each):</strong> <code>.skip-link</code>, <code>.site-header</code>, <code>.header-top</code>, <code>.header-main</code>, <code>.wordmark</code>, <code>.site-nav</code> (links not underlined; <code>[aria-current="page"]</code> has a 4px gold bottom rule), <code>.site-footer</code>, <code>.container</code> (max-width <code>--content-max</code>, padding <code>--space-3</code>), <code>.measure</code> (max-width <code>--measure</code>), <code>.btn</code>, <code>.btn-primary</code>, <code>.btn-cta</code>, <code>.btn-secondary</code>, <code>.field</code> (label above control), <code>.required-dot</code>, <code>.sr-only</code>, <code>.segmented</code> (method choice), <code>.card</code>, <code>.chip</code>, <code>.chip-shared</code>, <code>.chip-related</code>, <code>.chip-gap</code>, <code>.chip-other</code>, <code>.alert</code>, <code>.alert-info</code>, <code>.alert-success</code>, <code>.alert-warning</code>, <code>.alert-error</code>, <code>.link</code>, <code>.banner-demo</code>, <code>.result-list</code>.</p>
+        <p><strong>Instructions:</strong> Base: <code>body</code> uses <code>var(--font-stack)</code>, <code>var(--text-base)</code>, <code>var(--line-height)</code>, color <code>var(--text)</code>, background <code>var(--bg)</code>; headings bold, sentence case, sizes from tokens, no italics. Links: maroon, underlined in running text (<code>main a, .link</code>), not underlined in <code>.site-nav a</code> and <code>.site-footer a</code>. Buttons: <code>.btn</code> radius <code>--radius-button</code>, no shadow, no border change on hover, <code>transition: transform</code>; hover/focus-visible: <code>transform: scale(var(--scale-hover))</code>; <code>.btn-primary:hover</code> changes only the background to <code>--btn-primary-hover-bg</code>; disabled state gray with <code>cursor: not-allowed</code>. <code>:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: 2px; }</code>, and in the footer use <code>--focus-ring-on-dark</code>. <code>@media (prefers-reduced-motion: reduce)</code> sets <code>transform: none !important; transition: none !important</code>. Font sizes only in <code>rem</code>. Text containers use <code>.measure</code>. The test reads every <code>.css</code> in <code>src/web/src</code> and applies the rules of AC-28 with simple rule-splitting (split on <code>}</code>, selector before <code>{</code>). Add the import to <code>main.jsx</code> after tokens.</p>
+      </section>
+
+      <section id="T-13" class="card">
+        <div class="card-header"><span class="badge badge-info">T-13</span><h3>API client, routes, layout, app shell</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/api.js</code> (new), <code>src/web/src/routes.js</code> (new), <code>src/web/src/Layout.jsx</code> (new), <code>src/web/src/App.jsx</code> (modify), plus tests <code>api.test.js</code>, <code>routes.test.js</code>, and an extended <code>App.test.jsx</code>. <strong>large</strong> (about 7 small files, about 250 lines; one concern, the shell).</p>
+        <p><strong>Depends on:</strong> T-10, T-2 (fixtures), T-12 (classes). <strong>Satisfies:</strong> AC-29, AC-30. <strong>Cites:</strong> <a href="../architecture.html#CC-18">CC-18</a>, <a href="../architecture.html#ADR-18">ADR-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> block <a href="#I-7">I-7 · JavaScript modules</a>: the <code>api.js</code> and <code>routes.js</code> parts, <code>Layout({ route, health, children })</code>, and the error-code title table.</p>
+        <p><strong>Instructions:</strong> <code>api.js</code>: a private <code>request(method, path, body, fetchImpl)</code> doing <code>fetchImpl(path, {method, headers: {"Content-Type": "application/json"}, body})</code>; on a rejected fetch throw <code>ApiError({status: 0, code: NETWORK_ERROR_CODE, message: "Cannot reach the GetWork server."})</code>; parse JSON in a try block; <code>!response.ok</code> with <code>data.error</code> becomes <code>ApiError</code> from it. <code>describeError(err)</code> returns <code>{title, body: err.message, hint: err.hint}</code> with the title table; a non-<code>ApiError</code> gets the generic title. <code>routes.js</code> as in I-7. <code>Layout</code>: skip link (<code>href="#main"</code>, text "Skip to main content") first, then <code>header.site-header</code> (top bar with "Course project: CSE 573, Group 6", wordmark "GetWork", <code>nav</code> with links "Find jobs", "Find candidates", "About" using <code>hrefFor</code>, <code>aria-current</code> on the active one), the demo banner when <code>health?.mode === "demo"</code>, <code>main id="main" tabIndex={-1}</code>, and <code>footer.site-footer</code> with the exact disclaimer "GetWork is a CSE 573 course project at Arizona State University (Group 6). It is not an official ASU website." and a "Contact the team" link to <code>#/about</code>. <code>App</code>: state for route (from <code>window.location.hash</code>, updated on <code>hashchange</code>) and health (loading, ready, error with retry); the error state renders the unreachable alert from <code>describeError</code> with the text "Run uv run webapp serve" and a Retry <code>.btn-primary</code>; ready state renders a placeholder h1 per route (replaced in T-16 and T-17). Tests per AC-29 and AC-30 with fixtures from <code>contract.json</code>.</p>
+      </section>
+
+      <section id="T-14" class="card">
+        <div class="card-header"><span class="badge badge-info">T-14</span><h3>Query form and capability helpers</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/capabilities.js</code> (new), <code>src/web/src/capabilities.test.js</code> (new), <code>src/web/src/components/QueryForm.jsx</code> (new), <code>src/web/src/components/QueryForm.test.jsx</code> (new). <strong>large</strong> (about 260 lines; the component is the one large piece of UI logic).</p>
+        <p><strong>Depends on:</strong> T-13. <strong>Satisfies:</strong> AC-31, AC-32. <strong>Cites:</strong> <a href="../architecture.html#CC-18">CC-18</a>, <a href="../architecture.html#CC-6">CC-6</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> <code>parseSkills(text)</code>, <code>canRun(kind, system, capabilities)</code>, <code>QueryForm({ direction, health, busy, onSubmit, fetchImpl })</code>, <code>SYSTEM_LABELS</code> (from <code>api.js</code>), and the request shapes of <code>MatchRequest</code> in block I-1 (JSON field names exactly: <code>direction</code>, <code>k</code>, <code>system</code>, <code>query</code> with <code>kind</code>, <code>id</code>, <code>text</code>, <code>title</code>, <code>level</code>, <code>years_experience</code>, <code>skills</code>).</p>
+        <p><strong>Instructions:</strong> Direction determines the side: <code>resume_to_posting</code> means the user supplies a resume. Method choice is a <code>.segmented</code> group of three buttons with <code>aria-pressed</code> (labels "Paste text", "Fill in a form", "Pick an example"); the selected method's panel is shown. Fields (each with a visible label above, linked by <code>htmlFor</code>): paste: textarea "Resume text" or "Job posting text", file input "Load a .txt or .md file" (reads with <code>FileReader</code> / <code>file.text()</code> into the textarea), for postings an optional "Job title"; form: "Job title" (neither title nor skills is individually required, so no required marker; show the hint "Add a title, skills, or both"), "Years of experience" (number, resumes) or "Experience level" (select from <code>health.levels</code>, postings), "Skills" textarea (one per line or comma-separated); example: radio list from <code>getExamples(side, 6, fetchImpl)</code> showing title, level, number of skills. Common: "Number of results" select 5, 10, 20 (default 10), "Ranking method" select from <code>SYSTEM_LABELS</code> (default "Full"), then the single <code>.btn.btn-cta</code> submit ("Find jobs" for resumes, "Find candidates" for postings), disabled while <code>busy</code>. Inline errors (<code>role="alert"</code> inside the form) for the validation cases. Disabled methods: <code>canRun(kind, system, health.capabilities)</code> not ok disables that method's button and shows the reason as text beside it. Privacy line under the paste textarea: "Text you paste is sent to {detail} to be read." using <code>capabilities.structure.detail</code>. Required marker: a <code>.required-dot</code> span with <code>aria-hidden</code> plus a <code>.sr-only</code> "required" on the one required control per method (textarea for paste, the example choice for example). Tests per AC-31 and AC-32 with <code>user-event</code>.</p>
+      </section>
+
+      <section id="T-15" class="card">
+        <div class="card-header"><span class="badge badge-info">T-15</span><h3>Skill groups, evidence chips, match card</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/components/GroupedSkills.jsx</code> (new), <code>EvidenceChips.jsx</code> (new), <code>MatchCard.jsx</code> (new), and one test file for each (<code>GroupedSkills.test.jsx</code>, <code>EvidenceChips.test.jsx</code>, <code>MatchCard.test.jsx</code>), all under <code>src/web/src/components/</code>. <strong>large (file count)</strong>: six files, each under 60 lines.</p>
+        <p><strong>Depends on:</strong> T-13. <strong>Satisfies:</strong> AC-33. <strong>Cites:</strong> <a href="../architecture.html#CC-18">CC-18</a>, <a href="../architecture.html#ADR-5">ADR-5</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> <code>GroupedSkills({ skills })</code>, <code>EvidenceChips({ evidence })</code>, <code>MatchCard({ match, system, expanded, onToggle, children })</code>; data shapes <code>DocSkill</code>, <code>Evidence</code>, <code>Match</code> from block I-1.</p>
+        <p><strong>Instructions:</strong> <code>GroupedSkills</code>: group by <code>cluster</code> in first-appearance order with "Other" last; each group is a labeled list (<code>h4</code> cluster name, <code>ul</code> of <code>.chip</code> items, Other chips use <code>.chip-other</code>). <code>EvidenceChips</code>: three labeled rows rendered only when non-empty: "Shared" (check mark, <code>.chip-shared</code>, text "Python"), "Related" (approx sign, <code>.chip-related</code>, text "{resume skills} and {posting skills} in {cluster}"), "Missing" (cross, <code>.chip-gap</code>); symbols are <code>aria-hidden</code> and every chip also has the word as visible text. <code>MatchCard</code>: <code>.card</code> with rank, <code>h3</code> title (fallback "Untitled"), level, score <code>toFixed(3)</code> with caption "Similarity" (Full, B2) or "Keyword score" (B1+), <code>EvidenceChips</code> placed from <code>match.evidence</code>, a <code>.btn.btn-secondary</code> "Why this match?" with <code>aria-expanded</code> and <code>aria-controls</code> toggling via <code>onToggle</code>, and a region with <code>children</code> rendered only when expanded. The related chip text comes from the group's <code>resume_skills</code> and <code>posting_skills</code>, so neither component needs the direction.</p>
+      </section>
+
+      <section id="T-16" class="card">
+        <div class="card-header"><span class="badge badge-info">T-16</span><h3>Explain panel and Find page lifecycle</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/components/ExplainPanel.jsx</code> (new), <code>ExplainPanel.test.jsx</code> (new), <code>src/web/src/pages/FindPage.jsx</code> (new), <code>src/web/src/pages/FindPage.test.jsx</code> (new), <code>src/web/src/App.jsx</code> (modify: mount FindPage for jobs and candidates). <strong>large</strong>: about 280 lines; the lifecycle states are one concern.</p>
+        <p><strong>Depends on:</strong> T-14, T-15. <strong>Satisfies:</strong> AC-34, AC-35. <strong>Cites:</strong> <a href="../architecture.html#CC-18">CC-18</a>, <a href="../architecture.html#ADR-16">ADR-16</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> <code>ExplainPanel({ direction, query, matchId, fetchImpl })</code>, <code>FindPage({ direction, health, fetchImpl })</code>, <code>postMatch</code>, <code>postExplain</code>, <code>describeError</code> (block I-7); shapes <code>MatchResponse</code>, <code>Explanation</code> (block I-1).</p>
+        <p><strong>Instructions:</strong> <code>ExplainPanel</code>: <code>useEffect</code> calls <code>postExplain({direction, query, match_id: matchId}, fetchImpl)</code> once (guard against the double effect of <code>StrictMode</code> with a ref); states loading (<code>role="status"</code> "Loading the explanation..."), ready (summary as a paragraph in <code>.measure</code>, bullets as a list, the full <code>GroupedSkills</code> of the match is rendered by the card, not here; explainer line), error (<code>describeError</code> in a <code>.alert.alert-error</code> plus a "Try again" <code>.btn.btn-secondary</code> that re-runs the call). <code>FindPage</code>: h1 ("Find jobs for your resume" / "Find candidates for your posting"), one-paragraph intro in <code>.measure</code>, <code>QueryForm</code>, then by status: loading (<code>role="status"</code>), error (<code>role="alert"</code> alert with title, message, hint; for <code>network_unreachable</code> also the command), done: results section with <code>h2</code> "Results" (<code>tabIndex={-1}</code>, focused after render with a ref and effect), a live region (<code>aria-live="polite"</code>) reading "{n} postings found" or "{n} candidates found", "What we understood" card (title, level, <code>GroupedSkills</code> of the query view, years if present), notes as <code>.alert.alert-warning</code> with the label "Note", and the <code>ol.result-list</code> of <code>MatchCard</code>s with the expanded id kept in state (one expanded at a time) and an <code>ExplainPanel</code> inside the expanded card; empty state when <code>matches.length === 0</code>. The submit calls <code>postMatch(request, fetchImpl)</code>; keep the last request for resubmission. Mount in <code>App.jsx</code> for the <code>jobs</code> and <code>candidates</code> routes. Tests: mocked fetch by URL using <code>contract.json</code>; include the single-CTA assertion (<code>container.querySelectorAll(".btn-cta").length &lt;= 1</code>) after every state.</p>
+      </section>
+
+      <section id="T-17" class="card">
+        <div class="card-header"><span class="badge badge-info">T-17</span><h3>About page and accessibility test</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/pages/AboutPage.jsx</code> (new), <code>src/web/src/pages/AboutPage.test.jsx</code> (new), <code>src/web/src/a11y.test.jsx</code> (new), <code>src/web/src/App.jsx</code> (modify: mount AboutPage).</p>
+        <p><strong>Depends on:</strong> T-16. <strong>Satisfies:</strong> AC-36, AC-37. <strong>Cites:</strong> <a href="../architecture.html#CC-6">CC-6</a>, <a href="../architecture.html#ADR-18">ADR-18</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong> <code>AboutPage({ health })</code>; shape <code>HealthResponse</code> (block I-1).</p>
+        <p><strong>Instructions:</strong> h1 "About GetWork"; sections (h2): "What it does" (two sentences: two-way matching with skill clusters; explanations list shared, related and missing skills), "Ranking methods" (definition list: GetWork (skill clusters) is <code>Full</code>, Embeddings only is <code>B2</code>, Keywords only is <code>B1+</code>, each with one sentence), "Data in use" (mode, counts, artifacts directory, versions, embedding identity), "Server capabilities" (structure and embed: available or not, with reason), "Privacy" (the server keeps no history and writes nothing; text queries are sent to the configured language-model service named in the structure capability's detail, or "not available"), "The team" (Omar Abuasba and Prathyush Vasa, CSE 573 Group 6), and the disclaimer paragraph (same wording as the footer). Demo mode: a sentence "This server is running on built-in demo data." The accessibility test renders <code>App</code> with the contract fixtures at each hash route, runs <code>axe(container)</code> and expects <code>toHaveNoViolations()</code>, then repeats for FindPage after a mocked match response, after a mocked error, and with an expanded explanation. Disable the axe <code>color-contrast</code> rule in the test (jsdom cannot compute it) with a comment pointing at AC-27.</p>
+      </section>
+
+      <section id="T-18" class="card">
+        <div class="card-header"><span class="badge badge-info">T-18</span><h3>Guardrail tests, runbook, README, final check</h3></div>
+        <p><strong>Files:</strong> <code>src/tests/test_webapp_guardrails.py</code> (new), <code>src/getwork/webapp/README.md</code> (new), <code>src/tests/test_webapp_docs.py</code> (new), <code>README.md</code> (modify).</p>
+        <p><strong>Depends on:</strong> T-9, T-17. <strong>Satisfies:</strong> AC-38, AC-39, AC-40, AC-41. <strong>Cites:</strong> <a href="../architecture.html#ADR-18">ADR-18</a>, <a href="../architecture.html#CC-10">CC-10</a>.</p>
+        <p><strong>Interfaces:</strong> none new. Test helpers walk <code>src/web</code> (skipping <code>node_modules</code> and <code>dist</code>) and <code>src/getwork/webapp</code> with <code>pathlib</code>.</p>
+        <p><strong>Instructions:</strong> Guardrail tests implement AC-38 and AC-39 literally (regexes in the AC text; a small allowlist constant for the SVG namespace; <code>public/favicon.svg</code> as the only allowed asset; test files <code>*.test.*</code> are excluded from the URL scan because they may contain <code>http://localhost</code> mock paths, but not from the ASU-reference scan). Parse <code>package.json</code> with <code>json</code> and scan every <code>resolved</code> in <code>package-lock.json</code>. Runbook <code>README.md</code> under <code>src/getwork/webapp/</code> with headings: WA-1 demo run, WA-2 trial artifacts check and serve, WA-3 text query with your own keys (Voyager structuring plus local embeddings, GPU sharing note), WA-4 full corpus, WA-5 building the UI and single-process run, WA-6 troubleshooting (frontend not built, embedding mismatch, capability unavailable, public host warning "no authentication"), each with commands and the pass condition; list the environment variable names only (never values); state the privacy behavior. Update the root <code>README.md</code> status table row to "Web app (FastAPI backend, React UI, deterministic explainer) | Built" keeping "Explanation agent | Planned" as its own row, and add a short "Run the web app" section with the WA-1 commands. Final check (AC-41): run the three commands, paste their tails into the report, and confirm <code>git status --porcelain</code> shows no stray files.</p>
+      </section>
+    </section>
+
+    <section id="edge-cases">
+      <h2>Edge cases &amp; risks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Case</th><th>Required behavior</th><th>Covered by</th></tr></thead>
+          <tbody>
+            <tr><td>Artifacts missing, stale, or from different chains</td><td>Startup fails with the fix hint (exit 2); the server never starts half-loaded (CC-12)</td><td>AC-17, AC-22</td></tr>
+            <tr><td><code>artifacts_trial/</code> vs <code>artifacts/</code></td><td>Chosen only by <code>--artifacts-dir</code>; default is trial; health shows which</td><td>AC-17, AC-22</td></tr>
+            <tr><td>No key, no GPU</td><td>Server starts; corpus queries work; form and text report the reason as text; B1+ form works without embeddings</td><td>AC-19, AC-24</td></tr>
+            <tr><td>Embedding model differs from the stored vectors</td><td>409 <code>embedding_mismatch</code>, no ranking</td><td>AC-19</td></tr>
+            <tr><td>LLM returns invalid JSON, times out, or the key is rejected</td><td>502 <code>structuring_failed</code> with a redacted message; no secret in body or logs</td><td>AC-20</td></tr>
+            <tr><td>Blank, huge, or skill-less input</td><td><code>empty_query</code>, <code>text_too_long</code>, note <code>no_skills</code> (still ranked by title and level)</td><td>AC-19, AC-20</td></tr>
+            <tr><td>All skills unseen by the taxonomy</td><td>Everything under Other with via "default"; note <code>unknown_skills</code>; no related chips</td><td>AC-19</td></tr>
+            <tr><td>Corpus labeled with the LLM, query lookup-only</td><td>Note <code>relabel_mode_differs</code>; documented limitation</td><td>AC-19</td></tr>
+            <tr><td>Two simultaneous requests on one GPU</td><td>Embedding calls are serialized</td><td>AC-21</td></tr>
+            <tr><td>Memory: 28,842 resumes at 2,560 dimensions is about 295 MB per vector set</td><td><code>--systems</code> loads fewer sets (Full only is about 300 MB for resumes); documented in the runbook</td><td>AC-22, AC-40</td></tr>
+            <tr><td>Server unreachable from the browser</td><td>Clear alert with the start command and Retry; no blank page</td><td>AC-30</td></tr>
+            <tr><td>Explanation fails</td><td>Error confined to the card with Try again</td><td>AC-34</td></tr>
+            <tr><td>Zero matches</td><td>Empty state with advice</td><td>AC-35</td></tr>
+            <tr><td>Public bind with no authentication</td><td>Warning at startup; default is loopback; no CORS</td><td>AC-16, AC-23</td></tr>
+            <tr><td>Query text privacy</td><td>Not logged, not stored; UI names where text is sent</td><td>AC-20, AC-31</td></tr>
+            <tr><td>Accessibility regressions</td><td>axe test, token contrast test, focus and motion rules</td><td>AC-27, AC-28, AC-37</td></tr>
+            <tr><td>Brand misuse: ASU logos, "ASU GetWork", ASU GitHub code</td><td>No marks or assets, product name "GetWork", registry-only dependencies, guardrail tests</td><td>AC-30, AC-38, AC-39</td></tr>
+            <tr><td>Upstream modules change names before they are built</td><td>T-3, T-7 and T-8 adapt to the merged code; interfaces in this spec are the planner's reading of the draft specs</td><td>AC-17 to AC-20</td></tr>
+            <tr><td>Frontend and backend shapes drift</td><td>One fixture validated by pydantic and used by every component test</td><td>AC-3</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="open-questions">
+      <h2>Open questions</h2>
+      <div class="callout warn"><span class="callout-title">Assumptions</span>
+        <p><strong>A-1 (scope).</strong> "An agent explains each match" is delivered as the evidence plus a deterministic, rule-based explainer behind the <code>Explainer</code> protocol (<a href="../architecture.html#ADR-16">ADR-16</a>), because the LangGraph agent is the separate, unspecced <code>match-agent</code> feature. Chat follow-ups and blind labeling are out of this spec. Not taken: building a small LLM explainer here (it would duplicate match-agent, need a model that must differ from the judges, and not be faithful by construction).</p>
+        <p><strong>A-2 (query-time labeling).</strong> New documents are labeled lookup-only: unseen skills go to Other. If the corpus was relabeled with the LLM, a note says so. Not taken: running the LLM relabeler per query (extra latency and cost, a cache directory to manage). Revisit if trial results show many unseen skills in pasted resumes.</p>
+        <p><strong>A-3 (input formats).</strong> Paste or <code>.txt</code>/<code>.md</code> files only. PDF and DOCX parsing would add a dependency and server-side file handling; a resume PDF can be copied as text. Not taken: <code>pypdf</code> upload.</p>
+        <p><strong>A-4 (stack).</strong> React 18 in plain JavaScript, hash routing, no UI kit (<a href="../architecture.html#ADR-17">ADR-17</a>). Not taken: Jinja or htmx (one toolchain, but the proposal and presentation promise React) and TypeScript (friction for a small team). Version numbers are not pinned here; <code>package-lock.json</code> pins them at implementation time, and React 19 is acceptable if the testing libraries support it.</p>
+        <p><strong>A-5 (theme).</strong> Values marked "team" in the Theme tokens section are our decisions where the brand guide pages reached by the researcher gave no value (button radius and variant colors, focus ring, heading scale, card and alert styling, hover color, footer wording). The approved color-pair graphic of the guide was not readable, so contrast pairs were chosen by computed WCAG ratios. If the instructor or team obtains the Figma UI kit, only <code>tokens.css</code> and the style-rule test change.</p>
+        <p><strong>A-6 (logos).</strong> The app uses a text wordmark and no ASU mark, per the guide's limits for student projects. Confirm with the instructor if an ASU or School of Computing logo is wanted; that would need written permission and a new ADR.</p>
+        <p><strong>A-7 (upstream names).</strong> Names of modules from draft specs (taxonomy, relabel, docembed, embed, retrieval) are taken from those specs as written on 2026-11-07. If their build changes a name, the web-app task adapts and reports it.</p>
+        <p><strong>A-8 (embedding health).</strong> The embedding capability reports "available" if configured, without loading the model at startup; a missing GPU shows up on the first form or text query as <code>capability_unavailable</code> with the reason. Not taken: loading at startup (slows every demo and breaks corpus-only use).</p>
+        <p><strong>A-9 (B1+ weights).</strong> B1+ at query time uses <code>DEFAULT_WEIGHTS</code> or <code>--b1plus-weights</code>; wiring tuned weights from the evaluation stages is a later change.</p>
+      </div>
+      <div class="callout note"><span class="callout-title">Questions for the user</span>
+        <p>None block the build. Worth confirming: (1) the "Q-1" answer in ADR-15, namely that the demo runs on a team member's machine with their own key; (2) whether a real ASU or SCAI logo is wanted (A-6); (3) whether the old index wording "chat" belongs to match-agent (A-1).</p>
+      </div>
+    </section>
+
+    <footer class="footer">GetWork · Feature spec: web-app · see architecture.html</footer>
+  </main>
+</div>
+</body>
+</html>

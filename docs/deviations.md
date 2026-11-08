@@ -32,9 +32,12 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-12 | Embedding | Experience-level derivation | Clarification | draft | Yes |
 | P-13 | Relabeling | LLM-free default; add-only re-extraction | Departure | draft | Yes |
 | P-14 | Embedding | Optional Voyager embedding backend | Addition | draft | Conditional |
-| P-15 | Web app | Query-time hosting of structuring and embedding unresolved | Open | open | TBD |
+| P-15 | Web app | Query-time hosting: user-run local process with lazy, optional models | Clarification | draft | Yes (one paragraph in 3.7) |
+| P-16 | Structuring | Alias table: how it is built, and the display-spelling rule | Clarification | built | Yes (one or two sentences) |
+| P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | draft | Yes (scope sentence) |
+| P-18 | Agent | Agent uses a JSON action protocol (not native tool calls), a claim verifier, rules fallback, stateless non-streamed chat; CreateAI via the local backend | Clarification | draft | Yes (one paragraph in 3.7) |
 
-Row count: 15.
+Row count: 18.
 
 ---
 
@@ -206,22 +209,61 @@ Row count: 15.
 - **Owner:** TBD
 - **Resolution:** open
 
-## P-15 Query-time hosting of structuring and embedding unresolved
+## P-15 Query-time hosting of structuring and embedding
 
 - **Proposal says:** 3.7: submitted documents are structured by an LLM call, then relabeled and embedded.
-- **Now:** Q-1 open. Voyager is keyed (CC-10 forbids agents holding the key) and models may be retired; the app would need its own key and a pinned model; the embedding model host is also open; the app must reproduce the offline pipeline at request time.
-- **Reason recorded:** n/a
-- **Impact:** Blocks web-app and match-agent.
-- **Status:** open.
-- **Proposal text change:** TBD
+- **Now (draft, web-app, ADR-15; answers Q-1 pending approval):** the app is one user-run local process (`webapp serve`) that reads the user's own `.env` through the CLI only and builds the structuring client (`make_client`) and the embedding client (`make_embedding_client`) lazily. Query kinds degrade: a corpus document needs neither model, a form needs only the embedding model (nothing for B1+), free text needs both. New documents are labeled lookup-only (unseen skills go to Other), not with the LLM relabeler. Nothing from a query is stored or logged.
+- **Reason recorded:** CC-10 forbids agents holding the key and Voyager models may be retired; Sol is a batch cluster; the 12 GB card cannot hold a local LLM server and the embedding model together.
+- **Impact:** A live demo needs a configured team machine. The proposal's "relabeled" step at query time is lookup-only unless the LLM relabeler is wired in later.
+- **Status:** draft.
+- **Proposal text change:** One paragraph in 3.7 describing the local, optional, lazy model use and the lookup-only labeling of new documents.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** open (Q-1)
+- **Resolution:** draft (Q-1 answered in ADR-15, awaiting user approval)
+
+## P-16 Alias table construction and display spelling
+
+- **Proposal says:** Step 2 (~lines 281-283): extracted skills are normalized with an alias table that maps variants to a canonical form (JS to JavaScript, k8s to Kubernetes). It does not say how the table is made.
+- **Now (built, alias-table):** two layers. (1) Every skill spelling in the structured records of both sources is grouped by a normalized key (NFKC, whitespace collapse, casefold, trailing `.,;:` stripped) and the group takes one display spelling; (2) a curated CSV (`src/getwork/alias/alias_curated.csv`, 38 seed rows written by the planner, not mined from data) overrides it. Matching is exact on the key; no fuzzy or embedding matching. An optional, user-run LLM step only drafts rows for human review and is never merged automatically. Every record keeps `skills_raw` and an `alias_table_version`; the trial and full-corpus tables differ, so the version must match across both sources downstream.
+- **Display-spelling rule (A-3):** ignore all-caps forms of 5 or more letters when another form exists, then most frequent, then not-all-lower-case, then the smaller string. Spec decision (2026-11-08): the threshold is "more than 4 letters" because on the trial data a 4-letter threshold would have picked `Html`, `Rest`, `json`, `Soap` over `HTML`, `REST`, `JSON`, `SOAP`. Built as `SHOUTING_MIN_LETTERS = 5` in `src/getwork/alias/build.py`; `test_pick_display_rules` asserts `JAVA` over `Java` and `HTML` over `Html`.
+- **Follow-up closed (2026-11-08):** the first built code used a threshold of 4 because the first spec example contradicted the prose; it was fixed to 5 and the test updated. Any alias table built before the fix has a different version, so rerun `alias-table build` and `apply` and rebuild downstream artifacts (CC-12 refuses mixed versions); not verified here whether the trial artifacts were already rebuilt.
+- **Reason recorded:** The proposal gives examples only; a curated-only table cannot cover tens of thousands of skills, and case variants are 208 of 2,059 distinct trial resume skills.
+- **Impact:** Methods text for Step 2; the report should say the table is corpus-derived plus a small curated list, and quantify merged forms from `alias_build_report.json`.
+- **Status:** built.
+- **Proposal text change:** One or two sentences in Step 2.
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** closed in code; the proposal text change below is still open.
 
 ---
 
+## P-17 Web app scope and presentation
+
+- **Proposal says:** Application row and 3.7: "FastAPI backend, React frontend allows users to submit a resume or job", view top-k, chat with the agent, and label pairs blind (presentation slide: "React app: submit a resume or posting, view top-k, chat, and label pairs blind").
+- **Now (draft, web-app, ADR-16 to ADR-18):** FastAPI and React as stated. The explanation shown with each match is deterministic evidence (shared, related by cluster, missing skills) plus a rule-based `TemplateExplainer` behind an `Explainer` protocol; the LangGraph agent (`match-agent`) plugs into that seam later, and chat follow-ups go with it. Blind labeling becomes its own feature (`labeling-ui`) after `eval-sampling-pooling`. Added: a demo mode on built-in data, a corpus-document query kind, and a UI theme built from the public ASU brand-guide values (text wordmark, no ASU marks, no ASU repository code).
+- **Reason recorded:** the agent and the labeling inputs do not exist yet; a faithful, testable explanation can ship now and doubles as a baseline for the agent's hallucination rate.
+- **Impact:** Methods text for the application; the report must not claim the shipped UI explanations come from the agent.
+- **Status:** draft.
+- **Proposal text change:** One scope sentence in 3.7.
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** draft
+
+## P-18 Agent implementation: protocol, verification, fallback, hosting
+
+- **Proposal says:** A LangGraph agent with tools (similarity search, cluster lookup, skill comparison) explains each match, reached through ASU CreateAI; explanations are rated 1 to 5 for faithfulness and usefulness, and a hallucination is a skill named in neither document.
+- **Now (draft, match-agent, ADR-19, ADR-20, CC-19):** LangGraph is used as the state machine only (optional `agent` extra, imported lazily). The model is called through the shared `LLMClient`, so tool use is a JSON action protocol, not native function calling. Four read-only tools: document skills, compare two results, cluster lookup (over skills already in the conversation), and similar documents. Every answer is a list of claims citing code-generated facts, and a deterministic verifier rejects any claim that names a skill outside the cited documents; after two failed retries, a timeout (60 s) or budget limit (4 tool steps, 6 model calls), the user gets the rules-based explanation with a recorded reason. Chat is stateless and not streamed. CreateAI is reached as an OpenAI-compatible server through the `local` backend (`LOCAL_LLM_BASE_URL`); there is no CreateAI-specific client.
+- **Reason recorded:** `LLMClient` has no tool-call support and local servers differ; verified output is what makes the hallucination rate meaningful and keeps the demo safe.
+- **Impact:** Methods text for step 8. Because the verifier rejects ungrounded skills before they are shown, the automatic hallucination rate on accepted answers is near zero by construction; the report must also state the verifier intervention rate, the fallback share, and the human or judge faithfulness ratings, and must say the vocabulary scan cannot see skills outside the taxonomy and alias table. The agent model must differ from both judge models (ADR-10); this is a configuration rule, not enforced in code.
+- **Status:** draft.
+- **Proposal text change:** One paragraph in 3.7.
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** draft
+
 ## Gap-fillers and additions (not disagreements)
 
+- `project-foundation` (repo layout and shared config) was cancelled by the user: the layout grew feature by feature, and the CC-1 models, id scheme and model client came with `structurer`, `alias-table` and `local-llm-backend`. The proposed repo conventions in the architecture (Q-6) stay unconfirmed.
 - Structurer: `experience[]` = {role, company, duration_months}, `education[]` = {degree, field, institution}; all keys required, values nullable (D-1); role nullable.
 - No experience-level field from the structurer; numeric `years_experience` (resume: explicit total, else sum of durations/12; posting: minimum years required); level left to document-embedding (D-3, D-2).
 - Skills stored as written with only trim and case-insensitive dedup (D-4); alias table is a separate step (CC-2).
@@ -229,7 +271,9 @@ Row count: 15.
 - Input truncation at 48,000 chars (D-15; 3 of 28,842 resumes, 0 postings); 4 workers.
 - Provenance refusal on mixed model/prompt/schema (D-7/D-10/D-16/D-19/D-24/D-25).
 - Downstream posting title is the LLM-extracted title, not the raw CSV field.
-- Alias-table (draft): corpus-built by case/whitespace key plus a curated CSV; optional LLM proposer writes a draft CSV that is never auto-merged; exact normalized-key matching; `skills_raw` retained.
+- Alias-table (built): corpus-built by case/whitespace key plus a curated CSV; optional LLM proposer writes a draft CSV that is never auto-merged; exact normalized-key matching; `skills_raw` retained (see P-16 for the display-spelling rule).
+- Alias-table implementation details not in the proposal or the first spec text, now written into the spec: `load_table` raises `ValueError` for a file that is not an object with an `entries` object; `build`, `apply` and `propose` pre-validate every structured record (all `RECORD_KEYS`, list `skills`) and exit 2 before writing anything; `propose` calls `make_client` before reading any input; the proposer's `conflict` status is unreachable in real runs (each skill appears once in `canonical_counts`, and `parse_groups` rejects an alias in two groups), so it is a defensive guard tested with synthetic input; `ModelOutput` dedupes skills case-insensitively, so tests with case-variant raw skills overwrite `record["skills"]` after `to_record`; the `alias-table` script entry is added in T-1, so `uv run alias-table` fails until T-8; AC-21 runs `uv run --offline pytest`.
+- Alias-table style note: spec signatures `complete_validated` and `propose_aliases` have three or four positional parameters then keyword-only ones; `call_with_retry` (six positional) is the structurer's existing function, called unchanged. The project's keyword-style rule applies to new functions in later features.
 - Skill-taxonomy (draft): document-frequency counting, min_df 2; UMAP 5 components / 15 neighbors / min_dist 0 / cosine; default grids; noise cap 0.30; silhouette on original vectors, clustered skills only; k-means also on UMAP points; editable `cluster_names.csv`; heuristic naming from the three most frequent members; names at most 40 chars, unique, not "Other"; hand editing limited to renaming or choosing a configuration.
 - Relabeling: "incomplete" = `no_skills`, `few_skills` (below the per-source 10th percentile, Q-9) or `low_coverage` (<0.5 known); lookup always wins (RL-1); unseen skills resolved once per distinct skill in batches of 50, with caching.
 - Document serialization: labeled lines "Title: / Level: / Skills: Cluster A: s1, s2; Other: ...". B2 order choice open as Q-10 (the grouped default lets adjacency leak taxonomy information to B2, an ablation-validity issue).
@@ -249,6 +293,8 @@ Row count: 15.
 8. Prompt versions, quantization and server version for local runs are not captured in records (L-8 says record in project notes).
 9. The `evaluations/` directory is empty with an undefined purpose.
 10. Kept items with null `experience_level` or an empty label are handled by assumption, not by a recorded decision.
+11. The 38-row curated alias seed is planner-written from general knowledge, not mined from the data; coverage on the full corpus is unmeasured (alias-table assumption).
+12. All-caps words of 5 or more letters that are real acronyms (for example `ANSYS`) lose to a mixed-case variant under the display-spelling rule (P-16) until curated by hand.
 
 ## Pending proposal edits
 
@@ -258,6 +304,7 @@ Row count: 15.
 - [ ] P-9 / P-10 evaluation protocol and comparisons
 - [ ] P-11 timeline
 - [ ] P-12 experience level
+- [ ] P-16 alias table method
 
 ## Could not verify
 

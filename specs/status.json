@@ -445,11 +445,130 @@
     },
     "alias-table": {
       "spec": "specs/features/alias-table.html",
-      "phase": "awaiting-approval",
-      "planner_agent": "aa40644379b4020a6",
+      "phase": "done",
+      "planner_agent": "a5722c64f6a9be301",
       "branch": "dev",
-      "tasks": {},
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: positional call_with_retry in validated.py:67 (spec shows same); no docstrings on build_feedback/parse_json_object."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: tamper test lacks match=; load_table malformed-file ValueError accepted."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "SPEC (held for planner): A-3 prose says shouting = more than 4 letters but example {JAVA:5,Java:3}->Java needs >=4; dev used SHOUTING_MIN_LETTERS=4 (so HTML/HTML5 ignored when another form exists). Fix prose or example. Reviewer pass. Non-blocking: test_alias_build.py:101 weak canonical assertion (use table.entries); build.py:10 imports make_table by name; positional multi-arg calls; pyproject script needs T-8 cli.py. Reviewer: >=4 reading is the only one satisfying all examples, but HTML/JSON/REST/YAML now ignored when a mixed-case form exists; planner picks fix. Planner decided keep \">4 letters\" (SHOUTING_MIN_LETTERS=5); code+test follow-up sent to dev af8c7997b3e2e6640 (P-16 open in docs/deviations.md until it lands). Follow-up landed: SHOUTING_MIN_LETTERS=5, tests updated, 388 passed (no re-review, tiny follow-up). P-16 in docs/deviations.md can be closed."
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "T-4-T-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev: load_table adds ValueError for malformed file (not in spec); test helper overwrites record skills after to_record because ModelOutput dedupes. Reviewer pass. Non-blocking: long assert line in test_alias_apply.py (>100 chars)."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-3",
+            "T-5"
+          ],
+          "batch": "T-7-T-9",
+          "worktree": ".",
+          "fix_rounds": 1,
+          "notes": "Review fail: alias_v1.md missing blank line between paragraphs (blocking). Non-blocking: test imports Path via propose.Path. SPEC (held): conflict status unreachable in real runs (canonical_counts yields each skill once; parse_groups rejects alias in two groups) - note or drop. Re-review pass after fix round 1. Non-blocking: pin load-bearing prompt substrings in test; propose_aliases 7 params (spec-verbatim)."
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-6",
+            "T-7"
+          ],
+          "batch": "T-7-T-9",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: cli.py _check_record goes beyond spec (harmless); keep record-key rule in one place."
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-8"
+          ],
+          "batch": "T-7-T-9",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        }
+      },
+      "batches": {
+        "T-1-T-3": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": "a0b889996e704a565",
+          "fix_rounds": 0
+        },
+        "T-4-T-6": {
+          "tasks": [
+            "T-4",
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "af8c7997b3e2e6640",
+          "fix_rounds": 0
+        },
+        "T-7-T-9": {
+          "tasks": [
+            "T-7",
+            "T-8",
+            "T-9"
+          ],
+          "developer_agent": "a2dccd0ad437e2b24",
+          "fix_rounds": 1
+        }
+      },
+      "notes": "User approved build; in place on dev, no commits, batches of 3, planner feedback held to end of feature. No large flags in this feature. User's structurer run in progress: do not touch data/ or artifacts; do not run structurer. No Voyager calls, no .env. Consolidated spec feedback sent to planner a5722c64f6a9be301 (prior planner id not resumable)."
     },
     "embedding-client": {
       "spec": "specs/features/embedding-client.html",
@@ -490,6 +609,31 @@
       "branch": "dev",
       "tasks": {},
       "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "web-app": {
+      "spec": "specs/features/web-app.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "a8e7495744e8a281a",
+      "researcher_agent": "a928d94874d183f6f",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "User asked for frontend/backend workflow plan themed on ASU brand guide (brandguide.asu.edu); must not reference any ASU GitHub repos. Researcher fetching brand tokens; forward result to planner via SendMessage. Spec ready (18 tasks, 41 ACs). Large flags: T-4, T-8, T-10, T-12, T-13, T-14, T-15, T-16 (ask user). Backend T-3+ depends on unbuilt upstream specs; frontend T-10..T-17 and backend T-1,T-2 can start now. Questions pending: ADR-15, logo (A-6), move chat/blind labeling out (A-1)."
+    },
+    "project-foundation": {
+      "spec": null,
+      "phase": "cancelled",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Cancelled by user 2026-11-08; its scope was covered by built features (paths, fileio, LLM client, structurer). Index status set to cancelled."
+    },
+    "match-agent": {
+      "spec": "specs/features/match-agent.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "a8e7495744e8a281a",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6)."
     }
   }
 }
