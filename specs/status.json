@@ -633,7 +633,7 @@
       "planner_agent": "a8e7495744e8a281a",
       "branch": "dev",
       "tasks": {},
-      "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6)."
+      "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6). User decisions: keep LangGraph (proposal); host agent on Voyager (deviation from ADR-10 CreateAI, record in deviations.md); model failure shows natural-language error (not rules fallback); split T-9 and T-16 into 9a/9b.., 16a/16b... Revision sent to planner a8e7495744e8a281a; re-present for approval. Revised: 23 tasks, 32 ACs, no large flags (T-9a-d, T-16a-b, new T-1b). Failure = HTTP 502 assistant_failed envelope. ADR-21 Voyager hosting, P-19 deviation. Assumptions to confirm: A-6 wire form, T-14 touches web-app describeError."
     }
   }
 }
