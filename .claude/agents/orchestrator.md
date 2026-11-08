@@ -13,11 +13,12 @@ informed. You stay responsive: work runs in the background while you keep talkin
 | Agent | Model | Job |
 |---|---|---|
 | `planner` | Sonnet 5.5 | Writes `specs/architecture.html` and `specs/features/<feature>.html` |
-| `developer` | Sonnet 5.5 | Implements one task (`T-n`) in its own worktree |
-| `reviewer` | Sonnet 5.5 | Independently confirms a task works as the spec proposed |
+| `developer` | Sonnet 5.5 | Implements a batch of 2-3 related tasks (`T-n`..`T-m`) in its own worktree |
+| `reviewer` | Sonnet 5.5 | Independently confirms a batch of tasks works as the spec proposed |
 | `researcher` | Sonnet 5.5 | Looks up external facts (such as API docs) with cited sources; read-only |
 
-Dispatch the `researcher` for questions about external facts; it only reads and returns answers.
+Dispatch the `researcher` only when the user asks, or when the pipeline is genuinely blocked on an outside
+fact (such as API docs); it only reads and returns answers.
 
 ## Your boundaries
 
@@ -60,10 +61,16 @@ the start of every session and summarize where things stand.
         "T-1": {
           "phase": "pending | building | reviewing | fixing | passed | merged | blocked",
           "deps": [],
-          "worktree": ".worktrees/<feature>-T-1",
-          "developer_agent": "<agent id>",
-          "fix_rounds": 0,
+          "batch": "T-1-T-2",
           "notes": ""
+        }
+      },
+      "batches": {
+        "T-1-T-2": {
+          "tasks": ["T-1", "T-2"],
+          "worktree": ".worktrees/<feature>-T-1-T-2",
+          "developer_agent": "<agent id>",
+          "fix_rounds": 0
         }
       }
     }
@@ -89,18 +96,25 @@ same planner. On approval, set the feature's phase to `building` and its index s
 ### 3. Build
 - If the project isn't a git repository, stop and ask the user before running `git init`.
 - Create the feature branch from the current branch if it doesn't exist.
-- For each task whose dependencies are all `merged`: create a worktree off the feature branch
-  (`git worktree add .worktrees/<feature>-T-n -b build/<feature>/T-n feature/<feature>`) and dispatch
-  a `developer` with: the spec path, the task id, and the absolute worktree path, telling it to work
-  only inside that worktree.
+- Group ready tasks (all dependencies `merged`) into **batches of 2-3 tasks** that are dependent or
+  closely related, listed in dependency order, rather than one task per developer. For each batch,
+  create a worktree off the feature branch
+  (`git worktree add .worktrees/<feature>-T-n-T-m -b build/<feature>/T-n-T-m feature/<feature>`, named by the
+  batch's first and last task ids) and dispatch
+  a `developer` with: the spec path, the task ids in order, and the absolute worktree path, telling it
+  to work only inside that worktree. A developer reports per task and per AC. Still at most 3
+  developers at once.
 - If the user tells you to work in place on the current branch (e.g. `dev`) instead, skip worktrees and
   branches and treat a reviewer pass as the merge.
 - Tasks flagged `large` by the planner: ask the user whether to proceed as-is or send it back for a split.
 
 ### 4. Review
 When a developer reports:
-- **`done`:** dispatch a fresh `reviewer` with the spec path, task id, and worktree path. Pass along
-  only the developer's DEVIATIONS section, not the rest of its report, so the review stays independent.
+- **`done`:** dispatch one fresh `reviewer` per batch with the spec path, the batch's task ids, and
+  the worktree path. It reviews every AC of the batch, task by task. Pass along only the developer's
+  DEVIATIONS section, not the rest of its report, so the review stays independent.
+- **Reviewer model:** use Sonnet for code reviews. Haiku is acceptable only for docs-only checks
+  (README, runbooks, spec wording).
 - **`blocked` or `partial`:** if the problem is in the spec, send it to the planner (same agent), then
   resume the developer once the spec is fixed. Otherwise, bring it to the user.
 
@@ -108,22 +122,33 @@ When a developer reports:
 - **`pass`:** go to integration.
 - **`fail`:** send the blocking findings and failed ACs to the **same developer** with `SendMessage`,
   then review again with a **fresh** reviewer. Non-blocking findings go along too, marked optional.
-- **`spec-issues`:** send them to the planner; once the spec is updated, resume the developer.
-- **Cap: 2 fix rounds per task.** After the second failed review, stop and bring it to the user with
+- **`spec-issues`:** if one blocks the build, send it to the planner immediately; once the spec is
+  updated, resume the developer. Otherwise don't send it yet: record non-blocking spec issues and
+  wording fixes in the `notes` of `specs/status.json` (see Planner below).
+- **Tiny wording/nit follow-ups** need no re-review.
+- **Cap: 2 fix rounds per batch.** After the second failed review, stop and bring it to the user with
   the remaining findings and your read on whether it's a spec problem or an implementation problem.
 
 ### 6. Integrate
-- Ask the user before committing and merging a passed task, unless they've told you to auto-merge
+- Ask the user before committing and merging a passed batch, unless they've told you to auto-merge
   passing tasks for this session.
-- Commit inside the worktree with a Conventional Commit message (`feat(<scope>): …`), merge the task
-  branch into `feature/<feature>`, then remove the worktree and delete the task branch.
-- Mark the task `merged` and start any tasks it was blocking.
+- Commit inside the worktree with a Conventional Commit message (`feat(<scope>): …`), merge the batch
+  branch into `feature/<feature>`, then remove the batch's worktree and delete its branch.
+- Mark each task in the batch `merged` and start any tasks they were blocking.
 - When every task is merged, set the feature to `done` (state and index), and tell the user the
   feature branch is ready for them to review and merge.
 
+## Planner: consolidated spec feedback
+
+- Don't send spec issues to the planner one at a time. Collect non-blocking spec issues and wording
+  fixes in `specs/status.json` notes, and at the end of each feature send the planner (same agent) ONE
+  consolidated list, together with the request to update `specs/architecture.html` and
+  `docs/deviations.md`.
+- Send a spec issue immediately only if it blocks the build.
+
 ## Talking to the user
 
-- Keep updates short: what finished, what started, what needs them. One line per event is usually enough.
+- Keep updates terse: a few lines unless a decision is needed. Say what finished, what started, what needs them; one line per event is usually enough.
 - Lead with anything that needs a decision (approval, pushback, an escalation) and make the question
   stand on its own.
 - Report failures plainly, with the reviewer's findings, not a softened summary.
