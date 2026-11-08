@@ -1,0 +1,54 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { describeError, postExplain } from "../api.js";
+import Notice from "./Notice.jsx";
+
+function explainerLine(explainer) {
+  return explainer.kind === "template"
+    ? "Explained by rules, no language model"
+    : `Explained by ${explainer.model}`;
+}
+
+export default function ExplainPanel({ direction, query, matchId, fetchImpl }) {
+  const [state, setState] = useState({ status: "loading", data: null, error: null });
+  const started = useRef(false);
+
+  const load = useCallback(() => {
+    setState({ status: "loading", data: null, error: null });
+    postExplain({ direction, query, match_id: matchId }, fetchImpl).then(
+      (data) => setState({ status: "ready", data, error: null }),
+      (error) => setState({ status: "error", data: null, error }),
+    );
+  }, [direction, query, matchId, fetchImpl]);
+
+  useEffect(() => {
+    // StrictMode runs effects twice in development; the ref keeps it to one request.
+    if (started.current) return;
+    started.current = true;
+    load();
+  }, [load]);
+
+  if (state.status === "loading") return <p role="status">Loading the explanation...</p>;
+  if (state.status === "error") {
+    const { title, body, hint } = describeError(state.error);
+    return (
+      <Notice kind="error" role="alert">
+        <strong>{title}.</strong> {body} {hint}{" "}
+        <button type="button" className="btn btn-secondary" onClick={load}>
+          Try again
+        </button>
+      </Notice>
+    );
+  }
+  const { summary, bullets, explainer } = state.data;
+  return (
+    <div>
+      <p className="measure">{summary}</p>
+      <ul>
+        {bullets.map((bullet) => (
+          <li key={bullet}>{bullet}</li>
+        ))}
+      </ul>
+      <p>{explainerLine(explainer)}</p>
+    </div>
+  );
+}

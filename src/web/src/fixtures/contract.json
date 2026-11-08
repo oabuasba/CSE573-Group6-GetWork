@@ -1,0 +1,147 @@
+{
+ "health": {
+  "status": "ok",
+  "mode": "demo",
+  "artifacts_dir": null,
+  "counts": {"resumes": 6, "postings": 6},
+  "systems": ["B1+", "B2", "Full"],
+  "levels": ["Internship", "Entry level", "Associate", "Mid-Senior level", "Director", "Executive", "Not specified"],
+  "versions": {"alias_table_version": "demo", "taxonomy_version": "demo", "serialization_version": "demo", "relabel_mode": "demo", "embedding": null, "demo": true},
+  "capabilities": {"structure": {"available": false, "reason": "Demo mode has no language model.", "detail": null}, "embed": {"available": true, "reason": null, "detail": "demo scoring, no embedding model"}},
+  "explainer": {"kind": "template", "model": null}
+ },
+ "examples": {
+  "items": [
+   {
+    "id": "r-1",
+    "side": "resume",
+    "title": "Frontend Developer",
+    "level": "Associate",
+    "level_source": "years",
+    "years_experience": 3.0,
+    "incomplete_reason": "low_coverage",
+    "skills": [{"skill": "Vue", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "CSS", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "JavaScript", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "SQL", "cluster": "Other", "via": "noise"}, {"skill": "Excel", "cluster": "Other", "via": "noise"}]
+   },
+   {
+    "id": "r-2",
+    "side": "resume",
+    "title": "Data Analyst",
+    "level": "Entry level",
+    "level_source": "years",
+    "years_experience": 1.0,
+    "incomplete_reason": null,
+    "skills": [{"skill": "SQL", "cluster": "Data", "via": "taxonomy"}, {"skill": "Excel", "cluster": "Data", "via": "taxonomy"}, {"skill": "Tableau", "cluster": "Data", "via": "taxonomy"}]
+   },
+   {
+    "id": "r-3",
+    "side": "resume",
+    "title": "Platform Engineer",
+    "level": "Mid-Senior level",
+    "level_source": "years",
+    "years_experience": 7.0,
+    "incomplete_reason": null,
+    "skills": [{"skill": "Kubernetes", "cluster": "DevOps", "via": "taxonomy"}, {"skill": "Docker", "cluster": "DevOps", "via": "taxonomy"}, {"skill": "Terraform", "cluster": "DevOps", "via": "taxonomy"}]
+   }
+  ]
+ },
+ "match": {
+  "direction": "resume_to_posting",
+  "system": "Full",
+  "query_kind": "corpus",
+  "k": 10,
+  "k_effective": 3,
+  "query": {
+   "id": "r-1",
+   "side": "resume",
+   "title": "Frontend Developer",
+   "level": "Associate",
+   "level_source": "years",
+   "years_experience": 3.0,
+   "incomplete_reason": "low_coverage",
+   "skills": [{"skill": "Vue", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "CSS", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "JavaScript", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "SQL", "cluster": "Other", "via": "noise"}, {"skill": "Excel", "cluster": "Other", "via": "noise"}]
+  },
+  "matches": [
+   {
+    "rank": 1,
+    "id": "j-1",
+    "score": 0.8123,
+    "document": {
+     "id": "j-1",
+     "side": "posting",
+     "title": "Frontend Engineer",
+     "level": "Associate",
+     "level_source": "listed",
+     "years_experience": null,
+     "incomplete_reason": null,
+     "skills": [{"skill": "React", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "JavaScript", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "CSS", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "Kubernetes", "cluster": "DevOps", "via": "taxonomy"}]
+    },
+    "evidence": {
+     "shared": [{"skill": "JavaScript", "cluster": "Front-end"}, {"skill": "CSS", "cluster": "Front-end"}],
+     "related": [{"cluster": "Front-end", "resume_skills": ["Vue"], "posting_skills": ["React"]}],
+     "gaps": [{"skill": "Kubernetes", "cluster": "DevOps"}],
+     "level": {"resume": "Associate", "posting": "Associate", "relation": "same"},
+     "title_overlap": ["frontend"]
+    }
+   },
+   {
+    "rank": 2,
+    "id": "j-2",
+    "score": 0.7412,
+    "document": {
+     "id": "j-2",
+     "side": "posting",
+     "title": "Web Developer",
+     "level": "Entry level",
+     "level_source": "listed",
+     "years_experience": null,
+     "incomplete_reason": null,
+     "skills": [{"skill": "JavaScript", "cluster": "Front-end", "via": "taxonomy"}, {"skill": "HTML", "cluster": "Front-end", "via": "taxonomy"}]
+    },
+    "evidence": {
+     "shared": [{"skill": "JavaScript", "cluster": "Front-end"}],
+     "related": [{"cluster": "Front-end", "resume_skills": ["Vue", "CSS"], "posting_skills": ["HTML"]}],
+     "gaps": [],
+     "level": {"resume": "Associate", "posting": "Entry level", "relation": "adjacent"},
+     "title_overlap": ["developer"]
+    }
+   },
+   {
+    "rank": 3,
+    "id": "j-3",
+    "score": 0.3005,
+    "document": {
+     "id": "j-3",
+     "side": "posting",
+     "title": "Site Reliability Engineer",
+     "level": "Mid-Senior level",
+     "level_source": "listed",
+     "years_experience": null,
+     "incomplete_reason": null,
+     "skills": [{"skill": "Kubernetes", "cluster": "DevOps", "via": "taxonomy"}, {"skill": "Terraform", "cluster": "DevOps", "via": "taxonomy"}]
+    },
+    "evidence": {
+     "shared": [],
+     "related": [],
+     "gaps": [{"skill": "Kubernetes", "cluster": "DevOps"}, {"skill": "Terraform", "cluster": "DevOps"}],
+     "level": {"resume": "Associate", "posting": "Mid-Senior level", "relation": "adjacent"},
+     "title_overlap": []
+    }
+   }
+  ],
+  "notes": [{"code": "sparse_query", "message": "Your document lists few skills, so results rely more on the title."}],
+  "provenance": {"alias_table_version": "demo", "taxonomy_version": "demo", "serialization_version": "demo", "relabel_mode": "demo", "embedding": null, "demo": true}
+ },
+ "explain": {
+  "summary": "2 shared skills, 1 related group, 1 gap.",
+  "bullets": ["Shared skills: JavaScript, CSS.", "Related through Front-end: the resume lists Vue, the posting asks for React.", "The posting asks for skills the resume does not show: Kubernetes.", "Experience level is the same (Associate).", "Shared title words: frontend."],
+  "evidence": {
+   "shared": [{"skill": "JavaScript", "cluster": "Front-end"}, {"skill": "CSS", "cluster": "Front-end"}],
+   "related": [{"cluster": "Front-end", "resume_skills": ["Vue"], "posting_skills": ["React"]}],
+   "gaps": [{"skill": "Kubernetes", "cluster": "DevOps"}],
+   "level": {"resume": "Associate", "posting": "Associate", "relation": "same"},
+   "title_overlap": ["frontend"]
+  },
+  "explainer": {"kind": "template", "model": null}
+ },
+ "error": {"error": {"code": "capability_unavailable", "message": "Reading pasted text needs a language model, which is not available.", "hint": "Fill in the form or pick an example instead.", "field": null}}
+}

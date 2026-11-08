@@ -1,0 +1,94 @@
+/* src/web/src/theme/tokens.css */
+:root {
+  /* Palette: guide, color page */
+  --color-maroon: #8C1D40;
+  --color-gold: #FFC627;
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+  --color-green: #78BE20;
+  --color-blue: #00A3E0;
+  --color-orange: #FF7F32;
+  --color-copper: #AF674B;
+  --color-turquoise: #4AB7C4;
+  --color-pink: #E74973;
+  --color-gray-1: #191919;
+  --color-gray-2: #484848;
+  --color-gray-3: #747474;
+  --color-gray-4: #BFBFBF;
+  --color-gray-5: #D0D0D0;
+  --color-gray-6: #E8E8E8;
+  --color-gray-7: #FAFAFA;
+  /* Team decisions: the guide gives no value */
+  --color-maroon-hover: #A8214B;
+  --color-maroon-pressed: #6B1530;
+
+  /* Semantic roles: components reference only these */
+  --bg: var(--color-gray-7);
+  --surface: var(--color-white);
+  --text: var(--color-gray-1);
+  --text-secondary: var(--color-gray-2);
+  --text-muted: var(--color-gray-3);
+  --border: var(--color-gray-5);
+  --border-strong: var(--color-gray-3);
+  --link: var(--color-maroon);
+  --link-hover: var(--color-maroon-pressed);
+  --header-top-bg: var(--color-gray-6);
+  --header-top-fg: var(--color-gray-1);
+  --header-bg: var(--color-white);
+  --header-fg: var(--color-gray-1);
+  --wordmark: var(--color-maroon);
+  --nav-current-rule: var(--color-gold);
+  --footer-bg: var(--color-gray-1);
+  --footer-fg: var(--color-white);
+  --footer-link: var(--color-gold);
+  --btn-primary-bg: var(--color-maroon);
+  --btn-primary-fg: var(--color-white);
+  --btn-primary-hover-bg: var(--color-maroon-hover);
+  --btn-cta-bg: var(--color-gold);
+  --btn-cta-fg: var(--color-gray-1);
+  --btn-secondary-bg: var(--color-white);
+  --btn-secondary-fg: var(--color-maroon);
+  --btn-secondary-border: var(--color-maroon);
+  --chip-shared-bg: var(--color-gold);
+  --chip-shared-fg: var(--color-gray-1);
+  --chip-related-bg: var(--color-white);
+  --chip-related-fg: var(--color-maroon);
+  --chip-related-border: var(--color-maroon);
+  --chip-gap-bg: var(--color-gray-6);
+  --chip-gap-fg: var(--color-gray-1);
+  --chip-other-bg: var(--color-gray-6);
+  --chip-other-fg: var(--color-gray-2);
+  --alert-info-rule: var(--color-blue);
+  --alert-success-rule: var(--color-green);
+  --alert-warning-rule: var(--color-orange);
+  --alert-error-rule: var(--color-maroon);
+  --focus-ring: var(--color-gray-1);
+  --focus-ring-on-dark: var(--color-gold);
+  --focus-width: 3px;
+  --scale-hover: 1.05;
+
+  /* Type */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --text-base: 1rem;
+  --text-small: 0.875rem;
+  --text-h1: 2rem;
+  --text-h2: 1.5rem;
+  --text-h3: 1.25rem;
+  --line-height: 1.5;
+  --measure: 43.75rem;
+
+  /* Space: multiples of 8px */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-5: 2.5rem;
+  --space-6: 3rem;
+  --space-8: 4rem;
+  --content-max: 72rem;
+
+  /* Shape */
+  --radius-button: 2rem;
+  --radius-control: 4px;
+  --radius-card: 8px;
+}
