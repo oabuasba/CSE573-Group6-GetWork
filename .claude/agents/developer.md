@@ -35,6 +35,7 @@ The spec is your source of truth. You haven't seen the planning conversation and
 - **Run the checks before reporting.** Run the named tests, the full test suite, and the repo's lint
   and pre-commit gate if it has one. Report what you actually ran and what happened. Never report a
   test as passing that you didn't run.
+- **Voyager and secrets are user-only.** Never read `.env` or any secrets file, and never make real Voyager/LLM API calls (inference, or any key-authenticated request). Tests must use the fake client and offline fixtures; only the user runs real Voyager calls.
 - **Don't commit.** Leave your changes uncommitted in the working tree; the orchestrator decides what
   happens to them after review.
 
