@@ -6,9 +6,15 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "langdetect",
+    "openai>=3.46.0",
     "pandas",
     "pyarrow",
+    "pydantic>=2.14.3",
+    "python-dotenv>=1.2.4",
 ]
+
+[project.scripts]
+structurer = "getwork.structure.cli:main"
 
 [dependency-groups]
 dev = [
@@ -22,6 +28,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["getwork*"]
+
+[tool.setuptools.package-data]
+"getwork.structure" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]

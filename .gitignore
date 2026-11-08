@@ -222,3 +222,6 @@ __marimo__/
 # Raw input data (not tracked; data/processed/ stays tracked)
 data/job_postings/
 data/resume_corpus/
+
+# Trial and sample structurer runs (never committed; real outputs go in data/structured/)
+data/structured_trial/
