@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetWork — Feature: embedding-client</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#goal">Goal</a>
+      <a href="#scope">Scope</a>
+      <a href="#design">Design</a>
+      <a href="#decisions">&nbsp;&nbsp;Decisions</a>
+      <a href="#interfaces">&nbsp;&nbsp;Interfaces</a>
+      <a href="#user-checklist">&nbsp;&nbsp;User-run checklist</a>
+      <a href="#acceptance">Acceptance criteria</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#edge-cases">Edge cases &amp; risks</a>
+      <a href="#open-questions">Open questions</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>embedding-client</h1>
+      <p class="subtitle">One <code>EmbeddingClient</code> protocol with a local Qwen3-Embedding-4B backend (sentence-transformers, the default), an optional Voyager backend, and an offline fake. Shared by skill embedding (step 3) and document embedding (step 6).</p>
+      <div class="meta"><span><strong>Status:</strong> draft</span><span><strong>Updated:</strong> 2026-11-07</span><span><strong>Pipeline step:</strong> 3 and 6 (shared)</span><span><strong>Master:</strong> <a href="../architecture.html">architecture.html</a></span></div>
+      <span class="product-badge">embedding-client</span>
+    </header>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>Two stages need vectors: <a href="skill-taxonomy.html">skill-taxonomy</a> embeds up to 1,000 single skills, and <a href="document-embedding.html">document-embedding</a> embeds every serialized document twice (Full and B2). <a href="../architecture.html#ADR-4">ADR-4</a> fixes the model (Qwen3-Embedding-4B through sentence-transformers); the user runs it locally on an RTX 5070 (12 GB), and ASU Voyager also serves <code>qwen3-embedding-4b</code> and <code>8b</code>. This feature adds the seam both stages call, mirroring <code>LLMClient</code>/<code>FakeLLMClient</code> (<a href="../architecture.html#ADR-14">ADR-14</a>): an <code>EmbeddingClient</code> protocol, a deterministic <code>FakeEmbeddingClient</code> so tests never load a model or touch the network, the local sentence-transformers client (GPU, with out-of-memory batch backoff), an optional Voyager client, backend selection and validation, a resumable chunk cache, and the row-aligned <code>.npy</code> vector files that carry the embedding provenance (model, backend, dimension) so vectors from different backends are never mixed. The first Hugging Face model download and every GPU run are user-run checklist steps. The 8B model is out of scope unless the 4B clusters poorly (follow-up).</p>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <h3>In scope</h3>
+      <ul>
+        <li><code>src/getwork/embed/</code>: protocol and errors (<code>client.py</code>), fake (<code>fake.py</code>), OOM-aware batching (<code>batching.py</code>), chunk cache (<code>cache.py</code>), vector files (<code>store.py</code>), settings and factory (<code>settings.py</code>, <code>factory.py</code>), local client (<code>st_client.py</code>), Voyager client (<code>voyager_embed.py</code>), and the <code>embed-preflight</code> command.</li>
+        <li>An optional dependency group <code>embed</code> (sentence-transformers, torch) so the offline test suite never needs them; <code>numpy</code> becomes a core dependency.</li>
+        <li>Runbook and user-run checklist EU-1 to EU-6.</li>
+      </ul>
+      <h3>Out of scope</h3>
+      <ul>
+        <li>Downloading the model, installing the <code>embed</code> extra, and any GPU run: user-run only.</li>
+        <li>Qwen3-Embedding-8B and query-time hosting (<a href="../architecture.html#open-questions">Q-1</a>). Both are follow-ups; the protocol makes them a config change.</li>
+        <li>What text is embedded (skill strings: <code>skill-taxonomy</code>; documents: <code>document-embedding</code>) and any vector math beyond normalization.</li>
+        <li>Instruction prefixes and Matryoshka dimension truncation (decision E-4).</li>
+      </ul>
+    </section>
+
+    <section id="design">
+      <h2>Design</h2>
+      <p>Stages call <code>client.embed(texts)</code> and get unit-length <code>float32</code> rows (<a href="../architecture.html#CC-5">CC-5</a>); <code>client.info</code> describes the model for provenance. Which implementation is behind it is a flag or variable (<a href="../architecture.html#CC-13">CC-13</a>). Tests inject <code>FakeEmbeddingClient</code>. Cites <a href="../architecture.html#ADR-4">ADR-4</a>, <a href="../architecture.html#ADR-12">ADR-12</a>, <a href="../architecture.html#ADR-14">ADR-14</a>, <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-11">CC-11</a>, <a href="../architecture.html#CC-13">CC-13</a>. Requires <a href="alias-table.html">alias-table</a> T-1 and T-2 (<code>pyproject.toml</code> sequencing, <code>fileio</code>) and <a href="local-llm-backend.html">local-llm-backend</a> T-2 (<code>_validate_base_url</code> with a name argument).</p>
+
+      <h3 id="decisions">Decisions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Id</th><th>Decision</th><th>Rationale</th><th>Alternative not taken</th></tr></thead>
+          <tbody>
+            <tr id="E-1"><td>E-1</td><td>A Protocol <code>EmbeddingClient</code> with <code>info</code> and <code>embed(texts)</code>; implementations: <code>SentenceTransformerClient</code> (local), <code>VoyagerEmbeddingClient</code>, <code>FakeEmbeddingClient</code>.</td><td>Same seam as <code>LLMClient</code>: stages are testable offline and the host (local, Voyager, later a query-time server) is configuration.</td><td>Calling sentence-transformers directly in each stage (torch in every import path, untestable offline).</td></tr>
+            <tr id="E-2"><td>E-2</td><td>Backend precedence: <code>--embed-backend</code> over <code>EMBED_BACKEND</code> (environment over env file) over default <code>local</code>. <code>local</code> needs no key and defaults the model to <code>Qwen/Qwen3-Embedding-4B</code> (<code>EMBED_MODEL</code> or <code>--embed-model</code> overrides). <code>voyager</code> requires <code>VOYAGER_API_KEY</code>, <code>VOYAGER_BASE_URL</code>, and a model id from <code>VOYAGER_EMBED_MODEL</code> or <code>--embed-model</code>, with no default.</td><td>ADR-4 names the local model, so a default is safe there; a Voyager model id can be retired or renamed, so it must be explicit (as ADR-11 did for the LLM). <code>EMBED_MODEL</code> applies to local only so a stale value never goes to Voyager.</td><td>One shared model variable (wrong id sent to the other backend); a default Voyager id in code.</td></tr>
+            <tr id="E-3"><td>E-3</td><td>torch and sentence-transformers are imported only inside <code>SentenceTransformerClient.__init__</code> in <code>st_client.py</code>, and installed through the optional extra <code>embed</code>. <code>openai</code> is imported only in <code>voyager_embed.py</code>. Factory, settings, store, and all stages import neither.</td><td>The suite and the CLIs run on a machine without a GPU stack; the guard test (alias-table AC-4) enforces it.</td><td>Hard dependencies on torch (multi-GB install for every developer and CI run).</td></tr>
+            <tr id="E-4"><td>E-4</td><td>No instruction prefix and no <code>prompt_name</code> for any text. Skills and documents are embedded as raw strings, symmetrically for resumes and postings.</td><td>ADR-4 requires one model and one format for both sides; Qwen3-Embedding's query instruction is meant for asymmetric query/document retrieval, which this task is not. Whether an instruction helps is an experiment, not a default.</td><td>An instruction on the query side only (breaks the two-way symmetry).</td></tr>
+            <tr id="E-5"><td>E-5</td><td>Local defaults (all overridable): device <code>auto</code> = CUDA or an error (never a silent CPU fallback), dtype <code>float16</code> on CUDA, left padding, <code>max_seq_length</code> 2048, batch size 8. On a CUDA out-of-memory error the batch size is halved and the same slice retried until it succeeds or fails at size 1 (<code>EmbeddingResourceError</code>). Texts are processed longest-first so an OOM appears on the first batch.</td><td>The 4B model in half precision is about 8 GB (inferred), leaving 4 GB of a 12 GB card for activations; a silent CPU run would take days; halving makes a too-large batch size self-correcting.</td><td>A fixed batch size (a crash after hours); a silent CPU fallback.</td></tr>
+            <tr id="E-6"><td>E-6</td><td>Vectors are <code>float32</code>, L2-normalized (<code>l2_normalize</code>) before being returned, and written with a row-aligned id file and a meta file by <code>store.write_vectors</code>. The meta holds <code>embedding</code> = <code>EmbeddingInfo.as_dict()</code>. <code>check_same_embedding</code> refuses to combine vector sets whose model, backend, or dimension differ (<code>EmbeddingMismatchError</code>).</td><td>CC-5 (cosine is an inner product) and CC "vectors as .npy with a row-aligned id file". The same model id served by Voyager and run locally can differ numerically (precision, quantization), so the backend is part of the identity.</td><td>Trusting file names; normalizing at query time.</td></tr>
+            <tr id="E-7"><td>E-7</td><td><code>embed_cached</code> splits a list into chunks of 256, embeds each chunk once, and stores it as <code>chunk_&lt;i&gt;_&lt;key&gt;.npy</code> where <code>key</code> hashes the chunk texts and the full <code>EmbeddingInfo</code>. A rerun reuses finished chunks.</td><td>A full-corpus embedding run takes long enough to be interrupted; the key makes stale chunks harmless after a text or model change.</td><td>No cache (restart from zero); caching by position only (stale vectors after an edit).</td></tr>
+            <tr id="E-8"><td>E-8</td><td>The Voyager client batches (default 32), uses the openai SDK's <code>embeddings.create</code>, maps errors with <code>error_from_http</code> (the <code>LLMError</code> classes), and retries transient errors and 429 with the same <code>RetryConfig</code>/<code>backoff_delay</code> as <code>call_with_retry</code>. It probes the dimension once at construction.</td><td>Reuses the error taxonomy and backoff already tested for the LLM path; Voyager returns 429 and 503 under load.</td><td>A new error taxonomy.</td></tr>
+            <tr id="E-9"><td>E-9</td><td>The 12 GB card is shared: a local LLM server (<a href="local-llm-backend.html">local-llm-backend</a>) and the local embedding model must not run at the same time. The checklist says to stop the server first.</td><td>Qwen3-8B 4-bit plus the 4B embedding model in half precision exceed 12 GB.</td><td>Running both and relying on swapping (out-of-memory crashes mid-run).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="interfaces">Interfaces</h3>
+      <p>Signatures are final; tasks copy them verbatim. Python 3.11. Imports not shown are standard or numpy.</p>
+
+<pre><code># src/getwork/embed/client.py   (numpy only; no torch, no openai)
+EMBEDDING_BACKENDS: tuple[str, ...] = ("local", "voyager")
+
+@dataclass(frozen=True)
+class EmbeddingInfo:
+    model: str
+    backend: str                       # "local" | "voyager" | "fake"
+    dim: int
+    max_seq_length: int | None = None
+    dtype: str | None = None           # "float16", "float32", ... or None
+    def as_dict(self) -&gt; dict[str, object]:
+        """The five fields as a dict, keys in the order model, backend, dim, max_seq_length, dtype."""
+
+class EmbeddingError(Exception): ...
+class EmbeddingResourceError(EmbeddingError): ...   # out of memory even at batch size 1
+class EmbeddingMismatchError(EmbeddingError): ...   # vector sets from different model/backend/dim
+
+class EmbeddingClient(Protocol):
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """float32 array (len(texts), info.dim); row i embeds texts[i]; every row has L2 norm within 1e-3 of 1.
+        Empty input returns shape (0, info.dim). Raises EmbeddingError (HTTP backends may also raise the
+        getwork.llm.client.LLMError subclasses)."""
+
+def l2_normalize(vectors: np.ndarray) -&gt; np.ndarray:
+    """float32 copy with each row divided by its L2 norm. EmbeddingError if the array is not 2-D, a value is not
+    finite, or a row norm is below 1e-12."""
+
+# src/getwork/embed/fake.py
+class FakeEmbeddingClient:
+    def __init__(self, dim: int = 64, model: str = "fake-embedding") -&gt; None: ...
+    calls: list[list[str]]             # texts of every embed() call, in order
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...        # EmbeddingInfo(model, "fake", dim)
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Deterministic, process-independent bag-of-words vectors. tokens = re.findall(r"\w+", text.casefold());
+        no tokens -&gt; the single token "\x00". token_vector(t): bytes = b"".join(sha256(f"{i}:{t}".encode()).digest()
+        for i in range(ceil(dim/32)))[:dim]; value = byte - 127.5 as float32. A text's vector is the sum of its
+        token vectors (a repeated token counts each time), then l2_normalize. Appends list(texts) to calls."""
+
+# src/getwork/embed/batching.py   (no torch)
+def encode_in_batches(encode: Callable[[Sequence[str]], np.ndarray], texts: Sequence[str], batch_size: int, *,
+                      is_oom: Callable[[BaseException], bool],
+                      on_oom: Callable[[int], None] | None = None) -&gt; np.ndarray:
+    """ValueError if texts is empty or batch_size &lt; 1. Order texts by (-len(text), index); take consecutive slices
+    of the current batch_size; encode(slice) returns (len(slice), dim). When encode raises an exception with
+    is_oom(exc) true: if batch_size == 1 raise EmbeddingResourceError("out of memory at batch size 1");
+    otherwise batch_size = max(1, batch_size // 2), call on_oom(new batch_size), retry the same slice. Other
+    exceptions propagate unchanged. The reduced batch size stays for later slices. Return the rows in the
+    original input order as float32."""
+
+# src/getwork/embed/cache.py   (uses getwork.fileio.atomic_write)
+def embed_cached(client: EmbeddingClient, texts: Sequence[str], *, cache_dir: Path | None, chunk_size: int = 256,
+                 progress: Callable[[int, int], None] | None = None) -&gt; np.ndarray:
+    """ValueError if chunk_size &lt; 1. Chunks are consecutive slices of chunk_size. Chunk i has
+    key = sha256(json.dumps([client.info.as_dict(), list(chunk_texts)], ensure_ascii=False, sort_keys=True)
+    .encode("utf-8")).hexdigest()[:16] and file cache_dir / f"chunk_{i:06d}_{key}.npy". An existing file with shape
+    (len(chunk), info.dim) is loaded; otherwise client.embed(chunk) is saved through atomic_write (np.save to an
+    open file object) and used. cache_dir None disables caching. Other files in cache_dir are never deleted.
+    progress(done_chunks, total_chunks) is called after each chunk. Returns the rows in order;
+    no texts -&gt; np.zeros((0, info.dim), np.float32)."""
+
+# src/getwork/embed/store.py   (uses getwork.fileio)
+@dataclass(frozen=True)
+class VectorSet:
+    ids: list[str]
+    vectors: np.ndarray                # float32 (n, dim), unit rows
+    meta: dict
+def write_vectors(directory: Path, stem: str, ids: Sequence[str], vectors: np.ndarray,
+                  meta: Mapping[str, object]) -&gt; None:
+    """Writes directory/f"{stem}.npy" (np.save, float32), f"{stem}_ids.json" (JSON list) and f"{stem}_meta.json"
+    (meta plus "n" and "dim"), each through fileio atomics. ValueError unless: vectors is 2-D float32 with len(ids)
+    rows, ids are unique, every value is finite, every row norm is within 1e-3 of 1 (CC-5), and
+    meta["embedding"] is a dict whose "dim" equals vectors.shape[1]."""
+def read_vectors(directory: Path, stem: str) -&gt; VectorSet:
+    """FileNotFoundError naming the missing path. ValueError if the three files disagree (row count, dim,
+    ids not unique)."""
+def check_same_embedding(a: Mapping[str, object], b: Mapping[str, object]) -&gt; None:
+    """a and b are meta dicts. Compare meta["embedding"]["model"], ["backend"], ["dim"]; raise
+    EmbeddingMismatchError naming each differing key and both values (values are not secrets)."""
+
+# src/getwork/embed/settings.py   (no torch, no openai)
+ENV_EMBED_BACKEND: str = "EMBED_BACKEND"
+ENV_EMBED_MODEL: str = "EMBED_MODEL"
+ENV_EMBED_VOYAGER_MODEL: str = "VOYAGER_EMBED_MODEL"
+DEFAULT_EMBED_BACKEND: str = "local"
+DEFAULT_LOCAL_MODEL: str = "Qwen/Qwen3-Embedding-4B"
+DEFAULT_BATCH_SIZE_LOCAL: int = 8
+DEFAULT_BATCH_SIZE_VOYAGER: int = 32
+DEFAULT_MAX_SEQ_LENGTH: int = 2048
+
+@dataclass(frozen=True)
+class EmbedSettings:
+    backend: str                       # one of EMBEDDING_BACKENDS
+    model: str
+    device: str = "auto"               # local only: "auto", "cpu", "cuda", "cuda:N"
+    dtype: str = "auto"                # local only: "auto", "float16", "bfloat16", "float32"
+    batch_size: int = DEFAULT_BATCH_SIZE_LOCAL
+    max_seq_length: int = DEFAULT_MAX_SEQ_LENGTH
+    api_key: str = field(default="", repr=False)   # voyager only
+    base_url: str = ""                 # voyager only
+    def __str__(self) -&gt; str:          # "EmbedSettings(backend=..., model=..., device=..., batch_size=...)", never the key
+
+def load_embed_settings(environ: Mapping[str, str], dotenv_path: Path | None, *,
+                        backend: str | None = None, model: str | None = None, device: str | None = None,
+                        dtype: str | None = None, batch_size: int | None = None,
+                        max_seq_length: int | None = None) -&gt; EmbedSettings:
+    """Values from dotenv_values (if the file exists) overlaid by environ; blank counts as missing; os.environ is
+    never modified. backend: argument, else ENV_EMBED_BACKEND, else DEFAULT_EMBED_BACKEND; stripped, lower-cased;
+    not in EMBEDDING_BACKENDS -&gt; ConfigError listing the allowed values. local: model = argument, else
+    ENV_EMBED_MODEL, else DEFAULT_LOCAL_MODEL; device must be auto, cpu, cuda or cuda:N, dtype one of the four
+    names, else ConfigError. voyager: ConfigError listing every missing NAME among VOYAGER_API_KEY (llm.settings.
+    ENV_API_KEY), VOYAGER_BASE_URL (ENV_BASE_URL) and the model (argument, else ENV_EMBED_VOYAGER_MODEL); the base
+    URL goes through llm.settings._validate_base_url(url, ENV_BASE_URL). batch_size and max_seq_length must be
+    &gt;= 1 else ConfigError; batch_size defaults by backend. Messages never contain a value of a key or URL."""
+
+# src/getwork/embed/factory.py   (imports st_client / voyager_embed only inside _real_client)
+@dataclass(frozen=True)
+class EmbeddingBundle:
+    client: EmbeddingClient
+    info: EmbeddingInfo
+    secrets: list[str]                 # [api key] for voyager, else []
+
+def add_embed_args(parser: argparse.ArgumentParser, *, with_env_file: bool = True) -&gt; None:
+    """Adds --embed-backend {local,voyager} (default None), --embed-model, --device, --dtype,
+    --embed-batch-size (positive int), --max-seq-length (positive int), all default None; and --env-file
+    (default ".env") only when with_env_file."""
+def make_embedding_client(*, args: argparse.Namespace, environ: Mapping[str, str],
+                          client: EmbeddingClient | None = None) -&gt; EmbeddingBundle:
+    """client given (tests): EmbeddingBundle(client, client.info, []); the env file and environ are not read.
+    Otherwise s = load_embed_settings(environ, Path(args.env_file), backend=args.embed_backend, model=args.embed_model,
+    device=args.device, dtype=args.dtype, batch_size=args.embed_batch_size, max_seq_length=args.max_seq_length);
+    c = _real_client(s); secrets = [s.api_key] if s.backend == "voyager" else []."""
+def _real_client(settings: EmbedSettings) -&gt; EmbeddingClient:
+    """local: from getwork.embed.st_client import SentenceTransformerClient; voyager: from getwork.embed.voyager_embed
+    import VoyagerEmbeddingClient. Tests monkeypatch this."""
+
+# src/getwork/embed/st_client.py   (the ONLY module under src/ that imports torch / sentence_transformers)
+class SentenceTransformerClient:
+    def __init__(self, settings: EmbedSettings) -&gt; None:
+        """Import torch and sentence_transformers here; ImportError -&gt; EmbeddingError("sentence-transformers and
+        torch are not installed; run: uv sync --extra embed"). device "auto": "cuda" if torch.cuda.is_available()
+        else EmbeddingError("no CUDA device found; pass --device cpu to run on the CPU (very slow for a 4B model)").
+        dtype "auto": "float16" on a cuda device, "float32" on cpu; torch_dtype = getattr(torch, dtype_name).
+        self._model = SentenceTransformer(settings.model, device=device, model_kwargs={"torch_dtype": torch_dtype},
+        tokenizer_kwargs={"padding_side": "left"}); self._model.max_seq_length = settings.max_seq_length.
+        info = EmbeddingInfo(settings.model, "local", self._model.get_sentence_embedding_dimension(),
+        settings.max_seq_length, dtype_name)."""
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Empty -&gt; zeros((0, dim)). Else l2_normalize(encode_in_batches(self._encode, texts, settings.batch_size,
+        is_oom=..., on_oom=...)). _encode(batch) = self._model.encode(list(batch), batch_size=len(batch),
+        normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False). is_oom: isinstance(exc,
+        torch.cuda.OutOfMemoryError) or "out of memory" in str(exc).lower(). on_oom(size): torch.cuda.empty_cache()
+        when the device starts with "cuda" and one line to stderr naming the new batch size. Any other exception
+        becomes EmbeddingError(f"{type(exc).__name__}: {exc}")."""
+
+# src/getwork/embed/voyager_embed.py   (the ONLY module under src/ besides llm/voyager.py that imports openai)
+class VoyagerEmbeddingClient:
+    def __init__(self, settings: EmbedSettings, *, timeout_s: float = 600.0, http_client: object | None = None,
+                 retry: RetryConfig = RetryConfig(), sleep: Callable[[float], None] = time.sleep) -&gt; None:
+        """openai.OpenAI(base_url=settings.base_url, api_key=settings.api_key, timeout=timeout_s, max_retries=0,
+        http_client=http_client). Embeds the fixed string "dimension probe" once (with retries) and sets
+        info = EmbeddingInfo(settings.model, "voyager", len(vector))."""
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Empty -&gt; zeros((0, dim)). Batches of settings.batch_size: sdk.embeddings.create(model=settings.model,
+        input=list(batch), encoding_format="float"); rows ordered by each item's .index; len(data) != len(batch)
+        -&gt; EmbeddingError; then l2_normalize. Errors: openai.APITimeoutError and APIConnectionError -&gt;
+        error_from_http(None, None, str(e), [api_key]); openai.APIStatusError -&gt; error_from_http(status, headers,
+        str(e), [api_key]). TransientLLMError: up to retry.max_attempts calls per batch with
+        sleep(backoff_delay(failures, retry, e.retry_after)) between them; RateLimitError: sleep(max(
+        retry.rate_limit_wait_s, e.retry_after or 0)) and retry, at most retry.max_rate_limit_waits waits; when
+        the budget is spent the last error is raised. PermanentLLMError and FatalLLMError propagate at once."""
+
+# src/getwork/embed/cli.py   (script: embed-preflight)
+def main(argv: list[str] | None = None, *, client: EmbeddingClient | None = None,
+         environ: Mapping[str, str] | None = None) -&gt; int:
+    """add_embed_args(parser). Builds the bundle with make_embedding_client, embeds ["Python", "Django",
+    "Kubernetes"] with time.perf_counter timing, prints one JSON object to stdout: {"backend", "model", "dim",
+    "max_seq_length", "dtype", "seconds", "related_cosine" (Python, Django), "unrelated_cosine" (Python,
+    Kubernetes), "norms_ok" (all rows within 1e-3 of 1)}. Exit 0; 2 for ConfigError (message on stderr, no key);
+    3 for EmbeddingError or LLMError (redacted message on stderr)."""</code></pre>
+
+      <h3>Data flow</h3>
+      <p>Caller (a stage CLI) calls <code>add_embed_args</code>, then <code>make_embedding_client(args=..., environ=os.environ, client=injected)</code>. The stage calls <code>embed_cached(bundle.client, texts, cache_dir=..., chunk_size=...)</code>, then <code>write_vectors(dir, stem, ids, vectors, meta={"embedding": bundle.info.as_dict(), ...})</code>. A consuming stage calls <code>read_vectors</code> and <code>check_same_embedding</code> before it combines two vector sets. Output of this feature is code only; the vector files are written by the stages (<a href="skill-taxonomy.html">skill-taxonomy</a>, <a href="document-embedding.html">document-embedding</a>) under <code>artifacts_trial/</code> (<a href="../architecture.html#CC-11">CC-11</a>).</p>
+
+      <h3 id="user-checklist">User-run checklist</h3>
+      <p>Not acceptance criteria: no agent can do these. Written into <code>src/getwork/embed/README.md</code> (T-8). Items marked <em>inferred</em> come from general knowledge, not a source read for this spec; verify them (see Open questions for what to ask the researcher).</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Step</th><th>Action</th><th>Pass condition</th></tr></thead>
+          <tbody>
+            <tr><td>EU-1</td><td><code>uv sync --extra embed</code> (installs torch and sentence-transformers, several GB). The RTX 5070 is a Blackwell card (compute capability 12.0); <em>inferred:</em> it needs a PyTorch build for CUDA 12.8 or newer. Then <code>uv run python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"</code>.</td><td>Prints <code>True</code> and a CUDA version of 12.8 or higher. If <code>False</code>, install the CUDA wheel index PyTorch documents for your platform before going on.</td></tr>
+            <tr><td>EU-2</td><td>Stop any local LLM server (<a href="local-llm-backend.html">local-llm-backend</a>). Check <code>nvidia-smi</code>.</td><td>Nearly all 12 GB free.</td></tr>
+            <tr><td>EU-3</td><td><code>uv run embed-preflight</code>. The first run downloads Qwen3-Embedding-4B from Hugging Face into the cache (<em>inferred:</em> about 8 GB, <code>~/.cache/huggingface</code>); that download is yours to run.</td><td>JSON with <code>backend: local</code>, <code>model: Qwen/Qwen3-Embedding-4B</code>, a <code>dim</code> (<em>inferred:</em> 2560), <code>dtype: float16</code>, <code>norms_ok: true</code>, and <code>related_cosine</code> greater than <code>unrelated_cosine</code>.</td></tr>
+            <tr><td>EU-4</td><td>Watch <code>nvidia-smi</code> during the first real embedding run. If the log prints "reducing batch size", the run is fine but slower; pass <code>--embed-batch-size 4</code> to start lower.</td><td>No crash; peak memory below 12 GB. Note the batch size that worked.</td></tr>
+            <tr><td>EU-5 (optional)</td><td>Voyager embeddings: add <code>VOYAGER_EMBED_MODEL=&lt;id&gt;</code> to <code>.env</code> (the id from Voyager's model list, for example the 4B model), then <code>uv run embed-preflight --embed-backend voyager</code>.</td><td>JSON with <code>backend: voyager</code>; dim matches the local model's if both serve the 4B model.</td></tr>
+            <tr><td>EU-6</td><td>Choose one backend and model for the whole dataset and note it. Vector sets from different backends are refused by <code>check_same_embedding</code>, even for the same model id.</td><td>A written decision.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="acceptance">
+      <h2>Acceptance criteria</h2>
+      <p>All tests run offline with the <code>offline</code> fixture (<code>pytestmark = pytest.mark.usefixtures("offline")</code>), use <code>tmp_path</code>, and never read <code>.env</code>, load a real model, import torch or sentence-transformers, or touch the network. The fixture changes the working directory, so tests use absolute paths under <code>tmp_path</code>.</p>
+      <ol>
+        <li id="AC-1"><strong>AC-1</strong>: <code>EmbeddingInfo.as_dict()</code> has keys model, backend, dim, max_seq_length, dtype in that order; <code>l2_normalize</code> returns float32 unit rows without changing its input, and raises <code>EmbeddingError</code> for a zero row, a NaN or inf, and a 1-D array. <em>Test:</em> <code>src/tests/test_embed_client.py::test_info_as_dict_order</code>, <code>::test_l2_normalize_rows</code>, <code>::test_l2_normalize_rejects_bad_input</code></li>
+        <li id="AC-2"><strong>AC-2</strong>: <code>FakeEmbeddingClient</code>: output shape <code>(n, dim)</code>, float32, unit rows; the same text gives the same vector in two instances and the expected first value is fixed (a literal asserted in the test, so the test fails if the construction changes); texts sharing tokens have higher cosine than texts with disjoint tokens; the empty string and empty list are handled (<code>(0, dim)</code>); <code>calls</code> records each call; <code>info.backend == "fake"</code>. <em>Test:</em> <code>src/tests/test_embed_client.py::test_fake_is_deterministic_unit_norm</code>, <code>::test_fake_shared_tokens_raise_cosine</code>, <code>::test_fake_empty_inputs_and_calls</code></li>
+        <li id="AC-3"><strong>AC-3</strong>: <code>encode_in_batches</code> returns rows in input order after longest-first processing; a callback that raises an OOM-flagged exception for batches above 2 makes the batch size go 8, 4, 2 (observed through <code>on_oom</code>) and the result still matches the no-OOM result; an OOM at size 1 raises <code>EmbeddingResourceError</code>; a non-OOM exception propagates unchanged; empty texts and batch size 0 raise <code>ValueError</code>. <em>Test:</em> <code>src/tests/test_embed_batching.py::test_order_restored</code>, <code>::test_oom_halves_batch_size</code>, <code>::test_oom_at_size_one_raises</code>, <code>::test_other_errors_propagate_and_bad_args</code></li>
+        <li id="AC-4"><strong>AC-4</strong>: <code>embed_cached</code>: a second call with the same texts makes zero client calls and returns equal vectors; changing one text re-embeds only its chunk; a client with a different <code>info</code> (model name) re-embeds everything; a stale chunk file is not deleted; <code>cache_dir=None</code> always calls the client; <code>progress</code> reports <code>(i, total)</code> per chunk; no texts returns <code>(0, dim)</code>; <code>chunk_size=0</code> raises <code>ValueError</code>. <em>Test:</em> <code>src/tests/test_embed_batching.py::test_cache_reuses_chunks</code>, <code>::test_cache_invalidated_by_text_or_info</code>, <code>::test_cache_disabled_progress_and_empty</code></li>
+        <li id="AC-5"><strong>AC-5</strong>: <code>write_vectors</code>/<code>read_vectors</code> round-trip ids, float32 vectors and meta (with <code>n</code> and <code>dim</code>); files are <code>&lt;stem&gt;.npy</code>, <code>&lt;stem&gt;_ids.json</code>, <code>&lt;stem&gt;_meta.json</code>; writing raises <code>ValueError</code> for float64 vectors, a row-count mismatch, duplicate ids, a NaN, a non-unit row, and a meta without <code>embedding</code> or with a wrong <code>dim</code>; reading a missing file names its path; a hand-edited ids file with a different length raises <code>ValueError</code>. <em>Test:</em> <code>src/tests/test_embed_store.py::test_roundtrip_and_file_names</code>, <code>::test_write_rejects_bad_vectors_and_meta</code>, <code>::test_read_errors</code></li>
+        <li id="AC-6"><strong>AC-6</strong>: <code>check_same_embedding</code> passes for equal model, backend, dim (other meta keys and <code>dtype</code> may differ) and raises <code>EmbeddingMismatchError</code> naming each differing key for a different backend, model, or dim. <em>Test:</em> <code>src/tests/test_embed_store.py::test_check_same_embedding</code></li>
+        <li id="AC-7"><strong>AC-7</strong>: <code>load_embed_settings</code>: no configuration gives backend <code>local</code>, model <code>Qwen/Qwen3-Embedding-4B</code>, batch size 8, no key needed; <code>EMBED_BACKEND</code> from the env file is overridden by the environment, which is overridden by the argument; an unknown backend raises <code>ConfigError</code> listing <code>local</code> and <code>voyager</code> and not echoing the value; <code>EMBED_MODEL</code> sets the local model and is ignored for <code>voyager</code>; <code>voyager</code> without key, base URL, or model raises <code>ConfigError</code> naming every missing variable (<code>VOYAGER_API_KEY</code>, <code>VOYAGER_BASE_URL</code>, <code>VOYAGER_EMBED_MODEL</code>) and never a value; <code>http://</code> to a non-local host is rejected; invalid device, dtype, or batch size 0 raise <code>ConfigError</code>; <code>repr</code> and <code>str</code> never contain the key; <code>os.environ</code> is unchanged. <em>Test:</em> <code>src/tests/test_embed_factory.py::test_defaults_are_local_4b</code>, <code>::test_backend_precedence_and_unknown</code>, <code>::test_model_variables_are_per_backend</code>, <code>::test_voyager_requires_key_url_model</code>, <code>::test_value_validation_and_secrecy</code></li>
+        <li id="AC-8"><strong>AC-8</strong>: <code>add_embed_args</code> adds exactly the documented options with <code>None</code> defaults (and <code>.env</code> for <code>--env-file</code> only when requested); <code>make_embedding_client</code> with an injected client returns it with <code>info</code> and no secrets without reading the env file (pass a missing path and an empty environ); without a client it calls <code>_real_client</code> (monkeypatched) with the resolved settings and returns <code>secrets == [key]</code> for voyager and <code>[]</code> for local; a <code>ConfigError</code> propagates; importing <code>getwork.embed.factory</code> in a fresh interpreter imports none of <code>torch</code>, <code>sentence_transformers</code>, <code>openai</code>. <em>Test:</em> <code>src/tests/test_embed_factory.py::test_add_embed_args_defaults</code>, <code>::test_make_client_with_injected_client</code>, <code>::test_make_client_builds_real_client_and_secrets</code>, <code>::test_factory_import_is_light</code> (subprocess)</li>
+        <li id="AC-9"><strong>AC-9</strong>: <code>SentenceTransformerClient</code> with stand-in <code>torch</code> and <code>sentence_transformers</code> modules injected through <code>monkeypatch.setitem(sys.modules, ...)</code>: it passes the model name, device, <code>torch_dtype</code>, <code>padding_side="left"</code>, and sets <code>max_seq_length</code>; <code>auto</code> picks cuda and float16 when the stand-in reports CUDA and gives <code>EmbeddingError</code> mentioning <code>--device cpu</code> when it does not; <code>--device cpu</code> picks float32; <code>info</code> reports the stand-in's dimension; <code>embed</code> returns unit rows in input order and an empty list gives <code>(0, dim)</code>; a stand-in OOM on a batch above 2 is retried at smaller sizes and calls <code>empty_cache</code>; a stand-in <code>RuntimeError</code> becomes <code>EmbeddingError</code>. <em>Test:</em> <code>src/tests/test_embed_st_client.py::test_constructor_arguments_and_info</code>, <code>::test_auto_device_and_dtype</code>, <code>::test_embed_order_unit_norm_and_empty</code>, <code>::test_oom_backoff_and_error_wrapping</code></li>
+        <li id="AC-10"><strong>AC-10</strong>: With <code>sys.modules["sentence_transformers"] = None</code> (import fails), constructing <code>SentenceTransformerClient</code> raises <code>EmbeddingError</code> containing <code>uv sync --extra embed</code> and does not touch the network; a guard test shows <code>st_client.py</code> contains no module-level import of torch or sentence_transformers. <em>Test:</em> <code>src/tests/test_embed_st_client.py::test_missing_library_message</code>, <code>::test_no_module_level_heavy_imports</code></li>
+        <li id="AC-11"><strong>AC-11</strong>: <code>VoyagerEmbeddingClient</code> with <code>httpx2.MockTransport</code>: the constructor sends one probe request and sets <code>info.dim</code>; <code>embed</code> sends the model id, batches of <code>batch_size</code>, <code>encoding_format: float</code> and the bearer key; rows are reordered by <code>index</code>, unit-normalized, and returned in input order; a short response raises <code>EmbeddingError</code>; an empty list sends no request. <em>Test:</em> <code>src/tests/test_embed_voyager.py::test_probe_sets_dim_and_request_shape</code>, <code>::test_batching_order_and_normalization</code>, <code>::test_short_response_is_error</code></li>
+        <li id="AC-12"><strong>AC-12</strong>: Voyager errors: 503 then 200 retries (one <code>sleep</code> of the backoff delay, observed through the injected <code>sleep</code>); 429 sleeps at least <code>rate_limit_wait_s</code> and honors <code>Retry-After</code>; 401 and 404 raise <code>FatalLLMError</code> and 400 raises <code>PermanentLLMError</code> with one request; exhausting <code>max_attempts</code> raises the last <code>TransientLLMError</code>; a connection error is transient; the key never appears in any error text. <em>Test:</em> <code>src/tests/test_embed_voyager.py::test_transient_retry_and_backoff</code>, <code>::test_rate_limit_waits</code>, <code>::test_permanent_and_fatal_not_retried</code>, <code>::test_retries_exhausted_and_key_redacted</code></li>
+        <li id="AC-13"><strong>AC-13</strong>: <code>embed-preflight</code> via <code>cli.main</code> with an injected fake prints the documented JSON keys and returns 0, with <code>norms_ok</code> true and numeric cosines; a failing injected client (raising <code>EmbeddingError</code>) returns 3 with a message on stderr; with no client and a voyager backend missing its variables it returns 2 naming them and no value; <code>--embed-backend local</code> with a monkeypatched <code>_real_client</code> works without any environment variable. <em>Test:</em> <code>src/tests/test_embed_cli.py::test_preflight_prints_json_and_exits_0</code>, <code>::test_preflight_embedding_error_exits_3</code>, <code>::test_preflight_config_error_exits_2</code>, <code>::test_preflight_local_needs_no_variables</code></li>
+        <li id="AC-14"><strong>AC-14</strong>: <code>pyproject.toml</code> lists <code>numpy</code> in <code>dependencies</code>, an <code>embed</code> optional group containing <code>sentence-transformers</code> and <code>torch</code> and not listed in <code>dependencies</code>, and the script <code>embed-preflight = "getwork.embed.cli:main"</code>; <code>.env.example</code> still assigns exactly the three Voyager variables and adds commented lines naming <code>EMBED_BACKEND</code>, <code>EMBED_MODEL</code>, <code>VOYAGER_EMBED_MODEL</code>; the runbook <code>src/getwork/embed/README.md</code> contains headings EU-1 to EU-6 and the strings <code>embed-preflight</code>, <code>--extra embed</code>, <code>inferred</code>, <code>check_same_embedding</code>. <em>Test:</em> <code>src/tests/test_embed_docs.py::test_pyproject_extra_and_script</code>, <code>::test_env_example_documents_embedding</code>, <code>::test_runbook_has_checklist</code></li>
+        <li id="AC-15"><strong>AC-15</strong>: The whole suite passes with no key, no model, no GPU stack, and no network, and the tests create nothing under the repository: <code>env -u VOYAGER_API_KEY -u VOYAGER_BASE_URL -u VOYAGER_MODEL -u EMBED_BACKEND -u EMBED_MODEL -u VOYAGER_EMBED_MODEL uv run pytest -q</code> exits 0 and <code>git status --porcelain</code> shows nothing new from the run. The offline fixture also unsets the three new variables. <em>Test:</em> <code>src/tests/test_structure_offline.py::test_apply_offline_unsets_env_set_earlier_and_changes_cwd</code> (extended); the command line is a check, not a pytest test, because it covers the whole suite.</li>
+      </ol>
+    </section>
+
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>Each task is at most about 200 changed lines including tests, at most about 4 files, one concern. Tasks touching the same file are sequenced (this feature's tasks touch <code>pyproject.toml</code> in T-1 and T-8, <code>conftest.py</code> and <code>.env.example</code> in T-8). Developers never read <code>.env</code>, never call a real API, never download a model or install the <code>embed</code> extra, and start each new test file with <code>pytestmark = pytest.mark.usefixtures("offline")</code>. Cross-feature prerequisites: <code>AL-T-n</code> for <a href="alias-table.html">alias-table</a>, <code>LB-T-n</code> for <a href="local-llm-backend.html">local-llm-backend</a>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Summary</th><th>Depends on</th><th>ACs</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#T-1">T-1</a></td><td>Protocol, errors, fake, numpy dependency</td><td>AL-T-1</td><td>AC-1, AC-2</td></tr>
+            <tr><td><a href="#T-2">T-2</a></td><td>OOM-aware batching and chunk cache</td><td>T-1, AL-T-2</td><td>AC-3, AC-4</td></tr>
+            <tr><td><a href="#T-3">T-3</a></td><td>Vector files and embedding identity check</td><td>T-1, AL-T-2</td><td>AC-5, AC-6</td></tr>
+            <tr><td><a href="#T-4">T-4</a></td><td>Settings and factory</td><td>T-1, LB-T-2</td><td>AC-7, AC-8</td></tr>
+            <tr><td><a href="#T-5">T-5</a></td><td>Local sentence-transformers client</td><td>T-2, T-4</td><td>AC-9, AC-10</td></tr>
+            <tr><td><a href="#T-6">T-6</a></td><td>Voyager embedding client</td><td>T-4</td><td>AC-11, AC-12</td></tr>
+            <tr><td><a href="#T-7">T-7</a></td><td><code>embed-preflight</code> command</td><td>T-4</td><td>AC-13</td></tr>
+            <tr><td><a href="#T-8">T-8</a></td><td>Extra, script, env example, offline fixture, runbook, final check</td><td>T-5, T-6, T-7, LB-T-7</td><td>AC-14, AC-15</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section id="T-1" class="card">
+        <div class="card-header"><span class="badge badge-info">T-1</span><h3>Protocol, errors, fake, numpy dependency</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/__init__.py</code> (new, empty), <code>src/getwork/embed/client.py</code> (new), <code>src/getwork/embed/fake.py</code> (new), <code>src/tests/test_embed_client.py</code> (new), <code>pyproject.toml</code> (modify). Five files, but <code>__init__.py</code> is empty and the <code>pyproject.toml</code> edit is one line.</p>
+        <p><strong>Depends on:</strong> AL-T-1 (<code>pyproject.toml</code> sequencing). <strong>Satisfies:</strong> AC-1, AC-2. <strong>Cites:</strong> <a href="../architecture.html#CC-5">CC-5</a>, <a href="../architecture.html#CC-13">CC-13</a>, decisions E-1, E-6.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/client.py   (numpy only; no torch, no openai)
+EMBEDDING_BACKENDS: tuple[str, ...] = ("local", "voyager")
+
+@dataclass(frozen=True)
+class EmbeddingInfo:
+    model: str
+    backend: str                       # "local" | "voyager" | "fake"
+    dim: int
+    max_seq_length: int | None = None
+    dtype: str | None = None           # "float16", "float32", ... or None
+    def as_dict(self) -&gt; dict[str, object]:
+        """The five fields as a dict, keys in the order model, backend, dim, max_seq_length, dtype."""
+
+class EmbeddingError(Exception): ...
+class EmbeddingResourceError(EmbeddingError): ...   # out of memory even at batch size 1
+class EmbeddingMismatchError(EmbeddingError): ...   # vector sets from different model/backend/dim
+
+class EmbeddingClient(Protocol):
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """float32 array (len(texts), info.dim); row i embeds texts[i]; every row has L2 norm within 1e-3 of 1.
+        Empty input returns shape (0, info.dim). Raises EmbeddingError (HTTP backends may also raise the
+        getwork.llm.client.LLMError subclasses)."""
+
+def l2_normalize(vectors: np.ndarray) -&gt; np.ndarray:
+    """float32 copy with each row divided by its L2 norm. EmbeddingError if the array is not 2-D, a value is not
+    finite, or a row norm is below 1e-12."""
+
+# src/getwork/embed/fake.py
+class FakeEmbeddingClient:
+    def __init__(self, dim: int = 64, model: str = "fake-embedding") -&gt; None: ...
+    calls: list[list[str]]             # texts of every embed() call, in order
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...        # EmbeddingInfo(model, "fake", dim)
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Deterministic, process-independent bag-of-words vectors. tokens = re.findall(r"\w+", text.casefold());
+        no tokens -&gt; the single token "\x00". token_vector(t): bytes = b"".join(sha256(f"{i}:{t}".encode()).digest()
+        for i in range(ceil(dim/32)))[:dim]; value = byte - 127.5 as float32. A text's vector is the sum of its
+        token vectors (a repeated token counts each time), then l2_normalize. Appends list(texts) to calls."""</code></pre>
+        <p><strong>Instructions:</strong> Run <code>uv add numpy</code> (updates <code>pyproject.toml</code> and <code>uv.lock</code>); do not add any other dependency in this task. <code>as_dict</code> uses <code>dataclasses.asdict</code> (field order is the declared order). The fake builds <code>np.frombuffer(raw, dtype=np.uint8)</code> then <code>- 127.5</code>. Tests as named in AC-1 and AC-2; for the fixed literal, run the fake once while writing the test and paste the first value of <code>embed(["python"])[0][0]</code> rounded to 6 digits.</p>
+      </section>
+
+      <section id="T-2" class="card">
+        <div class="card-header"><span class="badge badge-info">T-2</span><h3>OOM-aware batching and chunk cache</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/batching.py</code> (new), <code>src/getwork/embed/cache.py</code> (new), <code>src/tests/test_embed_batching.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1, AL-T-2 (<code>fileio.atomic_write</code>). <strong>Satisfies:</strong> AC-3, AC-4. <strong>Cites:</strong> decisions E-5, E-7.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/batching.py   (no torch)
+def encode_in_batches(encode: Callable[[Sequence[str]], np.ndarray], texts: Sequence[str], batch_size: int, *,
+                      is_oom: Callable[[BaseException], bool],
+                      on_oom: Callable[[int], None] | None = None) -&gt; np.ndarray:
+    """ValueError if texts is empty or batch_size &lt; 1. Order texts by (-len(text), index); take consecutive slices
+    of the current batch_size; encode(slice) returns (len(slice), dim). When encode raises an exception with
+    is_oom(exc) true: if batch_size == 1 raise EmbeddingResourceError("out of memory at batch size 1");
+    otherwise batch_size = max(1, batch_size // 2), call on_oom(new batch_size), retry the same slice. Other
+    exceptions propagate unchanged. The reduced batch size stays for later slices. Return the rows in the
+    original input order as float32."""
+
+# src/getwork/embed/cache.py   (uses getwork.fileio.atomic_write)
+def embed_cached(client: EmbeddingClient, texts: Sequence[str], *, cache_dir: Path | None, chunk_size: int = 256,
+                 progress: Callable[[int, int], None] | None = None) -&gt; np.ndarray:
+    """ValueError if chunk_size &lt; 1. Chunks are consecutive slices of chunk_size. Chunk i has
+    key = sha256(json.dumps([client.info.as_dict(), list(chunk_texts)], ensure_ascii=False, sort_keys=True)
+    .encode("utf-8")).hexdigest()[:16] and file cache_dir / f"chunk_{i:06d}_{key}.npy". An existing file with shape
+    (len(chunk), info.dim) is loaded; otherwise client.embed(chunk) is saved through atomic_write (np.save to an
+    open file object) and used. cache_dir None disables caching. Other files in cache_dir are never deleted.
+    progress(done_chunks, total_chunks) is called after each chunk. Returns the rows in order;
+    no texts -&gt; np.zeros((0, info.dim), np.float32)."""</code></pre>
+        <p><strong>Instructions:</strong> Uses <code>EmbeddingClient</code>, <code>EmbeddingResourceError</code> from <code>getwork.embed.client</code> (T-1). In the OOM test the encode stand-in raises <code>MemoryError</code> (is_oom = <code>lambda e: isinstance(e, MemoryError)</code>) when its slice is longer than 2 and returns <code>FakeEmbeddingClient</code> rows otherwise. Cache tests use <code>FakeEmbeddingClient</code> and count <code>len(fake.calls)</code>. A corrupted or wrong-shaped chunk file is overwritten, not an error.</p>
+      </section>
+
+      <section id="T-3" class="card">
+        <div class="card-header"><span class="badge badge-info">T-3</span><h3>Vector files and embedding identity check</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/store.py</code> (new), <code>src/tests/test_embed_store.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1, AL-T-2 (<code>write_json_atomic</code>, <code>atomic_write</code>, <code>read_json</code>). <strong>Satisfies:</strong> AC-5, AC-6. <strong>Cites:</strong> <a href="../architecture.html#CC-5">CC-5</a>, <a href="../architecture.html#CC-13">CC-13</a>, decision E-6.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/store.py   (uses getwork.fileio)
+@dataclass(frozen=True)
+class VectorSet:
+    ids: list[str]
+    vectors: np.ndarray                # float32 (n, dim), unit rows
+    meta: dict
+def write_vectors(directory: Path, stem: str, ids: Sequence[str], vectors: np.ndarray,
+                  meta: Mapping[str, object]) -&gt; None:
+    """Writes directory/f"{stem}.npy" (np.save, float32), f"{stem}_ids.json" (JSON list) and f"{stem}_meta.json"
+    (meta plus "n" and "dim"), each through fileio atomics. ValueError unless: vectors is 2-D float32 with len(ids)
+    rows, ids are unique, every value is finite, every row norm is within 1e-3 of 1 (CC-5), and
+    meta["embedding"] is a dict whose "dim" equals vectors.shape[1]."""
+def read_vectors(directory: Path, stem: str) -&gt; VectorSet:
+    """FileNotFoundError naming the missing path. ValueError if the three files disagree (row count, dim,
+    ids not unique)."""
+def check_same_embedding(a: Mapping[str, object], b: Mapping[str, object]) -&gt; None:
+    """a and b are meta dicts. Compare meta["embedding"]["model"], ["backend"], ["dim"]; raise
+    EmbeddingMismatchError naming each differing key and both values (values are not secrets)."""</code></pre>
+        <p><strong>Instructions:</strong> Write the ids file with <code>write_json_atomic</code> (a list of strings) and the meta with <code>write_json_atomic</code> of <code>{**meta, "n": len(ids), "dim": dim}</code>. The <code>.npy</code> goes through <code>atomic_write(path, lambda tmp: np.save(open_file, vectors))</code>: open the temp path with <code>open(tmp, "wb")</code> and pass the file object to <code>np.save</code> so numpy does not append a second <code>.npy</code>. <code>read_vectors</code> loads with <code>np.load(path, allow_pickle=False)</code>.</p>
+      </section>
+
+      <section id="T-4" class="card">
+        <div class="card-header"><span class="badge badge-info">T-4</span><h3>Settings and factory</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/settings.py</code> (new), <code>src/getwork/embed/factory.py</code> (new), <code>src/tests/test_embed_factory.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1, LB-T-2 (<code>_validate_base_url(base_url, name)</code>). <strong>Satisfies:</strong> AC-7, AC-8. <strong>Cites:</strong> <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-13">CC-13</a>, decision E-2, E-3.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/settings.py   (no torch, no openai)
+ENV_EMBED_BACKEND: str = "EMBED_BACKEND"
+ENV_EMBED_MODEL: str = "EMBED_MODEL"
+ENV_EMBED_VOYAGER_MODEL: str = "VOYAGER_EMBED_MODEL"
+DEFAULT_EMBED_BACKEND: str = "local"
+DEFAULT_LOCAL_MODEL: str = "Qwen/Qwen3-Embedding-4B"
+DEFAULT_BATCH_SIZE_LOCAL: int = 8
+DEFAULT_BATCH_SIZE_VOYAGER: int = 32
+DEFAULT_MAX_SEQ_LENGTH: int = 2048
+
+@dataclass(frozen=True)
+class EmbedSettings:
+    backend: str                       # one of EMBEDDING_BACKENDS
+    model: str
+    device: str = "auto"               # local only: "auto", "cpu", "cuda", "cuda:N"
+    dtype: str = "auto"                # local only: "auto", "float16", "bfloat16", "float32"
+    batch_size: int = DEFAULT_BATCH_SIZE_LOCAL
+    max_seq_length: int = DEFAULT_MAX_SEQ_LENGTH
+    api_key: str = field(default="", repr=False)   # voyager only
+    base_url: str = ""                 # voyager only
+    def __str__(self) -&gt; str:          # "EmbedSettings(backend=..., model=..., device=..., batch_size=...)", never the key
+
+def load_embed_settings(environ: Mapping[str, str], dotenv_path: Path | None, *,
+                        backend: str | None = None, model: str | None = None, device: str | None = None,
+                        dtype: str | None = None, batch_size: int | None = None,
+                        max_seq_length: int | None = None) -&gt; EmbedSettings:
+    """Values from dotenv_values (if the file exists) overlaid by environ; blank counts as missing; os.environ is
+    never modified. backend: argument, else ENV_EMBED_BACKEND, else DEFAULT_EMBED_BACKEND; stripped, lower-cased;
+    not in EMBEDDING_BACKENDS -&gt; ConfigError listing the allowed values. local: model = argument, else
+    ENV_EMBED_MODEL, else DEFAULT_LOCAL_MODEL; device must be auto, cpu, cuda or cuda:N, dtype one of the four
+    names, else ConfigError. voyager: ConfigError listing every missing NAME among VOYAGER_API_KEY (llm.settings.
+    ENV_API_KEY), VOYAGER_BASE_URL (ENV_BASE_URL) and the model (argument, else ENV_EMBED_VOYAGER_MODEL); the base
+    URL goes through llm.settings._validate_base_url(url, ENV_BASE_URL). batch_size and max_seq_length must be
+    &gt;= 1 else ConfigError; batch_size defaults by backend. Messages never contain a value of a key or URL."""
+
+# src/getwork/embed/factory.py   (imports st_client / voyager_embed only inside _real_client)
+@dataclass(frozen=True)
+class EmbeddingBundle:
+    client: EmbeddingClient
+    info: EmbeddingInfo
+    secrets: list[str]                 # [api key] for voyager, else []
+
+def add_embed_args(parser: argparse.ArgumentParser, *, with_env_file: bool = True) -&gt; None:
+    """Adds --embed-backend {local,voyager} (default None), --embed-model, --device, --dtype,
+    --embed-batch-size (positive int), --max-seq-length (positive int), all default None; and --env-file
+    (default ".env") only when with_env_file."""
+def make_embedding_client(*, args: argparse.Namespace, environ: Mapping[str, str],
+                          client: EmbeddingClient | None = None) -&gt; EmbeddingBundle:
+    """client given (tests): EmbeddingBundle(client, client.info, []); the env file and environ are not read.
+    Otherwise s = load_embed_settings(environ, Path(args.env_file), backend=args.embed_backend, model=args.embed_model,
+    device=args.device, dtype=args.dtype, batch_size=args.embed_batch_size, max_seq_length=args.max_seq_length);
+    c = _real_client(s); secrets = [s.api_key] if s.backend == "voyager" else []."""
+def _real_client(settings: EmbedSettings) -&gt; EmbeddingClient:
+    """local: from getwork.embed.st_client import SentenceTransformerClient; voyager: from getwork.embed.voyager_embed
+    import VoyagerEmbeddingClient. Tests monkeypatch this."""</code></pre>
+        <p><strong>Instructions:</strong> Reuse <code>ConfigError</code>, <code>ENV_API_KEY</code>, <code>ENV_BASE_URL</code>, <code>_clean</code>, <code>_validate_base_url</code> from <code>getwork.llm.settings</code> and use <code>dotenv_values</code> only (never <code>load_dotenv</code>); follow the merge pattern of <code>load_settings</code>. The type-check import of <code>EmbeddingClient</code> is fine at module level (it is torch-free). Tests use files named <code>test.env</code> under <code>tmp_path</code> (never <code>.env</code>) and plain dicts for <code>environ</code>. <code>test_factory_import_is_light</code> runs <code>sys.executable -c "import sys; import getwork.embed.factory; assert not {'torch','sentence_transformers','openai'} &amp; set(sys.modules)"</code>.</p>
+      </section>
+
+      <section id="T-5" class="card">
+        <div class="card-header"><span class="badge badge-info">T-5</span><h3>Local sentence-transformers client</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/st_client.py</code> (new), <code>src/tests/test_embed_st_client.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-2 (<code>encode_in_batches</code>), T-4 (<code>EmbedSettings</code>). <strong>Satisfies:</strong> AC-9, AC-10. <strong>Cites:</strong> decisions E-3, E-4, E-5, E-9.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/st_client.py   (the ONLY module under src/ that imports torch / sentence_transformers)
+class SentenceTransformerClient:
+    def __init__(self, settings: EmbedSettings) -&gt; None:
+        """Import torch and sentence_transformers here; ImportError -&gt; EmbeddingError("sentence-transformers and
+        torch are not installed; run: uv sync --extra embed"). device "auto": "cuda" if torch.cuda.is_available()
+        else EmbeddingError("no CUDA device found; pass --device cpu to run on the CPU (very slow for a 4B model)").
+        dtype "auto": "float16" on a cuda device, "float32" on cpu; torch_dtype = getattr(torch, dtype_name).
+        self._model = SentenceTransformer(settings.model, device=device, model_kwargs={"torch_dtype": torch_dtype},
+        tokenizer_kwargs={"padding_side": "left"}); self._model.max_seq_length = settings.max_seq_length.
+        info = EmbeddingInfo(settings.model, "local", self._model.get_sentence_embedding_dimension(),
+        settings.max_seq_length, dtype_name)."""
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Empty -&gt; zeros((0, dim)). Else l2_normalize(encode_in_batches(self._encode, texts, settings.batch_size,
+        is_oom=..., on_oom=...)). _encode(batch) = self._model.encode(list(batch), batch_size=len(batch),
+        normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False). is_oom: isinstance(exc,
+        torch.cuda.OutOfMemoryError) or "out of memory" in str(exc).lower(). on_oom(size): torch.cuda.empty_cache()
+        when the device starts with "cuda" and one line to stderr naming the new batch size. Any other exception
+        becomes EmbeddingError(f"{type(exc).__name__}: {exc}")."""</code></pre>
+        <p><strong>Instructions:</strong> Imports of torch and sentence_transformers happen inside <code>__init__</code> (the module must import cleanly without them). The test file never contains an import statement for these libraries: it builds stand-ins with <code>types.ModuleType</code>/<code>types.SimpleNamespace</code> and installs them with <code>monkeypatch.setitem(sys.modules, "torch", fake_torch)</code> and <code>("sentence_transformers", fake_st)</code>. The stand-in <code>SentenceTransformer</code> records its constructor kwargs, has <code>max_seq_length</code> as a plain attribute, <code>get_sentence_embedding_dimension()</code> returning 8, and <code>encode(batch, **kw)</code> returning <code>FakeEmbeddingClient(dim=8).embed(batch)</code> (and raising a stand-in <code>OutOfMemoryError</code> class for batches above 2 in the OOM test). The stand-in torch has <code>float16</code>, <code>bfloat16</code>, <code>float32</code> markers, <code>cuda.is_available</code>, <code>cuda.OutOfMemoryError</code>, <code>cuda.empty_cache</code>. <code>test_no_module_level_heavy_imports</code> reads the source text and asserts that no line outside a function body starts with <code>import torch</code>, <code>from torch</code>, <code>import sentence_transformers</code>, or <code>from sentence_transformers</code> (all such lines must be indented).</p>
+      </section>
+
+      <section id="T-6" class="card">
+        <div class="card-header"><span class="badge badge-info">T-6</span><h3>Voyager embedding client</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/voyager_embed.py</code> (new), <code>src/tests/test_embed_voyager.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-4. <strong>Satisfies:</strong> AC-11, AC-12. <strong>Cites:</strong> <a href="../architecture.html#CC-10">CC-10</a>, decisions E-2, E-8; structurer D-12, D-28 (httpx2 only in this test file).</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/voyager_embed.py   (the ONLY module under src/ besides llm/voyager.py that imports openai)
+class VoyagerEmbeddingClient:
+    def __init__(self, settings: EmbedSettings, *, timeout_s: float = 600.0, http_client: object | None = None,
+                 retry: RetryConfig = RetryConfig(), sleep: Callable[[float], None] = time.sleep) -&gt; None:
+        """openai.OpenAI(base_url=settings.base_url, api_key=settings.api_key, timeout=timeout_s, max_retries=0,
+        http_client=http_client). Embeds the fixed string "dimension probe" once (with retries) and sets
+        info = EmbeddingInfo(settings.model, "voyager", len(vector))."""
+    @property
+    def info(self) -&gt; EmbeddingInfo: ...
+    def embed(self, texts: Sequence[str]) -&gt; np.ndarray:
+        """Empty -&gt; zeros((0, dim)). Batches of settings.batch_size: sdk.embeddings.create(model=settings.model,
+        input=list(batch), encoding_format="float"); rows ordered by each item's .index; len(data) != len(batch)
+        -&gt; EmbeddingError; then l2_normalize. Errors: openai.APITimeoutError and APIConnectionError -&gt;
+        error_from_http(None, None, str(e), [api_key]); openai.APIStatusError -&gt; error_from_http(status, headers,
+        str(e), [api_key]). TransientLLMError: up to retry.max_attempts calls per batch with
+        sleep(backoff_delay(failures, retry, e.retry_after)) between them; RateLimitError: sleep(max(
+        retry.rate_limit_wait_s, e.retry_after or 0)) and retry, at most retry.max_rate_limit_waits waits; when
+        the budget is spent the last error is raised. PermanentLLMError and FatalLLMError propagate at once."""</code></pre>
+        <p><strong>Instructions:</strong> Import <code>error_from_http</code> from <code>getwork.llm.client</code> and <code>RetryConfig</code>, <code>backoff_delay</code> from <code>getwork.llm.retry</code>; copy the exception mapping pattern of <code>VoyagerClient._mapped_errors</code> (check <code>APITimeoutError</code> before <code>APIConnectionError</code>; both before generic <code>Exception</code>, which becomes <code>PermanentLLMError</code> via <code>describe_exception</code>). The mock transport in the test answers <code>POST /embeddings</code> with <code>{"data": [{"index": i, "embedding": [...]}, ...], "model": "m", "object": "list", "usage": {...}}</code>; return items in reversed order in one test to prove reordering. Tests use <code>EmbedSettings(backend="voyager", model="m", api_key="sk-test-key", base_url="https://voyager.test/v1", batch_size=2)</code> directly (no env), <code>httpx2.Client(transport=httpx2.MockTransport(handler))</code> as <code>http_client</code>, and a recording <code>sleep</code>. No test imports <code>openai</code>.</p>
+      </section>
+
+      <section id="T-7" class="card">
+        <div class="card-header"><span class="badge badge-info">T-7</span><h3>embed-preflight command</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/embed/cli.py</code> (new), <code>src/tests/test_embed_cli.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-4. <strong>Satisfies:</strong> AC-13. <strong>Cites:</strong> <a href="../architecture.html#CC-10">CC-10</a>.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/embed/cli.py   (script: embed-preflight)
+def main(argv: list[str] | None = None, *, client: EmbeddingClient | None = None,
+         environ: Mapping[str, str] | None = None) -&gt; int:
+    """add_embed_args(parser). Builds the bundle with make_embedding_client, embeds ["Python", "Django",
+    "Kubernetes"] with time.perf_counter timing, prints one JSON object to stdout: {"backend", "model", "dim",
+    "max_seq_length", "dtype", "seconds", "related_cosine" (Python, Django), "unrelated_cosine" (Python,
+    Kubernetes), "norms_ok" (all rows within 1e-3 of 1)}. Exit 0; 2 for ConfigError (message on stderr, no key);
+    3 for EmbeddingError or LLMError (redacted message on stderr)."""</code></pre>
+        <p><strong>Instructions:</strong> <code>environ</code> defaults to <code>os.environ</code>. Redact with <code>redact_secrets(message, bundle.secrets)</code>. Add <code>if __name__ == "__main__": raise SystemExit(main())</code>. Tests use <code>FakeEmbeddingClient</code>, <code>capsys</code>, and a monkeypatched <code>factory._real_client</code>; for the exit-3 test inject a small class whose <code>embed</code> raises <code>EmbeddingError("boom")</code> and whose <code>info</code> is valid. The script entry is registered in T-8.</p>
+      </section>
+
+      <section id="T-8" class="card">
+        <div class="card-header"><span class="badge badge-info">T-8</span><h3>Extra, script, env example, offline fixture, runbook, final check</h3></div>
+        <p><strong>Files:</strong> <code>pyproject.toml</code> (modify), <code>.env.example</code> (modify), <code>src/tests/conftest.py</code> (modify), <code>src/getwork/embed/README.md</code> (new), <code>src/tests/test_embed_docs.py</code> (new). Five files; three are small edits.</p>
+        <p><strong>Depends on:</strong> T-5, T-6, T-7, LB-T-7 (<code>.env.example</code> and <code>conftest.py</code> sequencing). <strong>Satisfies:</strong> AC-14, AC-15. <strong>Cites:</strong> <a href="../architecture.html#CC-10">CC-10</a>, decisions E-3, E-9.</p>
+        <p><strong>Interfaces:</strong> none.</p>
+        <p><strong>Instructions:</strong> <code>pyproject.toml</code>: add <code>[project.optional-dependencies]</code> with <code>embed = ["sentence-transformers", "torch"]</code> (do not run <code>uv sync --extra embed</code>; lock it with <code>uv lock</code> only if that works offline-free of downloads, otherwise leave <code>uv.lock</code> and say so in the report), add <code>embed-preflight = "getwork.embed.cli:main"</code> under <code>[project.scripts]</code>. <code>.env.example</code>: append commented lines <code># EMBED_BACKEND=local</code> ("local (default) or voyager"), <code># EMBED_MODEL=Qwen/Qwen3-Embedding-4B</code>, <code># VOYAGER_EMBED_MODEL=your-embedding-model-id</code>. <code>conftest.py</code>: add the three names to <code>ENV_VARS</code> (so <code>apply_offline</code> unsets them) and extend <code>test_apply_offline_unsets_env_set_earlier_and_changes_cwd</code> in <code>test_structure_offline.py</code>. <code>README.md</code>: what the module does, the options, the backend precedence, the checklist table EU-1 to EU-6 with one heading per step (keep the word <em>inferred</em> where Design uses it), the <code>check_same_embedding</code> rule, and the warning that the local LLM server and the local embedding model do not fit a 12 GB card together. Tests (read only <code>pyproject.toml</code> via <code>tomllib</code>, <code>.env.example</code>, and the README; repo root from <code>Path(__file__).resolve().parents[2]</code>): the three names in AC-14. Finally run AC-15's command line and report the result.</p>
+      </section>
+    </section>
+
+    <section id="edge-cases">
+      <h2>Edge cases &amp; risks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Case</th><th>Required behavior</th><th>Covered by</th></tr></thead>
+          <tbody>
+            <tr><td>CUDA out of memory with batch size 8</td><td>Batch size halves and the slice is retried; the run continues; at size 1 it fails with <code>EmbeddingResourceError</code> (exit 3 in CLIs).</td><td>AC-3, AC-9</td></tr>
+            <tr><td>No CUDA device</td><td>Error telling the user to pass <code>--device cpu</code>; never a silent CPU run.</td><td>AC-9</td></tr>
+            <tr><td><code>embed</code> extra not installed</td><td>One-line <code>EmbeddingError</code> with the install command; the rest of the suite and the other CLIs are unaffected.</td><td>AC-10</td></tr>
+            <tr><td>Run interrupted mid-embedding</td><td>Rerun reuses finished chunks (when the stage passes a <code>cache_dir</code>).</td><td>AC-4</td></tr>
+            <tr><td>Text edited or model/backend changed after a partial run</td><td>The chunk key changes, so stale chunks are ignored, never reused.</td><td>AC-4</td></tr>
+            <tr><td>Resume vectors from one backend, posting vectors from another</td><td><code>check_same_embedding</code> raises <code>EmbeddingMismatchError</code>; stages must call it before combining.</td><td>AC-6</td></tr>
+            <tr><td>Text longer than <code>max_seq_length</code></td><td>The model truncates silently (not detected). Serialized documents are short (title, level, skills), but a resume with about 200 skills can approach 1,000 tokens; the default of 2048 leaves room. The user can raise <code>--max-seq-length</code> if the preflight on a long text suggests otherwise.</td><td>design note (not testable offline)</td></tr>
+            <tr><td>Voyager embedding endpoint returns fewer rows or a changed dimension</td><td><code>EmbeddingError</code> for a short reply; a dimension different from the probe fails <code>write_vectors</code> (meta dim) and <code>check_same_embedding</code>.</td><td>AC-5, AC-11</td></tr>
+            <tr><td>Empty or whitespace text</td><td>The fake handles it; the real models embed it as they would any string. Stages never send empty strings (skills and titles are non-empty by schema).</td><td>AC-2</td></tr>
+            <tr><td>Key leakage</td><td>Settings, errors, CLI output, and the fake's repr never contain the Voyager key.</td><td>AC-7, AC-12, AC-13</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="open-questions">
+      <h2>Open questions</h2>
+      <div class="callout warn"><span class="callout-title">Assumptions and facts to confirm</span>
+        <ul>
+          <li><strong>Assumed:</strong> no instruction prefix for any text (E-4). If Qwen3-Embedding performs better with a task instruction on both sides, that is a later experiment and would change <code>FORMAT_VERSION</code> in document-embedding.</li>
+          <li><strong>Assumed (inferred, not looked up):</strong> Qwen3-Embedding-4B produces 2560-dimensional vectors, needs about 8 GB in half precision, loads in sentence-transformers with <code>padding_side="left"</code> and <code>torch_dtype</code>, and the RTX 5070 needs a CUDA 12.8 or newer PyTorch build. Defaults of batch 8 and <code>max_seq_length</code> 2048 are starting points to measure (EU-4).</li>
+          <li><strong>Assumed:</strong> Voyager exposes the OpenAI <code>/v1/embeddings</code> route for its Qwen3-Embedding models and accepts a list <code>input</code> of the batch size used (32). Unverified.</li>
+          <li><strong>Decided here, not asked:</strong> E-1 to E-9, in particular local-by-default (user decision), no silent CPU fallback (E-5), and the per-backend model variables (E-2).</li>
+          <li><strong>Follow-up:</strong> Qwen3-Embedding-8B (local would not fit 12 GB in half precision; Voyager could serve it) only if the 4B taxonomy clusters poorly; it needs no code change, only <code>--embed-model</code> and a new full run.</li>
+        </ul>
+      </div>
+      <div class="callout note"><span class="callout-title">Questions for the researcher agent</span>
+        <ul>
+          <li>Qwen3-Embedding-4B: output dimension, maximum sequence length, whether sentence-transformers loads it with <code>model_kwargs={"torch_dtype": ...}</code> and <code>tokenizer_kwargs={"padding_side": "left"}</code> in the current sentence-transformers and transformers versions (the dtype keyword may have been renamed), whether flash-attention is required, and the model card's guidance on instructions for symmetric (non-query) text.</li>
+          <li>Which PyTorch wheel and CUDA version support an RTX 5070 (compute capability 12.0) on WSL2 and on Linux, and typical peak VRAM for the 4B model in float16 at batch 8 and sequence length 1024 and 2048.</li>
+          <li>Voyager: is the embeddings endpoint (<code>/v1/embeddings</code>) available for <code>qwen3-embedding-4b</code>, what are its model ids, maximum batch size, maximum input tokens, and does it accept a <code>dimensions</code> parameter?</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="footer">GetWork · Feature spec: embedding-client · see architecture.html</footer>
+  </main>
+</div>
+</body>
+</html>

@@ -365,6 +365,131 @@
         }
       },
       "notes": "Revised spec ready (22 tasks); building with planner a9adedc8bb1f248cb. User pre-approved build once plan is ready (in place on dev, no commits). RULES: no agent may call any Voyager endpoint (incl. /v1/models, preflight), read .env, or create keys; tests use fake client only; package installs (uv add/sync) allowed; real-API steps are user-run only, with user observing. Ask user before any task flagged large."
+    },
+    "local-llm-backend": {
+      "spec": "specs/features/local-llm-backend.html",
+      "phase": "done",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "aebc36f31381f44c8",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: test reaches into client._sdk; switch if build_llm_client gains http_client."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [],
+          "worktree": ".",
+          "developer_agent": "a3d943981221d2715",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: optional docstring on resolve_backend. Spec ambiguity: blank backend override falls through to LLM_BACKEND (planner could state)."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2"
+          ],
+          "worktree": ".",
+          "developer_agent": "a0968f3be51ddc3ab",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Follow-ups sent: ClientBundle.secrets repr=False + test, module-style imports in test; make_client has 6 kw-only params (spec-fixed)."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "worktree": ".",
+          "developer_agent": "aa1b4e03b69bb3f77",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Must not release without T-5: write_final KeyError(backend) on legacy checkpoints until T-5 applies upgrade_record."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "worktree": ".",
+          "developer_agent": "ad46cec2424b9f1b5",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: test_structure_summary.py:21 CONFIG_KEYS line 102 cols under fmt: skip."
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-3",
+            "T-5"
+          ],
+          "worktree": ".",
+          "developer_agent": "af6f850a0a7a56c4b",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: unsorted import test_structure_cli.py:10; monkeypatch.undo() mid-test in test_backend_defaults_local; --preflight skips extra-body check."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "worktree": ".",
+          "developer_agent": "ac12106ab60e9d85e",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. README wording fixes (L-5, L-6, L-7) and a test docstring sent as follow-ups; spec wording sent to planner."
+        }
+      },
+      "notes": "User asked to build this feature only (others still awaiting approval). In place on dev. No Voyager/network calls, no .env."
+    },
+    "alias-table": {
+      "spec": "specs/features/alias-table.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "embedding-client": {
+      "spec": "specs/features/embedding-client.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "skill-taxonomy": {
+      "spec": "specs/features/skill-taxonomy.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "cluster-relabeling": {
+      "spec": "specs/features/cluster-relabeling.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "document-embedding": {
+      "spec": "specs/features/document-embedding.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+    },
+    "two-way-retrieval": {
+      "spec": "specs/features/two-way-retrieval.html",
+      "phase": "awaiting-approval",
+      "planner_agent": "aa40644379b4020a6",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
     }
   }
 }

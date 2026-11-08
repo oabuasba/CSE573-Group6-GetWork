@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetWork — Feature: document-embedding</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#goal">Goal</a>
+      <a href="#scope">Scope</a>
+      <a href="#design">Design</a>
+      <a href="#decisions">&nbsp;&nbsp;Decisions</a>
+      <a href="#interfaces">&nbsp;&nbsp;Interfaces</a>
+      <a href="#outputs">&nbsp;&nbsp;Commands and outputs</a>
+      <a href="#user-checklist">&nbsp;&nbsp;User-run checklist</a>
+      <a href="#acceptance">Acceptance criteria</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#edge-cases">Edge cases &amp; risks</a>
+      <a href="#open-questions">Open questions</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>document-embedding</h1>
+      <p class="subtitle">Pipeline step 6: turn each relabeled record into the Full and B2 texts (CC-4) with an experience level, and embed them into unit-normalized document vectors that two-way retrieval multiplies.</p>
+      <div class="meta"><span><strong>Status:</strong> draft</span><span><strong>Updated:</strong> 2026-11-07</span><span><strong>Pipeline step:</strong> 6</span><span><strong>Master:</strong> <a href="../architecture.html">architecture.html</a></span></div>
+      <span class="product-badge">document-embedding</span>
+    </header>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>Matching compares resumes and postings in one vector space (<a href="../architecture.html#ADR-4">ADR-4</a>), so both sides must be written down in exactly the same form. This feature builds, per source, a <em>documents table</em> from the relabeled records (<a href="cluster-relabeling.html">cluster-relabeling</a>): title, an experience level (listed for postings, derived from years of experience for resumes), the final skill set, and two serialized texts. <code>text_full</code> groups skills under cluster names (<code>Front-end: Vue, CSS; Cloud: AWS; Other: Excel</code>); <code>text_b2</code> is the same title, level and skills with no cluster labels, so the B2 versus Full gap measures only the taxonomy (<a href="../architecture.html#ADR-5">ADR-5</a>). Each text is embedded with the configured <code>EmbeddingClient</code> (<a href="embedding-client.html">embedding-client</a>; Qwen3-Embedding-4B locally by default) into L2-normalized float32 vectors (<a href="../architecture.html#CC-5">CC-5</a>), saved with the identity of the model, the taxonomy, the alias table, and the relabel mode, and with a hash of the texts so retrieval can refuse stale or mixed inputs. The table also carries everything the B1+ baseline needs (final skills, title, level rank), so retrieval needs no other input. The build step (texts only) needs no model and runs offline; the embed step is user-run on the GPU. Defaults point at the trial tree (100 + 100 records).</p>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <h3>In scope</h3>
+      <ul>
+        <li><code>getwork.docembed</code>: level resolution (<code>levels.py</code>), the two serializers (<code>serialize.py</code>), the documents table and its provenance checks (<code>documents.py</code>), document vectors (<code>vectors.py</code>), and the <code>doc-embed</code> command with subcommands <code>build</code> and <code>embed</code>, a runbook, and a user-run checklist.</li>
+        <li>Reading the listed experience level of postings from <code>data/processed/postings/postings_clean.parquet</code> (read only).</li>
+      </ul>
+      <h3>Out of scope</h3>
+      <ul>
+        <li>Top-k retrieval, scoring, and B1+ (<a href="two-way-retrieval.html">two-way-retrieval</a>).</li>
+        <li>Running the real model: tests use <code>FakeEmbeddingClient</code>; the GPU run is user-run.</li>
+        <li>Embedding single skills (that is <a href="skill-taxonomy.html">skill-taxonomy</a>, a different space).</li>
+        <li>Content beyond title, level, and skills (experience entries, education, free text), as CC-4 specifies.</li>
+        <li>Query-time embedding of a new document (the same functions apply; wiring is a later app feature, Q-1).</li>
+      </ul>
+    </section>
+
+    <section id="design">
+      <h2>Design</h2>
+      <p>Two deterministic text steps, then one embedding step. <code>doc-embed build</code> reads the relabeled files and writes the documents table; <code>doc-embed embed</code> reads the table and writes one vector set per source and system. Cites <a href="../architecture.html#ADR-4">ADR-4</a>, <a href="../architecture.html#ADR-5">ADR-5</a>, <a href="../architecture.html#ADR-7">ADR-7</a>, <a href="../architecture.html#ADR-12">ADR-12</a>, <a href="../architecture.html#ADR-14">ADR-14</a>, <a href="../architecture.html#CC-4">CC-4</a>, <a href="../architecture.html#CC-5">CC-5</a>, <a href="../architecture.html#CC-6">CC-6</a>, <a href="../architecture.html#CC-11">CC-11</a>, <a href="../architecture.html#CC-12">CC-12</a>, <a href="../architecture.html#CC-15">CC-15</a>, <a href="../architecture.html#CC-16">CC-16</a>. Requires <a href="cluster-relabeling.html">cluster-relabeling</a> T-6 (<code>read_relabeled</code>), <a href="skill-taxonomy.html">skill-taxonomy</a> T-2 (<code>Taxonomy</code>), <a href="embedding-client.html">embedding-client</a> T-2 to T-4 (cache, store, factory), and <a href="alias-table.html">alias-table</a> T-1, T-2 (paths, fileio).</p>
+
+      <h3 id="decisions">Decisions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Id</th><th>Decision</th><th>Rationale</th><th>Alternative not taken</th></tr></thead>
+          <tbody>
+            <tr id="DE-1"><td>DE-1</td><td>Text format. Full: <code>Title: {title}</code>, newline, <code>Level: {level}</code>, newline, <code>Skills: {Cluster A}: s1, s2; {Cluster B}: s3; Other: s4</code>. B2: the same first two lines and <code>Skills: s1, s2, s3, s4</code>. A missing title or level prints <code>Not specified</code>; no skills prints <code>Skills: none</code>. Whitespace inside any field is collapsed to single spaces. Groups are ordered by taxonomy cluster id with <code>Other</code> last; skills inside a group keep the final skill set's order. Constant <code>SERIALIZATION_VERSION = "ser_v1"</code>.</td><td>CC-4. Labeled field lines are cheap, unambiguous for the model, and identical for both systems. Cluster ids give a deterministic, taxonomy-defined order.</td><td>Prose sentences; ordering groups by size (changes whenever one skill changes).</td></tr>
+            <tr id="DE-2"><td>DE-2</td><td>B2 is the Full text with the cluster labels and group separators removed, so its skills appear in the same grouped order (<code>--b2-order grouped</code>, default). The alternative <code>--b2-order record</code> keeps the record's own skill order. The choice is stored in the summary and the vector meta and must match across sources.</td><td>ADR-5 says "identical text without the labels". Grouped order still lets adjacency carry some cluster information to B2, which slightly favors B2; Q-10 asks the user to choose.</td><td>Making record order the only mode (cleanest ablation but not "identical text").</td></tr>
+            <tr id="DE-3"><td>DE-3</td><td>Experience level (resolves Q-3 as a proposal). The scale is LinkedIn's: <code>Internship</code>, <code>Entry level</code>, <code>Associate</code>, <code>Mid-Senior level</code>, <code>Director</code>, <code>Executive</code>, plus <code>Not specified</code>. Postings use the listed level (<code>level_source: "listed"</code>); when absent (28% of postings) or unrecognized, the level derives from the posting's <code>years_experience</code> like resumes (<code>"years"</code>); if that is also missing, <code>Not specified</code> (<code>"missing"</code>). Resumes always derive from <code>years_experience</code> with bands: below 2 years <code>Entry level</code>, 2 up to 5 <code>Associate</code>, 5 or more <code>Mid-Senior level</code> (<code>--level-bands 2,5</code>). <code>Internship</code>, <code>Director</code>, <code>Executive</code> are never derived from years.</td><td>Years cannot distinguish a director from a senior engineer, so the derived scale stops at Mid-Senior; the bands are the usual LinkedIn conventions. The bands live in <code>DEFAULT_BANDS</code> and a flag, so a different answer to Q-3 is a one-line change.</td><td>Deriving Director/Executive from title keywords (a second heuristic that needs its own validation).</td></tr>
+            <tr id="DE-4"><td>DE-4</td><td>Level rank for B1+ is the index in the six-level scale (0 to 5); <code>Not specified</code> has no rank. Retrieval consumes <code>level</code> and calls <code>level_rank</code>.</td><td>Keeps scale knowledge in one module.</td><td>Storing ranks in the table (a second source of truth).</td></tr>
+            <tr id="DE-5"><td>DE-5</td><td>No retrieval instruction prefix: documents on both sides are embedded as plain text with the same call. This extends embedding-client E-4's no-prefix rule for skills to documents.</td><td>Symmetric two-way retrieval needs one space; a query instruction would make resume vectors differ in kind from posting vectors.</td><td>Qwen3's recommended instruct prefix for queries (asymmetric; could be an experiment later).</td></tr>
+            <tr id="DE-6"><td>DE-6</td><td>Both systems are embedded in one pass with the same client and settings and the same cache directory (<code>documents/&lt;source&gt;/_embed_cache</code>). A vector set is named <code>&lt;source&gt;_full</code> or <code>&lt;source&gt;_b2</code> (system ids from CC-6, lower-cased for file names).</td><td>Resumable, and the chunk cache is keyed by model identity plus text hash (embedding-client), so reruns and repeated texts are free.</td><td>Separate runs per system.</td></tr>
+            <tr id="DE-7"><td>DE-7</td><td>Provenance and comparability. Every documents summary and vector meta carries <code>alias_table_version</code>, <code>taxonomy_version</code>, <code>relabel_mode</code>, <code>relabel_model</code>, <code>relabel_backend</code>, <code>serialization_version</code>, <code>level_bands</code>, <code>b2_order</code>. Two sources are comparable only if all are equal and, for vectors, the embedding identity (model, backend, dim) is equal. <code>check_comparable</code> and <code>check_vector_sets_comparable</code> raise <code>DocEmbedMismatchError</code> (or <code>EmbeddingMismatchError</code>) naming the fields. Vector metas also store <code>texts_hash</code>; <code>check_vectors_current</code> refuses vectors whose hash differs from the current table.</td><td>One shared space needs one model, one taxonomy and one serialization for both sides; hashes make stale vectors detectable (the content-version rule of CC-12).</td><td>Trusting file locations.</td></tr>
+            <tr id="DE-8"><td>DE-8</td><td>Failures: <code>build</code> and <code>embed</code> fail as a whole (exit 2 for configuration or input problems, exit 3 for embedding errors) and write nothing partial; vectors are written only after every chunk of a system is embedded, and the chunk cache lets a rerun resume.</td><td>A vector set with missing rows is worse than none; there is no per-document failure mode in a deterministic embedding.</td><td>Skipping failed documents.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="interfaces">Interfaces</h3>
+      <p>Signatures are final; tasks copy them verbatim. Python 3.11. <code>Taxonomy</code>, <code>OTHER</code> are from <code>getwork.taxonomy.model</code>; <code>RELABEL_KEYS</code>, <code>read_relabeled</code> from <code>getwork.relabel.records</code>; <code>EmbeddingClient</code>, <code>EmbeddingError</code>, <code>EmbeddingMismatchError</code> from <code>getwork.embed.client</code>; <code>embed_cached</code> from <code>getwork.embed.cache</code>; <code>VectorSet</code>, <code>write_vectors</code>, <code>read_vectors</code>, <code>check_same_embedding</code> from <code>getwork.embed.store</code>.</p>
+
+<pre><code># src/getwork/docembed/levels.py   (no third-party imports)
+LEVELS: tuple[str, ...] = ("Internship", "Entry level", "Associate", "Mid-Senior level", "Director", "Executive")
+NOT_SPECIFIED: str = "Not specified"
+LEVEL_SOURCES: tuple[str, ...] = ("listed", "years", "missing")
+DEFAULT_BANDS: tuple[float, float] = (2.0, 5.0)
+def level_rank(level: str) -&gt; int | None:
+    """Index of level in LEVELS, None for NOT_SPECIFIED or anything else."""
+def normalize_listed_level(raw: object) -&gt; str | None:
+    """Strip and compare case-insensitively with LEVELS; "Mid-Senior" (without "level") also maps to
+    "Mid-Senior level" and "Entry" to "Entry level". A non-string (including float NaN), blank or unrecognized
+    value gives None."""
+def level_from_years(years: float | None, bands: tuple[float, float] = DEFAULT_BANDS) -&gt; str | None:
+    """None for None, NaN or negative. years &lt; bands[0] -&gt; "Entry level"; years &lt; bands[1] -&gt; "Associate";
+    otherwise "Mid-Senior level"."""
+def parse_bands(text: str) -&gt; tuple[float, float]:
+    """"2,5" -&gt; (2.0, 5.0). ValueError unless two comma-separated numbers with 0 &lt; first &lt; second."""
+def resolve_level(source: str, listed_raw: object, years: float | None,
+                  bands: tuple[float, float] = DEFAULT_BANDS) -&gt; tuple[str, str]:
+    """Returns (level, level_source). source "resumes": ignore listed_raw; years-derived -&gt; (level, "years"),
+    else (NOT_SPECIFIED, "missing"). source "postings": normalize_listed_level(listed_raw) -&gt; (level, "listed");
+    else years-derived -&gt; (level, "years"); else (NOT_SPECIFIED, "missing"). ValueError for another source."""
+
+# src/getwork/docembed/serialize.py   (no third-party imports)
+SERIALIZATION_VERSION: str = "ser_v1"
+B2_ORDERS: tuple[str, ...] = ("grouped", "record")
+def clean_field(text: str | None) -&gt; str:
+    """Collapse all whitespace runs (including newlines) to one space and strip; None or blank gives NOT_SPECIFIED."""
+def group_skills(skill_clusters: Sequence[Mapping[str, str]], cluster_order: Sequence[str]) -&gt; list[tuple[str, list[str]]]:
+    """skill_clusters items have "skill" and "cluster" (CC-15). Groups in cluster_order, then OTHER last; a group
+    appears only if it has skills; skills inside a group keep input order. ValueError naming the cluster if an
+    item's cluster is neither in cluster_order nor OTHER."""
+def serialize_full(title: str | None, level: str, skill_clusters: Sequence[Mapping[str, str]],
+                   cluster_order: Sequence[str]) -&gt; str:
+    """f"Title: {clean_field(title)}\nLevel: {clean_field(level)}\nSkills: " + "; ".join(f"{name}: {', '.join(skills)}"
+    for name, skills in group_skills(...)) ; "none" when there are no skills. Each skill passes through clean_field's
+    whitespace collapsing (a blank skill is skipped)."""
+def serialize_b2(title: str | None, level: str, skill_clusters: Sequence[Mapping[str, str]],
+                 cluster_order: Sequence[str], order: str = "grouped") -&gt; str:
+    """Same first two lines; "Skills: " + ", ".join(skills) with skills in the grouped order (order "grouped") or
+    the input order (order "record"), "none" when empty. ValueError for an order not in B2_ORDERS."""
+
+# src/getwork/docembed/documents.py
+DOCUMENT_KEYS: tuple[str, ...] = ("id", "source", "title", "level", "level_source", "years_experience", "skills",
+                                  "skill_clusters", "text_full", "text_b2", "alias_table_version",
+                                  "taxonomy_version", "relabel_mode", "relabel_model", "relabel_backend",
+                                  "serialization_version")
+DOCUMENT_PARQUET_SCHEMA: pa.Schema   # id, source, title, level, level_source: string; years_experience: float64;
+                                     # skills: list&lt;string&gt;; skill_clusters: list&lt;struct&lt;skill string, cluster string,
+                                     # via string&gt;&gt;; text_full, text_b2, alias_table_version, taxonomy_version,
+                                     # relabel_mode, relabel_model, relabel_backend, serialization_version: string
+PROVENANCE_KEYS: tuple[str, ...] = ("alias_table_version", "taxonomy_version", "relabel_mode", "relabel_model",
+                                    "relabel_backend")
+COMPARE_KEYS: tuple[str, ...] = (*PROVENANCE_KEYS, "serialization_version", "level_bands", "b2_order")
+class DocEmbedMismatchError(RuntimeError): ...
+def build_document(record: Mapping[str, object], listed_level: object, tax: Taxonomy,
+                   bands: tuple[float, float] = DEFAULT_BANDS, b2_order: str = "grouped") -&gt; dict:
+    """record is a relabeled record (RELABEL_KEYS). Returns a new dict with keys in DOCUMENT_KEYS order:
+    id, source, title, years_experience, skills, skill_clusters from the record (copied), level and level_source
+    from resolve_level(record["source"], listed_level, record["years_experience"], bands), text_full =
+    serialize_full(title, level, skill_clusters, tax.cluster_names()), text_b2 = serialize_b2(..., b2_order),
+    the five provenance values from the record (taxonomy_version, alias_table_version, relabel_mode,
+    relabel_model, relabel_backend), serialization_version = SERIALIZATION_VERSION. Never mutates record."""
+def provenance_of(records: Mapping[str, Mapping[str, object]]) -&gt; dict[str, object]:
+    """{key: value} for PROVENANCE_KEYS read from the records (relabel_model and relabel_backend come from the
+    record keys of the same names). ValueError if records is empty or the values differ between records."""
+def check_comparable(a: Mapping[str, object], b: Mapping[str, object], keys: Sequence[str] = COMPARE_KEYS) -&gt; None:
+    """A key absent from a mapping counts as None. Raises DocEmbedMismatchError listing every key in keys whose
+    values differ, with both values (none are secrets)."""
+def build_documents(source: str, relabeled: Mapping[str, dict], listed_levels: Mapping[str, object], tax: Taxonomy,
+                    out_dir: Path, *, bands: tuple[float, float] = DEFAULT_BANDS, b2_order: str = "grouped") -&gt; dict:
+    """provenance_of first (ValueError before anything is written). Documents in numeric id order
+    (getwork.structure.inputs.sort_ids), listed_levels.get(id) as listed_level. Writes out_dir/f"{source}_documents.jsonl"
+    (DOCUMENT_KEYS order), f"{source}_documents.parquet" (DOCUMENT_PARQUET_SCHEMA, zstd) and
+    f"{source}_documents_summary.json" through fileio. Returns the summary: {"source", "n_documents",
+    *PROVENANCE_KEYS, "serialization_version", "level_bands": [a, b], "b2_order", "level_counts": {each of LEVELS and
+    NOT_SPECIFIED: count, zeros included}, "level_source_counts": {"listed", "years", "missing"}, "n_empty_skills",
+    "mean_skills", "other_share", "examples": first 3 of {"id", "text_full", "text_b2"}}  (other_share = skills
+    clustered under OTHER / all skills, 0.0 if none; mean_skills 0.0 if no documents)."""
+def documents_path(root: Path, source: str) -&gt; Path:
+    """paths.documents_dir(root, source) / f"{source}_documents.jsonl"."""
+def read_documents(root: Path, source: str) -&gt; dict[str, dict]:
+    """FileNotFoundError naming the path (hint: run doc-embed build); ValueError naming the id if a row lacks a
+    DOCUMENT_KEYS key. Dict in numeric id order."""
+def read_documents_summary(root: Path, source: str) -&gt; dict:
+    """The summary JSON; FileNotFoundError naming the path (hint: run doc-embed build)."""
+
+# src/getwork/docembed/vectors.py
+SYSTEMS: tuple[str, ...] = ("Full", "B2")        # CC-6 ids
+def text_field(system: str) -&gt; str:
+    """"text_full" for "Full", "text_b2" for "B2"; ValueError otherwise."""
+def vector_stem(source: str, system: str) -&gt; str:
+    """f"{source}_{system.lower()}" (check_source and the system are validated)."""
+def texts_hash(texts: Sequence[str]) -&gt; str:
+    """"sha256:" + first 12 hex of sha256(json.dumps(list(texts), ensure_ascii=False).encode("utf-8"))."""
+def embed_documents(client: EmbeddingClient, docs: Mapping[str, dict], summary: Mapping[str, object], source: str,
+                    out_dir: Path, *, cache_dir: Path | None, chunk_size: int = 256,
+                    progress: Callable[[str, int, int], None] | None = None) -&gt; dict:
+    """For each system in SYSTEMS: ids = list(docs) (the dict's order is numeric id order), texts =
+    [docs[i][text_field(system)] for i in ids]; vectors = embed_cached(client, texts, cache_dir=cache_dir,
+    chunk_size=chunk_size, progress=lambda done, total: progress(system, done, total)); then write_vectors(out_dir,
+    vector_stem(source, system), ids, vectors, meta) with meta = {"kind": "document_vectors", "system": system,
+    "source": source, "embedding": client.info.as_dict(), **{k: summary[k] for k in COMPARE_KEYS},
+    "texts_hash": texts_hash(texts)}. Both systems are embedded before the first write. ValueError if docs is
+    empty. Returns {system: {"n", "dim", "texts_hash"}}."""
+def read_system_vectors(root: Path, source: str, system: str) -&gt; VectorSet:
+    """read_vectors(paths.documents_dir(root, source), vector_stem(source, system)); the FileNotFoundError message
+    adds the hint "run doc-embed embed"."""
+def check_vectors_current(meta: Mapping[str, object], docs: Mapping[str, dict], system: str) -&gt; None:
+    """DocEmbedMismatchError if meta["texts_hash"] != texts_hash of docs' text_field(system) in the dict's order,
+    or meta["system"] != system."""
+def check_vector_sets_comparable(a_meta: Mapping[str, object], b_meta: Mapping[str, object]) -&gt; None:
+    """check_same_embedding(a_meta, b_meta) (EmbeddingMismatchError), then check_comparable(a_meta, b_meta), then
+    DocEmbedMismatchError if meta["system"] differs."""
+
+# src/getwork/docembed/cli.py   (script: doc-embed)
+def main(argv: list[str] | None = None, *, client: EmbeddingClient | None = None,
+         environ: Mapping[str, str] | None = None) -&gt; int:
+    """Subcommands build and embed. Exit codes: 0 ok, 2 usage, config or input error, 3 embedding error."""</code></pre>
+
+      <h3 id="outputs">Commands and outputs</h3>
+      <ul>
+        <li><code>doc-embed build [--source resumes|postings|both] [--artifacts-dir artifacts_trial] [--processed-dir data/processed] [--level-bands 2,5] [--b2-order grouped|record]</code>. Reads <code>taxonomy/taxonomy.json</code>, <code>relabeled/&lt;source&gt;/&lt;source&gt;_relabeled.jsonl</code>, and for postings the <code>id</code> and <code>experience_level</code> columns of the cleaned Parquet. Needs no embedding settings. Writes <code>documents/&lt;source&gt;/&lt;source&gt;_documents.jsonl</code>, <code>.parquet</code>, <code>_summary.json</code>. Default source is <code>both</code>. Errors (exit 2): a missing taxonomy (message contains <code>taxonomy build</code>) or relabeled file (contains <code>relabel</code>), relabeled records whose alias table or taxonomy version differs from the files, the two sources having different relabel modes, models, or backends, invalid bands. All are detected before any output is written. A missing posting Parquet is not an error: levels fall back to years and a note goes to stderr.</li>
+        <li><code>doc-embed embed [--source both] [--artifacts-dir artifacts_trial] [--chunk-size 256] [--no-cache]</code> plus the shared embedding options (<code>--embed-backend --embed-model --device --dtype --embed-batch-size --max-seq-length --env-file</code>, from <code>add_embed_args</code>). Reads the documents tables and summaries; writes <code>documents/&lt;source&gt;/&lt;source&gt;_full.npy</code>, <code>_full_ids.json</code>, <code>_full_meta.json</code> and the same three for <code>_b2</code>, and chunk caches under <code>documents/&lt;source&gt;/_embed_cache/</code>. Errors: a missing documents table or summary (message contains <code>doc-embed build</code>), incomparable summaries across the two sources, configuration errors (exit 2), an <code>EmbeddingError</code> (exit 3, already cached chunks kept).</li>
+        <li>Output is deterministic for the same inputs (documents files byte-identical on rerun; vectors identical with the same model on the same device up to numerical noise).</li>
+        <li>Both commands print one JSON summary per source to stdout.</li>
+      </ul>
+
+      <h3 id="user-checklist">User-run checklist</h3>
+      <p>Not acceptance criteria. Written into <code>src/getwork/docembed/README.md</code> (T-7). DU-1 needs neither a key nor the GPU.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Step</th><th>Action</th><th>Pass condition</th></tr></thead>
+          <tbody>
+            <tr><td>DU-1</td><td><code>uv run doc-embed build</code> (trial defaults).</td><td>Exit 0. The summaries show <code>level_counts</code> and <code>level_source_counts</code>; the <code>examples</code> field shows readable Full and B2 texts. Open <code>documents/postings/postings_documents.jsonl</code> and check that <code>level</code> matches the listed level of a few postings in the clean Parquet, and that resume levels follow the 2/5 bands.</td></tr>
+            <tr><td>DU-2</td><td>Free the GPU: stop any local LLM server (the 4B embedding model and the LLM do not fit together on 12 GB). Run <code>uv run embed-preflight</code> (embedding-client checklist).</td><td>The preflight passes.</td></tr>
+            <tr><td>DU-3</td><td><code>uv run doc-embed embed</code>. If it stops, rerun the same command; cached chunks are reused.</td><td>Exit 0. For each source and system the meta file shows the model <code>Qwen/Qwen3-Embedding-4B</code>, backend <code>local</code>, dim, and <code>texts_hash</code>; the printed summary shows <code>n</code> equal to the document count.</td></tr>
+            <tr><td>DU-4</td><td>Optionally check the geometry: in a Python shell, load a source's Full vectors with <code>getwork.docembed.vectors.read_system_vectors</code> and confirm the row norms are 1 and a document's nearest neighbor within the same source is plausible.</td><td>Norms within 1e-3 of 1.</td></tr>
+            <tr><td>DU-5</td><td><code>git status</code>.</td><td>Nothing under <code>artifacts_trial/</code>, <code>data/structured/</code>, or <code>data/processed/</code> appears as changed.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="acceptance">
+      <h2>Acceptance criteria</h2>
+      <p>All tests run offline with the <code>offline</code> fixture (<code>pytestmark = pytest.mark.usefixtures("offline")</code>), use <code>tmp_path</code> (absolute paths: the fixture changes the working directory), small synthetic taxonomies (<code>make_taxonomy</code>) and relabeled records (built by hand with every <code>RELABEL_KEYS</code> key, or with <code>build_relabel_record</code>), and <code>FakeEmbeddingClient</code>. No test loads a real model, reads <code>.env</code>, or touches the network.</p>
+      <ol>
+        <li id="AC-1"><strong>AC-1</strong>: <code>level_rank</code> maps the six levels to 0..5 and <code>Not specified</code>/unknown text to <code>None</code>; <code>normalize_listed_level</code> accepts exact, differently cased, padded, and short forms (<code>"mid-senior"</code>, <code>"Entry"</code>) and returns <code>None</code> for <code>None</code>, NaN, blank, and unknown strings; <code>level_from_years</code> gives Entry for 0 and 1.99, Associate for 2.0 and 4.99, Mid-Senior for 5.0 and 30, <code>None</code> for <code>None</code>, NaN, and -1, and honors custom bands; <code>parse_bands</code> accepts <code>"2,5"</code> and <code>" 1.5 , 6 "</code> and rejects <code>"5,2"</code>, <code>"0,5"</code>, <code>"2"</code>, <code>"a,b"</code>, and three numbers. <em>Test:</em> <code>src/tests/test_docembed_levels.py::test_level_rank_and_normalize</code>, <code>::test_level_from_years_boundaries</code>, <code>::test_parse_bands</code></li>
+        <li id="AC-2"><strong>AC-2</strong>: <code>resolve_level</code> for resumes ignores a listed value and derives from years (<code>"years"</code>) or returns <code>("Not specified", "missing")</code>; for postings it prefers the listed level (<code>"listed"</code>), falls back to years when the listed value is NaN or unrecognized (<code>"years"</code>), then to missing; another source raises <code>ValueError</code>. <em>Test:</em> <code>src/tests/test_docembed_levels.py::test_resolve_level_resumes</code>, <code>::test_resolve_level_postings_fallbacks</code></li>
+        <li id="AC-3"><strong>AC-3</strong>: <code>serialize_full</code> returns exactly <code>"Title: Backend Engineer\nLevel: Associate\nSkills: Front-end: Vue, CSS; Cloud: AWS; Other: Excel"</code> for a record whose clusters are given in a different input order (groups follow <code>cluster_order</code>, <code>Other</code> last, skills keep input order within a group); omits empty groups; prints <code>Skills: none</code> for no skills; prints <code>Not specified</code> for a missing or blank title; collapses newlines and repeated spaces in title and skills; raises <code>ValueError</code> naming an unknown cluster. <em>Test:</em> <code>src/tests/test_docembed_serialize.py::test_full_exact_text_and_ordering</code>, <code>::test_full_empty_and_missing_fields</code>, <code>::test_full_whitespace_and_unknown_cluster</code></li>
+        <li id="AC-4"><strong>AC-4</strong>: <code>serialize_b2</code> has the same first two lines as Full and a flat comma-separated skill line containing no cluster name and no <code>;</code> introduced by grouping; for <code>order="grouped"</code> its skill sequence equals Full's skill sequence (test: remove each <code>"{name}: "</code> label and replace <code>"; "</code> by <code>", "</code> in the Full text and get the B2 text); for <code>order="record"</code> the input order is kept; an unknown order raises <code>ValueError</code>. <em>Test:</em> <code>src/tests/test_docembed_serialize.py::test_b2_is_full_without_labels</code>, <code>::test_b2_record_order_and_bad_order</code></li>
+        <li id="AC-5"><strong>AC-5</strong>: <code>build_document</code> returns keys in <code>DOCUMENT_KEYS</code> order; takes level and level source from <code>resolve_level</code> (a posting with listed <code>"Director"</code> gets that; a resume with 3.0 years gets Associate); copies title, years, skills, clusters and the five provenance values from the record; sets <code>serialization_version</code>; its texts equal the serializers' output; the input record is not mutated; <code>years_experience</code> may be <code>None</code>. <em>Test:</em> <code>src/tests/test_docembed_documents.py::test_build_document_fields_and_texts</code>, <code>::test_build_document_does_not_mutate</code></li>
+        <li id="AC-6"><strong>AC-6</strong>: <code>provenance_of</code> returns the five values for uniform records and raises <code>ValueError</code> for empty input or a record with another taxonomy version; <code>check_comparable</code> passes for equal mappings and raises <code>DocEmbedMismatchError</code> naming every differing key (taxonomy, alias table, relabel mode, relabel model, serialization version, level bands, B2 order) with both values. <em>Test:</em> <code>src/tests/test_docembed_documents.py::test_provenance_of</code>, <code>::test_check_comparable_names_differing_keys</code></li>
+        <li id="AC-7"><strong>AC-7</strong>: <code>build_documents</code> writes the three files; rows are sorted by numeric id (<code>r-2</code> before <code>r-10</code>) in <code>DOCUMENT_KEYS</code> order; a second call is byte-identical; the Parquet equals <code>DOCUMENT_PARQUET_SCHEMA</code> even when all skill lists are empty; the summary has exactly the documented keys with correct counts (<code>level_counts</code> includes zero entries, <code>level_source_counts</code>, <code>n_empty_skills</code>, <code>other_share</code>, three examples); non-uniform provenance raises before any file exists. <em>Test:</em> <code>src/tests/test_docembed_documents.py::test_build_documents_outputs_sorted_and_deterministic</code>, <code>::test_parquet_schema_with_empty_lists</code>, <code>::test_summary_keys_and_counts</code>, <code>::test_nonuniform_provenance_writes_nothing</code></li>
+        <li id="AC-8"><strong>AC-8</strong>: <code>read_documents</code> returns documents in numeric id order, names a missing path with the hint <code>doc-embed build</code>, and names the id of a row lacking a key; <code>read_documents_summary</code> names a missing path. <em>Test:</em> <code>src/tests/test_docembed_documents.py::test_read_documents_order_and_errors</code>, <code>::test_read_summary_missing</code></li>
+        <li id="AC-9"><strong>AC-9</strong>: <code>embed_documents</code> with <code>FakeEmbeddingClient</code> writes <code>&lt;source&gt;_full</code> and <code>&lt;source&gt;_b2</code> vector sets: ids in the table's order, unit-norm float32 rows, row <em>i</em> equal to the client's embedding of that document's text (compare with a direct <code>embed</code> call), Full and B2 vectors differing for a document with clusters, the meta containing <code>kind</code>, <code>system</code>, <code>source</code>, <code>embedding</code> (the client's info), every <code>COMPARE_KEYS</code> value, and <code>texts_hash</code>; with a <code>cache_dir</code> a second run makes zero client calls; an empty table raises <code>ValueError</code> and writes nothing; nothing is written when the client fails on the B2 pass. <em>Test:</em> <code>src/tests/test_docembed_vectors.py::test_embed_documents_files_and_meta</code>, <code>::test_second_run_uses_cache</code>, <code>::test_empty_docs_and_client_failure_write_nothing</code></li>
+        <li id="AC-10"><strong>AC-10</strong>: <code>check_vectors_current</code> passes for the table the vectors were made from and raises <code>DocEmbedMismatchError</code> when one text changed or the system differs; <code>check_vector_sets_comparable</code> passes for a resume set and a posting set of the same run, raises <code>EmbeddingMismatchError</code> for another model, backend or dim, and <code>DocEmbedMismatchError</code> for another taxonomy version, relabel mode, or system; <code>read_system_vectors</code> names the missing path with the hint <code>doc-embed embed</code>. <em>Test:</em> <code>src/tests/test_docembed_vectors.py::test_check_vectors_current</code>, <code>::test_check_vector_sets_comparable</code>, <code>::test_read_system_vectors_missing</code></li>
+        <li id="AC-11"><strong>AC-11</strong>: <code>doc-embed build</code> via <code>cli.main</code> (explicit directories under <code>tmp_path</code>, synthetic alias table, taxonomy, relabeled files and a posting Parquet with <code>experience_level</code>): returns 0, writes both sources' three files each, uses the Parquet's listed levels for postings, honors <code>--level-bands</code> and <code>--b2-order</code>, processes one source with <code>--source resumes</code>, needs no embedding settings; a missing posting Parquet still returns 0 with a note on stderr and levels from years. <em>Test:</em> <code>src/tests/test_docembed_cli.py::test_build_both_sources_with_listed_levels</code>, <code>::test_build_options_and_single_source</code>, <code>::test_build_without_processed_parquet</code></li>
+        <li id="AC-12"><strong>AC-12</strong>: <code>doc-embed build</code> returns 2, prints the cause, and creates nothing when: the taxonomy is missing (stderr contains <code>taxonomy build</code>), a relabeled file is missing (contains <code>relabel</code>), a record's taxonomy version or alias table version differs from <code>taxonomy.json</code>, the two sources were relabeled in different modes or with different models, or <code>--level-bands</code> is invalid; the default directories are <code>artifacts_trial</code> and <code>data/processed</code> (parse with no directory options), and a default run from an empty working directory returns 2 and creates nothing. <em>Test:</em> <code>src/tests/test_docembed_cli.py::test_build_input_errors_exit_2</code>, <code>::test_build_incomparable_sources_exit_2</code>, <code>::test_default_directories_are_trial_directories</code></li>
+        <li id="AC-13"><strong>AC-13</strong>: <code>doc-embed embed</code> with an injected <code>FakeEmbeddingClient</code> after <code>build</code>: returns 0 and writes the six vector files per source with metas that pass <code>check_vector_sets_comparable</code> across sources; a rerun makes no client calls (cache in <code>_embed_cache</code>); <code>--no-cache</code> creates no cache directory; a missing documents table or summary returns 2 with <code>doc-embed build</code> in stderr; summaries of the two sources that are not comparable return 2; an <code>EmbeddingError</code> from the client returns 3 and writes no vector file; with <code>--embed-backend voyager</code>, no injected client and no Voyager settings in the (empty) environment it returns 2 with the missing variable names and writes no vector file; invalid input is reported before the client is built. <em>Test:</em> <code>src/tests/test_docembed_cli.py::test_embed_both_sources_and_rerun_uses_cache</code>, <code>::test_embed_no_cache_option</code>, <code>::test_embed_errors_exit_codes</code></li>
+        <li id="AC-14"><strong>AC-14</strong>: <code>pyproject.toml</code> has the script <code>doc-embed = "getwork.docembed.cli:main"</code>; no module under <code>src/getwork/docembed/</code> imports <code>torch</code>, <code>sentence_transformers</code>, or <code>openai</code>; <code>src/getwork/docembed/README.md</code> has headings DU-1 to DU-5 and the strings <code>doc-embed build</code>, <code>doc-embed embed</code>, <code>embed-preflight</code>, <code>artifacts_trial</code>, <code>--b2-order</code>, <code>--level-bands</code>. <em>Test:</em> <code>src/tests/test_docembed_docs.py::test_pyproject_script</code>, <code>::test_package_has_no_heavy_imports</code>, <code>::test_runbook_mentions_commands_and_steps</code></li>
+        <li id="AC-15"><strong>AC-15</strong>: The whole suite passes with no key, no model, and no network: <code>env -u VOYAGER_API_KEY -u VOYAGER_BASE_URL -u VOYAGER_MODEL -u LLM_BACKEND -u EMBED_BACKEND uv run pytest -q</code> exits 0 and <code>git status --porcelain data/ artifacts_trial/</code> lists nothing created by the tests. <em>Check:</em> run both commands (not a pytest test, because they cover the whole suite and the working tree).</li>
+      </ol>
+    </section>
+
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>Each task is at most about 200 changed lines including tests, at most about 4 files, one concern. Tasks touching the same file are sequenced (<code>documents.py</code>: T-3 then T-4; <code>pyproject.toml</code>: T-7 only). Developers never read <code>.env</code>, never load a real model, never call a real API, and start each new test file with <code>pytestmark = pytest.mark.usefixtures("offline")</code>. Cross-feature prerequisites: <code>AL-T-n</code> (<a href="alias-table.html">alias-table</a>), <code>TX-T-n</code> (<a href="skill-taxonomy.html">skill-taxonomy</a>), <code>RL-T-n</code> (<a href="cluster-relabeling.html">cluster-relabeling</a>), <code>EC-T-n</code> (<a href="embedding-client.html">embedding-client</a>).</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Summary</th><th>Depends on</th><th>ACs</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#T-1">T-1</a></td><td>Level resolution</td><td>none</td><td>AC-1, AC-2</td></tr>
+            <tr><td><a href="#T-2">T-2</a></td><td>Full and B2 serializers</td><td>T-1</td><td>AC-3, AC-4</td></tr>
+            <tr><td><a href="#T-3">T-3</a></td><td><code>build_document</code>, provenance checks</td><td>T-2, RL-T-5, TX-T-2</td><td>AC-5, AC-6</td></tr>
+            <tr><td><a href="#T-4">T-4</a></td><td>Documents table: <code>build_documents</code>, readers</td><td>T-3, AL-T-2</td><td>AC-7, AC-8</td></tr>
+            <tr><td><a href="#T-5">T-5</a></td><td>Document vectors</td><td>T-4, EC-T-2, EC-T-3</td><td>AC-9, AC-10</td></tr>
+            <tr><td><a href="#T-6">T-6</a></td><td><code>doc-embed</code> command</td><td>T-5, RL-T-6, EC-T-4</td><td>AC-11, AC-12, AC-13</td></tr>
+            <tr><td><a href="#T-7">T-7</a></td><td>Script entry, runbook, docs tests, final check</td><td>T-6, RL-T-9, EC-T-8</td><td>AC-14, AC-15</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section id="T-1" class="card">
+        <div class="card-header"><span class="badge badge-info">T-1</span><h3>Level resolution</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/__init__.py</code> (new, empty), <code>src/getwork/docembed/levels.py</code> (new), <code>src/tests/test_docembed_levels.py</code> (new).</p>
+        <p><strong>Depends on:</strong> none. <strong>Satisfies:</strong> AC-1, AC-2. <strong>Cites:</strong> decisions DE-3, DE-4; open question Q-3 (proposal).</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/docembed/levels.py   (no third-party imports)
+LEVELS: tuple[str, ...] = ("Internship", "Entry level", "Associate", "Mid-Senior level", "Director", "Executive")
+NOT_SPECIFIED: str = "Not specified"
+LEVEL_SOURCES: tuple[str, ...] = ("listed", "years", "missing")
+DEFAULT_BANDS: tuple[float, float] = (2.0, 5.0)
+def level_rank(level: str) -&gt; int | None:
+    """Index of level in LEVELS, None for NOT_SPECIFIED or anything else."""
+def normalize_listed_level(raw: object) -&gt; str | None:
+    """Strip and compare case-insensitively with LEVELS; "Mid-Senior" (without "level") also maps to
+    "Mid-Senior level" and "Entry" to "Entry level". A non-string (including float NaN), blank or unrecognized
+    value gives None."""
+def level_from_years(years: float | None, bands: tuple[float, float] = DEFAULT_BANDS) -&gt; str | None:
+    """None for None, NaN or negative. years &lt; bands[0] -&gt; "Entry level"; years &lt; bands[1] -&gt; "Associate";
+    otherwise "Mid-Senior level"."""
+def parse_bands(text: str) -&gt; tuple[float, float]:
+    """"2,5" -&gt; (2.0, 5.0). ValueError unless two comma-separated numbers with 0 &lt; first &lt; second."""
+def resolve_level(source: str, listed_raw: object, years: float | None,
+                  bands: tuple[float, float] = DEFAULT_BANDS) -&gt; tuple[str, str]:
+    """Returns (level, level_source). source "resumes": ignore listed_raw; years-derived -&gt; (level, "years"),
+    else (NOT_SPECIFIED, "missing"). source "postings": normalize_listed_level(listed_raw) -&gt; (level, "listed");
+    else years-derived -&gt; (level, "years"); else (NOT_SPECIFIED, "missing"). ValueError for another source."""</code></pre>
+        <p><strong>Instructions:</strong> Standard library only (use <code>math.isnan</code>). The source check uses <code>getwork.paths.check_source</code> (alias-table T-1, already in the repo by the time this runs; it is the only import outside the standard library, and it has none of its own).</p>
+      </section>
+
+      <section id="T-2" class="card">
+        <div class="card-header"><span class="badge badge-info">T-2</span><h3>Full and B2 serializers</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/serialize.py</code> (new), <code>src/tests/test_docembed_serialize.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1 (<code>NOT_SPECIFIED</code>). <strong>Satisfies:</strong> AC-3, AC-4. <strong>Cites:</strong> <a href="../architecture.html#CC-4">CC-4</a>, <a href="../architecture.html#ADR-5">ADR-5</a>, decisions DE-1, DE-2.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/docembed/serialize.py   (no third-party imports)
+SERIALIZATION_VERSION: str = "ser_v1"
+B2_ORDERS: tuple[str, ...] = ("grouped", "record")
+def clean_field(text: str | None) -&gt; str:
+    """Collapse all whitespace runs (including newlines) to one space and strip; None or blank gives NOT_SPECIFIED."""
+def group_skills(skill_clusters: Sequence[Mapping[str, str]], cluster_order: Sequence[str]) -&gt; list[tuple[str, list[str]]]:
+    """skill_clusters items have "skill" and "cluster" (CC-15). Groups in cluster_order, then OTHER last; a group
+    appears only if it has skills; skills inside a group keep input order. ValueError naming the cluster if an
+    item's cluster is neither in cluster_order nor OTHER."""
+def serialize_full(title: str | None, level: str, skill_clusters: Sequence[Mapping[str, str]],
+                   cluster_order: Sequence[str]) -&gt; str:
+    """f"Title: {clean_field(title)}\nLevel: {clean_field(level)}\nSkills: " + "; ".join(f"{name}: {', '.join(skills)}"
+    for name, skills in group_skills(...)) ; "none" when there are no skills. Each skill passes through clean_field's
+    whitespace collapsing (a blank skill is skipped)."""
+def serialize_b2(title: str | None, level: str, skill_clusters: Sequence[Mapping[str, str]],
+                 cluster_order: Sequence[str], order: str = "grouped") -&gt; str:
+    """Same first two lines; "Skills: " + ", ".join(skills) with skills in the grouped order (order "grouped") or
+    the input order (order "record"), "none" when empty. ValueError for an order not in B2_ORDERS."""</code></pre>
+        <p><strong>Instructions:</strong> <code>OTHER</code> comes from <code>getwork.taxonomy.model</code>. A blank skill (after cleaning) is skipped before grouping, in both serializers. The unknown-cluster <code>ValueError</code> message contains the cluster name, cut to 60 characters. The test for AC-3 uses clusters named <code>Front-end</code>, <code>Cloud</code> with <code>cluster_order=["Front-end", "Cloud"]</code> and input items in the order Cloud, Other, Front-end.</p>
+      </section>
+
+      <section id="T-3" class="card">
+        <div class="card-header"><span class="badge badge-info">T-3</span><h3>build_document and provenance checks</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/documents.py</code> (new; this task: keys, errors, <code>build_document</code>, <code>provenance_of</code>, <code>check_comparable</code>), <code>src/tests/test_docembed_documents.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-2, RL-T-5 (<code>RELABEL_KEYS</code>, <code>build_relabel_record</code> for building test records), TX-T-2 (<code>Taxonomy</code>). <strong>Satisfies:</strong> AC-5, AC-6. <strong>Cites:</strong> <a href="../architecture.html#CC-15">CC-15</a>, decisions DE-1, DE-3, DE-7.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/docembed/documents.py   (this task)
+DOCUMENT_KEYS: tuple[str, ...] = ("id", "source", "title", "level", "level_source", "years_experience", "skills",
+                                  "skill_clusters", "text_full", "text_b2", "alias_table_version",
+                                  "taxonomy_version", "relabel_mode", "relabel_model", "relabel_backend",
+                                  "serialization_version")
+PROVENANCE_KEYS: tuple[str, ...] = ("alias_table_version", "taxonomy_version", "relabel_mode", "relabel_model",
+                                    "relabel_backend")
+COMPARE_KEYS: tuple[str, ...] = (*PROVENANCE_KEYS, "serialization_version", "level_bands", "b2_order")
+class DocEmbedMismatchError(RuntimeError): ...
+def build_document(record: Mapping[str, object], listed_level: object, tax: Taxonomy,
+                   bands: tuple[float, float] = DEFAULT_BANDS, b2_order: str = "grouped") -&gt; dict:
+    """record is a relabeled record (RELABEL_KEYS). Returns a new dict with keys in DOCUMENT_KEYS order:
+    id, source, title, years_experience, skills, skill_clusters from the record (copied), level and level_source
+    from resolve_level(record["source"], listed_level, record["years_experience"], bands), text_full =
+    serialize_full(title, level, skill_clusters, tax.cluster_names()), text_b2 = serialize_b2(..., b2_order),
+    the five provenance values from the record (taxonomy_version, alias_table_version, relabel_mode,
+    relabel_model, relabel_backend), serialization_version = SERIALIZATION_VERSION. Never mutates record."""
+def provenance_of(records: Mapping[str, Mapping[str, object]]) -&gt; dict[str, object]:
+    """{key: value} for PROVENANCE_KEYS read from the records (relabel_model and relabel_backend come from the
+    record keys of the same names). ValueError if records is empty or the values differ between records."""
+def check_comparable(a: Mapping[str, object], b: Mapping[str, object], keys: Sequence[str] = COMPARE_KEYS) -&gt; None:
+    """A key absent from a mapping counts as None. Raises DocEmbedMismatchError listing every key in keys whose
+    values differ, with both values (none are secrets)."""</code></pre>
+        <p><strong>Instructions:</strong> The five provenance values have the same names as in the relabeled record (CC-15). <code>DOCUMENT_PARQUET_SCHEMA</code> and the table functions come in T-4. Tests build one taxonomy with <code>make_taxonomy([Cluster(0, "Front-end", ("Vue", "CSS")), Cluster(1, "Cloud", ("AWS",))], noise=("Excel",), alias_table_version="sha256:t", meta={})</code> and records with <code>build_relabel_record</code> or by hand.</p>
+      </section>
+
+      <section id="T-4" class="card">
+        <div class="card-header"><span class="badge badge-info">T-4</span><h3>Documents table: build_documents and readers</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/documents.py</code> (modify), <code>src/tests/test_docembed_documents.py</code> (modify).</p>
+        <p><strong>Depends on:</strong> T-3, AL-T-2 (<code>fileio</code>, <code>paths</code>). <strong>Satisfies:</strong> AC-7, AC-8. <strong>Cites:</strong> <a href="../architecture.html#CC-11">CC-11</a>, <a href="../architecture.html#CC-16">CC-16</a>, decisions DE-7, DE-8.</p>
+        <p><strong>Interfaces (verbatim from Design; names from T-3 are available):</strong></p>
+<pre><code># src/getwork/docembed/documents.py   (this task)
+DOCUMENT_PARQUET_SCHEMA: pa.Schema   # id, source, title, level, level_source: string; years_experience: float64;
+                                     # skills: list&lt;string&gt;; skill_clusters: list&lt;struct&lt;skill string, cluster string,
+                                     # via string&gt;&gt;; text_full, text_b2, alias_table_version, taxonomy_version,
+                                     # relabel_mode, relabel_model, relabel_backend, serialization_version: string
+def build_documents(source: str, relabeled: Mapping[str, dict], listed_levels: Mapping[str, object], tax: Taxonomy,
+                    out_dir: Path, *, bands: tuple[float, float] = DEFAULT_BANDS, b2_order: str = "grouped") -&gt; dict:
+    """provenance_of first (ValueError before anything is written). Documents in numeric id order
+    (getwork.structure.inputs.sort_ids), listed_levels.get(id) as listed_level. Writes out_dir/f"{source}_documents.jsonl"
+    (DOCUMENT_KEYS order), f"{source}_documents.parquet" (DOCUMENT_PARQUET_SCHEMA, zstd) and
+    f"{source}_documents_summary.json" through fileio. Returns the summary: {"source", "n_documents",
+    *PROVENANCE_KEYS, "serialization_version", "level_bands": [a, b], "b2_order", "level_counts": {each of LEVELS and
+    NOT_SPECIFIED: count, zeros included}, "level_source_counts": {"listed", "years", "missing"}, "n_empty_skills",
+    "mean_skills", "other_share", "examples": first 3 of {"id", "text_full", "text_b2"}}  (other_share = skills
+    clustered under OTHER / all skills, 0.0 if none; mean_skills 0.0 if no documents)."""
+def documents_path(root: Path, source: str) -&gt; Path:
+    """paths.documents_dir(root, source) / f"{source}_documents.jsonl"."""
+def read_documents(root: Path, source: str) -&gt; dict[str, dict]:
+    """FileNotFoundError naming the path (hint: run doc-embed build); ValueError naming the id if a row lacks a
+    DOCUMENT_KEYS key. Dict in numeric id order."""
+def read_documents_summary(root: Path, source: str) -&gt; dict:
+    """The summary JSON; FileNotFoundError naming the path (hint: run doc-embed build)."""</code></pre>
+        <p><strong>Instructions:</strong> The JSONL goes through <code>write_jsonl_atomic</code>, the Parquet through <code>write_parquet_atomic(path, pa.Table.from_pylist(rows, schema=DOCUMENT_PARQUET_SCHEMA))</code>, the summary through <code>write_json_atomic</code>. An empty <code>listed_levels</code> mapping is valid. Read the JSONL with the structurer's <code>read_checkpoint(path, repair=False)</code>-style reader if it fits, otherwise a plain line loop; numeric ordering through <code>sort_ids</code>. <code>level_bands</code> in the summary is the list <code>[bands[0], bands[1]]</code>.</p>
+      </section>
+
+      <section id="T-5" class="card">
+        <div class="card-header"><span class="badge badge-info">T-5</span><h3>Document vectors</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/vectors.py</code> (new), <code>src/tests/test_docembed_vectors.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-4, EC-T-2 (<code>embed_cached</code>), EC-T-3 (<code>write_vectors</code>, <code>read_vectors</code>, <code>check_same_embedding</code>, <code>VectorSet</code>). <strong>Satisfies:</strong> AC-9, AC-10. <strong>Cites:</strong> <a href="../architecture.html#CC-5">CC-5</a>, <a href="../architecture.html#CC-6">CC-6</a>, <a href="../architecture.html#ADR-4">ADR-4</a>, decisions DE-5 to DE-8.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/docembed/vectors.py
+SYSTEMS: tuple[str, ...] = ("Full", "B2")        # CC-6 ids
+def text_field(system: str) -&gt; str:
+    """"text_full" for "Full", "text_b2" for "B2"; ValueError otherwise."""
+def vector_stem(source: str, system: str) -&gt; str:
+    """f"{source}_{system.lower()}" (check_source and the system are validated)."""
+def texts_hash(texts: Sequence[str]) -&gt; str:
+    """"sha256:" + first 12 hex of sha256(json.dumps(list(texts), ensure_ascii=False).encode("utf-8"))."""
+def embed_documents(client: EmbeddingClient, docs: Mapping[str, dict], summary: Mapping[str, object], source: str,
+                    out_dir: Path, *, cache_dir: Path | None, chunk_size: int = 256,
+                    progress: Callable[[str, int, int], None] | None = None) -&gt; dict:
+    """For each system in SYSTEMS: ids = list(docs) (the dict's order is numeric id order), texts =
+    [docs[i][text_field(system)] for i in ids]; vectors = embed_cached(client, texts, cache_dir=cache_dir,
+    chunk_size=chunk_size, progress=lambda done, total: progress(system, done, total)); then write_vectors(out_dir,
+    vector_stem(source, system), ids, vectors, meta) with meta = {"kind": "document_vectors", "system": system,
+    "source": source, "embedding": client.info.as_dict(), **{k: summary[k] for k in COMPARE_KEYS},
+    "texts_hash": texts_hash(texts)}. Both systems are embedded before the first write. ValueError if docs is
+    empty. Returns {system: {"n", "dim", "texts_hash"}}."""
+def read_system_vectors(root: Path, source: str, system: str) -&gt; VectorSet:
+    """read_vectors(paths.documents_dir(root, source), vector_stem(source, system)); the FileNotFoundError message
+    adds the hint "run doc-embed embed"."""
+def check_vectors_current(meta: Mapping[str, object], docs: Mapping[str, dict], system: str) -&gt; None:
+    """DocEmbedMismatchError if meta["texts_hash"] != texts_hash of docs' text_field(system) in the dict's order,
+    or meta["system"] != system."""
+def check_vector_sets_comparable(a_meta: Mapping[str, object], b_meta: Mapping[str, object]) -&gt; None:
+    """check_same_embedding(a_meta, b_meta) (EmbeddingMismatchError), then check_comparable(a_meta, b_meta), then
+    DocEmbedMismatchError if meta["system"] differs."""</code></pre>
+        <p><strong>Instructions:</strong> Pass <code>progress=None</code> straight through (do not wrap a <code>None</code>). <code>out_dir</code> is the source's documents directory (so the vector files sit next to the documents table); <code>cache_dir</code> is that directory's <code>_embed_cache</code> subdirectory chosen by the CLI. <code>texts_hash</code> in a meta is not part of <code>COMPARE_KEYS</code>, since two sources legitimately differ. Tests use <code>FakeEmbeddingClient(dim=16)</code>; the client-failure test uses a small wrapper class whose <code>embed</code> raises <code>EmbeddingError</code> on the second call, then asserts that no <code>*_full*</code> or <code>*_b2*</code> file exists in <code>out_dir</code> (the cache directory may exist). Build <code>docs</code> and <code>summary</code> with <code>build_documents</code> from T-4.</p>
+      </section>
+
+      <section id="T-6" class="card">
+        <div class="card-header"><span class="badge badge-info">T-6</span><h3>doc-embed command</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/docembed/cli.py</code> (new), <code>src/tests/test_docembed_cli.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-5, RL-T-6 (<code>read_relabeled</code>), EC-T-4 (<code>add_embed_args</code>, <code>make_embedding_client</code>). <strong>Satisfies:</strong> AC-11, AC-12, AC-13. <strong>Cites:</strong> <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-11">CC-11</a>, decisions DE-3, DE-7, DE-8. Follows <code>getwork/alias/cli.py</code> (alias-table T-8).</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/docembed/cli.py   (script: doc-embed)
+def main(argv: list[str] | None = None, *, client: EmbeddingClient | None = None,
+         environ: Mapping[str, str] | None = None) -&gt; int:
+    """Subcommands build and embed. Exit codes: 0 ok, 2 usage, config or input error, 3 embedding error."""</code></pre>
+        <p><strong>Instructions:</strong> Options and behavior as in "Commands and outputs". <em>build</em>: parse bands with <code>parse_bands</code> (ValueError -&gt; exit 2); load the taxonomy (<code>load_taxonomy</code>; missing -&gt; message contains <code>taxonomy build</code>); the alias table file is not read, instead <code>tax.alias_table_version</code> must equal every record's <code>alias_table_version</code>; read <code>read_relabeled</code> for the selected sources (FileNotFoundError message contains <code>relabel</code>); each record's <code>taxonomy_version</code> must equal <code>tax.version</code>; when both sources are selected, <code>check_comparable(provenance_of(a), provenance_of(b), PROVENANCE_KEYS)</code>. Any problem is exit 2 with the message on stderr, before creating directories. Listed levels: for postings, <code>pd.read_parquet(processed_parquet(processed_dir, "postings"), columns=["id", "experience_level"])</code> into a dict id -&gt; value (missing file: dict empty, one line to stderr); resumes use <code>{}</code>. <em>embed</em>: read the documents tables and summaries (missing -&gt; exit 2, message contains <code>doc-embed build</code>) and, when both sources are selected, check the two summaries with <code>check_comparable</code> (exit 2) before anything else, so a real model is never loaded for bad input; then <code>make_embedding_client(args=args, environ=os.environ if environ is None else environ, client=client)</code> (<code>ConfigError</code> -&gt; exit 2). Then <code>embed_documents</code> per source with <code>cache_dir = documents_dir(root, source) / "_embed_cache"</code> (None with <code>--no-cache</code>) and a progress callback printing one stderr line per system and ten percent. <code>EmbeddingError</code> and the <code>LLMError</code> subclasses (HTTP backend) -&gt; exit 3 with the message redacted of <code>bundle.secrets</code>. Print each source's result as JSON to stdout. Use <code>args.embed_backend</code> etc. from <code>add_embed_args</code> (with <code>--env-file</code>). Tests build everything under <code>tmp_path</code>: save a taxonomy and alias table with the helpers, write relabeled files with <code>relabel_source</code> (RL-T-6) or hand-written JSONL, and a postings Parquet with <code>pd.DataFrame(...).to_parquet</code>; the embed tests inject <code>FakeEmbeddingClient(dim=16)</code> and assert reruns through <code>client.calls</code>. Add <code>if __name__ == "__main__": raise SystemExit(main())</code>.</p>
+      </section>
+
+      <section id="T-7" class="card">
+        <div class="card-header"><span class="badge badge-info">T-7</span><h3>Script entry, runbook, docs tests, final check</h3></div>
+        <p><strong>Files:</strong> <code>pyproject.toml</code> (modify), <code>src/getwork/docembed/README.md</code> (new), <code>src/tests/test_docembed_docs.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-6, RL-T-9 and EC-T-8 (earlier <code>pyproject.toml</code> edits). <strong>Satisfies:</strong> AC-14, AC-15. <strong>Cites:</strong> decisions DE-2, DE-3, DE-6.</p>
+        <p><strong>Interfaces:</strong> none.</p>
+        <p><strong>Instructions:</strong> Add <code>doc-embed = "getwork.docembed.cli:main"</code> under <code>[project.scripts]</code>. README: what the stage does, the text format with one example of each system, the level rules and bands (and that they answer Q-3 as a proposal), the B2 order option and why it exists (Q-10), the options and defaults, the output files, how to resume, and the checklist DU-1 to DU-5 with one heading per step. Tests read <code>pyproject.toml</code> with <code>tomllib</code> and the README only. Finally run AC-15's two commands and report the results.</p>
+      </section>
+    </section>
+
+    <section id="edge-cases">
+      <h2>Edge cases &amp; risks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Case</th><th>Required behavior</th><th>Covered by</th></tr></thead>
+          <tbody>
+            <tr><td>Document with no skills (extraction failed and was not repaired)</td><td>Embedded with <code>Skills: none</code>; counted in <code>n_empty_skills</code>; its vector is dominated by title and level, which is the honest signal.</td><td>AC-3, AC-7</td></tr>
+            <tr><td>Missing title</td><td><code>Title: Not specified</code>.</td><td>AC-3</td></tr>
+            <tr><td>Posting without a listed level (28% of postings)</td><td>Level from years, else <code>Not specified</code>; <code>level_source_counts</code> shows how many.</td><td>AC-2, AC-7</td></tr>
+            <tr><td>Resume with no years of experience</td><td><code>Not specified</code>, <code>level_source: "missing"</code>.</td><td>AC-2</td></tr>
+            <tr><td>Resume from a long career with an implausible years value</td><td>Mid-Senior (the top derived level); no upper clamp is needed.</td><td>AC-1</td></tr>
+            <tr><td>Skill text containing a comma or semicolon</td><td>Printed as is (the group format is a convention for the model, not a parsed grammar); it never affects ids or provenance.</td><td>AC-3</td></tr>
+            <tr><td>Identical texts for different documents</td><td>Identical vectors; fine.</td><td>AC-9</td></tr>
+            <tr><td>Relabel run in lookup-only mode for one source and LLM mode for the other</td><td><code>build</code> exits 2 naming the differing keys.</td><td>AC-12</td></tr>
+            <tr><td>Model, taxonomy, or serialization changed after vectors were written</td><td>Vectors carry the old identity; retrieval's checks (<code>check_vectors_current</code>, <code>check_vector_sets_comparable</code>) refuse them.</td><td>AC-10</td></tr>
+            <tr><td>GPU out of memory</td><td>Handled by the embedding client's batch halving (embedding-client); at batch size 1 it raises <code>EmbeddingResourceError</code> and <code>embed</code> exits 3 with cached chunks kept.</td><td>AC-13</td></tr>
+            <tr><td>Trial corpus of 100 + 100</td><td>Works; the vector files are tiny; <code>other_share</code> will be high because the trial taxonomy is small.</td><td>checklist DU-1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="open-questions">
+      <h2>Open questions</h2>
+      <div class="callout warn"><span class="callout-title">Assumptions and items for the user to confirm</span>
+        <ul>
+          <li><strong>Assumed, answers Q-3:</strong> level scale LinkedIn's six levels; resumes derive Entry (&lt;2 years), Associate (2 to &lt;5), Mid-Senior (5 or more); postings use the listed level, with the same years bands as a fallback. Confirm or give other bands (<code>--level-bands</code>) before the full-corpus run; changing them changes only this stage and everything after it.</li>
+          <li><strong>Q-10 (new):</strong> B2 text order. Default is the Full text without labels (grouped order, literal ADR-5). If you want B2 to carry no taxonomy influence at all, run with <code>--b2-order record</code>; the choice is recorded in every summary and vector meta.</li>
+          <li><strong>Assumed:</strong> no instruction prefix for documents (DE-5); title is the structured <code>title</code>, not the posting's original title field.</li>
+          <li><strong>Assumed:</strong> the text template (<code>Title:</code>, <code>Level:</code>, <code>Skills:</code> lines) is a reasonable form; the exact wording is part of <code>SERIALIZATION_VERSION</code>, so changing it later invalidates old vectors by design.</li>
+          <li><strong>Handoff:</strong> two-way-retrieval reads <code>read_documents</code> (final skills, title, <code>level</code> via <code>level_rank</code>) and <code>read_system_vectors</code> for <code>Full</code> and <code>B2</code>. For later features: eval-sampling-pooling samples ids from the documents tables and pools the top-10 of B1+, B2, Full; llm-judging shows raw text (not these texts); taxonomy-validity re-runs <code>build_document</code> and <code>embed_documents</code>-style embedding for a record with one substituted skill (it needs <code>build_relabel_record</code>, <code>serialize_full</code>, and an <code>EmbeddingClient</code>); the hallucination metric compares explanation skills with the document's <code>skills</code>; match-agent's similarity tool uses the retrieval functions. A new document at query time goes through relabeling, <code>build_document</code>, and <code>EmbeddingClient.embed</code> (Q-1).</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="footer">GetWork · Feature spec: document-embedding · see architecture.html</footer>
+  </main>
+</div>
+</body>
+</html>
