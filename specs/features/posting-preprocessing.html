@@ -421,7 +421,9 @@ def clean_posting_text(raw: str) -&gt; str:
     """html.unescape; remove tags matching &lt;/?[A-Za-z][^&gt;]*&gt;; convert \r\n and \r to \n;
     replace "\xa0" with " "; collapse runs of spaces and tabs to one space;
     strip trailing spaces on each line; collapse 3 or more consecutive newlines to
-    exactly 2; strip the whole string. Idempotent. Keeps single and double newlines,
+    exactly 2; strip the whole string. Idempotent on text whose entities decode only once
+    (the tested case); double-escaped entities such as "&amp;amp;lt;" decode further on a second
+    pass, so it is not idempotent in general. Keeps single and double newlines,
     "**", and all other characters."""
 
 def add_posting_columns(df: pd.DataFrame) -&gt; pd.DataFrame:
@@ -494,7 +496,7 @@ def main(argv: list[str] | None = None) -&gt; int:
         <li id="AC-4"><strong>AC-4</strong>: <code>apply_domain_filter</code> returns <code>kept</code> with the added <code>families</code> column and the input row order, and <code>dropped</code> with columns <code>id</code>, <code>rule</code> (<code>"not_in_domain"</code>), <code>detail</code> (<code>""</code>); the two id sets are disjoint and together equal the input ids. <em>Test:</em> <code>src/tests/test_domain.py::test_apply_domain_filter_partition</code></li>
         <li id="AC-5"><strong>AC-5</strong>: <code>load_postings</code> on a fixture CSV tree returns the documented columns; ids are <code>j-&lt;job_id&gt;</code>; rows are sorted by numeric <code>job_id</code> (so <code>"99"</code> sorts before <code>"100"</code>); a multi-line quoted description is preserved verbatim in <code>text_raw</code>; a blank experience level becomes <code>None</code>; a missing company becomes <code>""</code>; a posting with no industry rows gets <code>[]</code>; industries keep file order with repeats removed. <em>Test:</em> <code>src/tests/test_posting_loader.py::test_load_postings_schema</code></li>
         <li id="AC-6"><strong>AC-6</strong>: <code>load_postings</code> skips <code>job_industries</code> rows whose <code>industry_id</code> is not in <code>industries.csv</code> and returns their count as the second value; it raises <code>ValueError</code> for a duplicate <code>job_id</code> and for a missing required column. <em>Test:</em> <code>src/tests/test_posting_loader.py::test_unmapped_industry_rows_counted</code>, <code>::test_load_errors</code></li>
-        <li id="AC-7"><strong>AC-7</strong>: <code>clean_posting_text</code> unescapes entities, removes HTML tags, converts CRLF to LF, turns <code>\xa0</code> into a space, collapses spaces and tabs, collapses 3+ newlines to 2, keeps single and double newlines and <code>**</code>, strips the ends, and is idempotent. <em>Test:</em> <code>src/tests/test_posting_loader.py::test_clean_posting_text</code>, <code>::test_clean_posting_text_idempotent</code></li>
+        <li id="AC-7"><strong>AC-7</strong>: <code>clean_posting_text</code> unescapes entities, removes HTML tags, converts CRLF to LF, turns <code>\xa0</code> into a space, collapses spaces and tabs, collapses 3+ newlines to 2, keeps single and double newlines and <code>**</code>, strips the ends, and is idempotent on its own output for ordinary text (a second pass changes nothing; not guaranteed for double-escaped entities such as <code>&amp;amp;lt;</code>, which decode one more level). <em>Test:</em> <code>src/tests/test_posting_loader.py::test_clean_posting_text</code>, <code>::test_clean_posting_text_idempotent</code></li>
         <li id="AC-8"><strong>AC-8</strong>: <code>add_posting_columns</code> fills <code>text_clean</code>, <code>n_chars</code>, <code>n_words</code> as specified and does not modify its input. <em>Test:</em> <code>src/tests/test_posting_loader.py::test_add_posting_columns</code></li>
         <li id="AC-9"><strong>AC-9</strong>: Postings with the same title and description after case and whitespace normalization, even from different companies, collapse to the one with the smallest numeric <code>job_id</code> (<code>"99"</code> beats <code>"100"</code>); the dropped row has rule <code>duplicate</code> and detail <code>duplicate_of=&lt;kept id&gt;</code>; <code>kept</code> keeps the input row order. <em>Test:</em> <code>src/tests/test_posting_dedup.py::test_duplicates_keep_smallest_job_id</code></li>
         <li id="AC-10"><strong>AC-10</strong>: Two postings with the same description but different titles are both kept. <em>Test:</em> <code>src/tests/test_posting_dedup.py::test_same_description_different_title_kept</code></li>
@@ -575,7 +577,9 @@ def clean_posting_text(raw: str) -&gt; str:
     """html.unescape; remove tags matching &lt;/?[A-Za-z][^&gt;]*&gt;; convert \r\n and \r to \n;
     replace "\xa0" with " "; collapse runs of spaces and tabs to one space;
     strip trailing spaces on each line; collapse 3 or more consecutive newlines to
-    exactly 2; strip the whole string. Idempotent. Keeps single and double newlines,
+    exactly 2; strip the whole string. Idempotent on text whose entities decode only once
+    (the tested case); double-escaped entities such as "&amp;amp;lt;" decode further on a second
+    pass, so it is not idempotent in general. Keeps single and double newlines,
     "**", and all other characters."""
 
 def add_posting_columns(df: pd.DataFrame) -&gt; pd.DataFrame:
