@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 structurer = "getwork.structure.cli:main"
+alias-table = "getwork.alias.cli:main"
 
 [dependency-groups]
 dev = [
@@ -31,6 +32,7 @@ include = ["getwork*"]
 
 [tool.setuptools.package-data]
 "getwork.structure" = ["prompts/*.md"]
+"getwork.alias" = ["alias_curated.csv", "prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]

@@ -228,3 +228,6 @@ data/structured_trial/
 
 # Local-backend trial runs (never committed)
 data/structured_trial_*/
+
+# Trial pipeline artifacts (never committed)
+artifacts_trial/

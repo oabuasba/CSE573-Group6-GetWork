@@ -1,0 +1,40 @@
+alias,canonical
+# Abbreviations and spellings of the same skill. Add reviewed rows below.
+js,JavaScript
+ts,TypeScript
+k8s,Kubernetes
+node,Node.js
+nodejs,Node.js
+node js,Node.js
+reactjs,React
+react.js,React
+vuejs,Vue.js
+vue,Vue.js
+postgres,PostgreSQL
+mongo,MongoDB
+mssql,SQL Server
+ms sql server,SQL Server
+microsoft sql server,SQL Server
+tf,TensorFlow
+sklearn,scikit-learn
+scikit learn,scikit-learn
+amazon web services,AWS
+amazon web service,AWS
+gcp,Google Cloud Platform
+google cloud,Google Cloud Platform
+microsoft azure,Azure
+cicd,CI/CD
+ci cd,CI/CD
+ml,Machine Learning
+dotnet,.NET
+golang,Go
+c sharp,C#
+csharp,C#
+cpp,C++
+restful api,REST API
+restful apis,REST API
+rest apis,REST API
+oop,Object-Oriented Programming
+object oriented programming,Object-Oriented Programming
+ms excel,Microsoft Excel
+ms office,Microsoft Office
