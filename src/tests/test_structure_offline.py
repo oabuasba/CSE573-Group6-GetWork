@@ -41,6 +41,9 @@ def test_apply_offline_unsets_env_set_earlier_and_changes_cwd(
         "LOCAL_LLM_BASE_URL",
         "LOCAL_LLM_MODEL",
         "LOCAL_LLM_API_KEY",
+        "EMBED_BACKEND",
+        "EMBED_MODEL",
+        "VOYAGER_EMBED_MODEL",
     )
     for name in names:
         monkeypatch.setenv(name, "x")
@@ -57,7 +60,12 @@ def test_all_llm_and_structure_tests_use_offline_fixture() -> None:
 
 
 def test_openai_imported_only_in_voyager_module_and_its_test() -> None:
-    allowed = {SRC_DIR / "getwork" / "llm" / "voyager.py", TESTS_DIR / "test_llm_voyager.py"}
+    allowed = {
+        SRC_DIR / "getwork" / "llm" / "voyager.py",
+        SRC_DIR / "getwork" / "embed" / "voyager_embed.py",
+        TESTS_DIR / "test_llm_voyager.py",
+        TESTS_DIR / "test_embed_voyager.py",
+    }
     candidates = [*(SRC_DIR / "getwork").rglob("*.py"), *TESTS_DIR.glob("*.py")]
     matches = {
         f for f in candidates

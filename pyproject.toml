@@ -5,20 +5,31 @@ description = "GetWork: resume and job data pipeline"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi",
     "langdetect",
+    "numpy>=2.4.6",
     "openai>=3.46.0",
     "pandas",
     "pyarrow",
     "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
+    "uvicorn",
 ]
 
 [project.scripts]
 structurer = "getwork.structure.cli:main"
 alias-table = "getwork.alias.cli:main"
+embed-preflight = "getwork.embed.cli:main"
+
+[project.optional-dependencies]
+embed = [
+    "sentence-transformers",
+    "torch",
+]
 
 [dependency-groups]
 dev = [
+    "httpx",
     "pytest",
 ]
 
