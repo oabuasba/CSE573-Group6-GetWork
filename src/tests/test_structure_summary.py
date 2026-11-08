@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -22,7 +23,7 @@ CONFIG_KEYS = {
 }  # fmt: skip
 
 
-def _cfg(**kw) -> runstate.RunConfig:
+def _cfg(**kw: Any) -> runstate.RunConfig:
     return runstate.RunConfig(
         source="postings", in_dir=Path("in"), out_dir=Path("out"),
         extract=ExtractConfig(model="m1"), **kw,
@@ -70,6 +71,13 @@ def test_counters_add_accumulates() -> None:
     assert (c.calls, c.retries, c.rate_limited, c.truncated_inputs) == (8, 3, 1, 1)
     assert c.failures_by_stage["validation"] == 2
     assert c.failures_by_stage["permanent"] == 0
+
+
+def test_counters_add_unknown_stage_raises_and_changes_nothing() -> None:
+    c = runstate.Counters()
+    with pytest.raises(ValueError, match="bogus"):
+        c.add(_bad("a", "bogus", CallStats(calls=2)))
+    assert c == runstate.Counters()
 
 
 def test_exit_code_for_statuses() -> None:

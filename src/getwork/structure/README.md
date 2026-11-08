@@ -106,9 +106,10 @@ directory, and, once accepted, change the `PROMPT_VERSION` default in `prompt.py
 
 Pass: failures are under 2% of attempted. For validation failures, read the messages in the
 failures CSV: an empty reply means raise `--max-tokens` or check that reasoning is off; anything
-else means revise the prompt as a new version (do not edit v1). Time the run with the wall clock (for example `time uv run structurer ...`) and note
-`rate_limited` to project a full run (37,265 calls, which can take a day or more). Estimate the
-full output size (trial JSONL size x N/100); each committed file must stay under 100 MB.
+else means revise the prompt as a new version (do not edit v1). Time the run with the wall clock
+(for example `time uv run structurer ...`) and note `rate_limited` to project a full run (37,265
+calls, which can take a day or more). Estimate the full output size (trial JSONL size x N/100);
+each committed file must stay under 100 MB.
 
 ### U-7 Full runs
 

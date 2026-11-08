@@ -179,13 +179,14 @@ def _execute(args: argparse.Namespace, client: LLMClient, model: str, secrets: l
 
         previous = signal.signal(signal.SIGINT, on_sigint)
     try:
-        result = runner.run(cfg, client, secrets=secrets, stop=stop, log=_log)
+        result = runner.run(cfg=cfg, client=client, secrets=secrets, stop=stop, log=_log)
     except KeyboardInterrupt:
         print("interrupted", file=sys.stderr)
         return EXIT_INTERRUPTED
     finally:
         if is_main:
-            signal.signal(signal.SIGINT, previous)
+            # signal.signal returns None for a handler not installed from Python
+            signal.signal(signal.SIGINT, signal.SIG_DFL if previous is None else previous)
     print(json.dumps(result.summary))
     return result.exit_code
 

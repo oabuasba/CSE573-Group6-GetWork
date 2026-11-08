@@ -3,8 +3,8 @@
 import csv
 import json
 import os
-import tempfile
 import threading
+import uuid
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -128,9 +128,9 @@ def read_checkpoint(path: Path, repair: bool = True) -> dict[str, dict]:
 
 def _atomic_write(path: Path, write: Callable[[Path], None]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    os.close(fd)
-    tmp = Path(tmp_name)
+    tmp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    # mkstemp would force mode 0600; O_CREAT with 0o666 yields 0644 under the usual umask.
+    os.close(os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666))
     try:
         write(tmp)
         os.replace(tmp, path)

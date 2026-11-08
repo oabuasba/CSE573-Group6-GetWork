@@ -7,6 +7,7 @@ from getwork.llm.client import (
     RateLimitError,
     TransientLLMError,
 )
+from getwork.llm.fake import FakeLLMClient
 from getwork.llm.retry import (
     CallStats,
     RetriesExhausted,
@@ -41,24 +42,11 @@ class FakeClock:
         self.now += seconds
 
 
-class ScriptedClient:
-    """Returns strings and raises exceptions from a script, in order."""
-
-    def __init__(self, script: list) -> None:
-        self.script = list(script)
-        self.calls: list[LLMRequest] = []
-
-    def complete(self, request: LLMRequest) -> str:
-        self.calls.append(request)
-        item = self.script.pop(0)
-        if isinstance(item, Exception):
-            raise item
-        return item
-
-
-def run(script: list, cfg: RetryConfig = RetryConfig()):
+def run(
+    script: list[str | BaseException], cfg: RetryConfig = RetryConfig()
+) -> tuple[object, FakeClock, FakeLLMClient, CallStats]:
     clock = FakeClock()
-    client = ScriptedClient(script)
+    client = FakeLLMClient(script=script)
     stats = CallStats()
     throttle = Throttle(clock=clock.time, sleep=clock.sleep)
     try:

@@ -29,7 +29,9 @@ def decode_bytes(data: bytes) -> tuple[str, str]:
 def clean_text(raw: str) -> str:
     """Remove <span ...> and </span> tags (case-insensitive), apply html.unescape,
     replace "\\xa0" with " ", collapse every whitespace run to one space, strip.
-    Idempotent. Leaves other tags and all other characters (including "•") alone."""
+    Idempotent on its own output for ordinary text whose entities decode only once; not
+    guaranteed for double-escaped entities such as "&amp;lt;". Leaves other tags and all
+    other characters (including "•") alone."""
     text = html.unescape(SPAN_TAG.sub("", raw)).replace("\xa0", " ")
     return WHITESPACE_RUN.sub(" ", text).strip()
 

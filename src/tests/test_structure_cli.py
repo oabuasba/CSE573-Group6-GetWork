@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -25,7 +26,10 @@ def _args(tmp_path: Path, *extra: str, source: str = "resumes") -> list[str]:
     ]  # fmt: skip
 
 
-def test_missing_key_exits_2_before_any_work(tmp_path, capsys):
+def test_missing_key_exits_2_before_any_work(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     code = cli.main(_args(tmp_path, "--env-file", str(tmp_path / "nope.env")), environ={})
     assert code == 2
     assert "VOYAGER_API_KEY" in capsys.readouterr().err
@@ -33,20 +37,20 @@ def test_missing_key_exits_2_before_any_work(tmp_path, capsys):
     assert not (tmp_path / "in").exists()
 
 
-def test_missing_model_exits_2(tmp_path, capsys):
+def test_missing_model_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     argv = ["--source", "resumes", "--in-dir", str(tmp_path / "in"),
             "--out-dir", str(tmp_path / "out")]  # fmt: skip
     assert cli.main(argv, client=_fake()) == 2
     assert "--model" in capsys.readouterr().err
 
 
-def test_unknown_prompt_version_exits_2(tmp_path, capsys):
+def test_unknown_prompt_version_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     code = cli.main(_args(tmp_path, "--prompt-version", "nope_v9"), client=_fake())
     assert code == 2
     assert "nope_v9" in capsys.readouterr().err
 
 
-def test_limit_and_sample_mutually_exclusive(tmp_path):
+def test_limit_and_sample_mutually_exclusive(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as info:
         cli.main(_args(tmp_path, "--limit", "1", "--sample", "1"), client=_fake())
     assert info.value.code == 2
@@ -55,7 +59,7 @@ def test_limit_and_sample_mutually_exclusive(tmp_path):
 @pytest.mark.parametrize(
     "bad", [["--workers", "0"], ["--limit", "-1"], ["--sample", "0"]]
 )
-def test_parser_rejects_non_positive_numbers(tmp_path, bad):
+def test_parser_rejects_non_positive_numbers(tmp_path: Path, bad: list[str]) -> None:
     with pytest.raises(SystemExit) as info:
         cli.main(_args(tmp_path, *bad), client=_fake())
     assert info.value.code == 2
@@ -65,7 +69,11 @@ def _rows(n: int) -> list[dict]:
     return [{"id": f"r-{i}", "text_clean": f"text {i}"} for i in range(1, n + 1)]
 
 
-def test_dry_run_writes_nothing_and_needs_no_key(tmp_path, write_clean_parquet, capsys):
+def test_dry_run_writes_nothing_and_needs_no_key(
+    tmp_path: Path,
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(3))
     argv = _args(tmp_path, "--dry-run", "--limit", "2")
     argv.remove("--model")
@@ -80,7 +88,11 @@ def test_dry_run_writes_nothing_and_needs_no_key(tmp_path, write_clean_parquet, 
     assert not (tmp_path / "out").exists()
 
 
-def test_dry_run_example_is_null_when_nothing_left(tmp_path, write_clean_parquet, capsys):
+def test_dry_run_example_is_null_when_nothing_left(
+    tmp_path: Path,
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(2))
     out = tmp_path / "out"
     out.mkdir()
@@ -96,12 +108,12 @@ def test_dry_run_example_is_null_when_nothing_left(tmp_path, write_clean_parquet
     assert sorted(p.name for p in out.iterdir()) == [paths.jsonl.name]
 
 
-def test_cli_import_does_not_import_openai():
+def test_cli_import_does_not_import_openai() -> None:
     code = "import sys; import getwork.structure.cli; assert 'openai' not in sys.modules"
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_temperature_option_parsing():
+def test_temperature_option_parsing() -> None:
     parse = cli.build_parser().parse_args
     assert parse(["--source", "resumes"]).temperature == 0.0
     assert parse(["--source", "resumes", "--temperature", "omit"]).temperature is None
@@ -111,23 +123,27 @@ def test_temperature_option_parsing():
     assert info.value.code == 2
 
 
-def test_reasoning_effort_omit_passes_through_raw():
+def test_reasoning_effort_omit_passes_through_raw() -> None:
     args = cli.build_parser().parse_args(["--source", "resumes", "--reasoning-effort", "omit"])
     assert args.reasoning_effort == "omit"
 
 
-def test_default_dirs_follow_source():
+def test_default_dirs_follow_source() -> None:
     args = cli._parse_args(["--source", "postings"])
     assert args.in_dir == Path("data/processed/postings")
     assert args.out_dir == Path("data/structured/postings")
 
 
-def test_dry_run_missing_input_exits_2(tmp_path, capsys):
+def test_dry_run_missing_input_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(_args(tmp_path, "--dry-run")) == 2
     assert "input parquet not found" in capsys.readouterr().err
 
 
-def test_dry_run_bad_checkpoint_exits_2(tmp_path, write_clean_parquet, capsys):
+def test_dry_run_bad_checkpoint_exits_2(
+    tmp_path: Path,
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(1))
     out = tmp_path / "out"
     out.mkdir()

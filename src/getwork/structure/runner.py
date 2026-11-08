@@ -75,7 +75,7 @@ def _exception_outcome(doc: SourceDoc, exc: Exception, secrets: Sequence[str]) -
         id=doc.id,
         stage="permanent",
         error_type=type(exc).__name__,
-        message=describe_exception(exc, secrets),
+        message=describe_exception(exc=exc, secrets=secrets),
         attempts=0,
     )
     return Outcome(id=doc.id, record=None, failure=failure, stats=CallStats(), truncated=False)
@@ -116,14 +116,14 @@ def _finalize(
     cfg: RunConfig, paths: store.OutputPaths, progress: _Progress, facts: RunFacts
 ) -> dict:
     """Rewrite checkpoint and Parquet sorted, merge failures, and write the summary."""
-    store.write_final(paths, progress.done)
+    store.write_final(paths=paths, records=progress.done)
     merged = store.merge_failures(
         previous=store.read_failures(paths.failures),
         current=progress.failures,
         attempted=progress.attempted_ids,
         done=progress.done.keys(),
     )
-    store.write_failures(paths.failures, merged)
+    store.write_failures(path=paths.failures, rows=merged)
     final_facts = replace(facts, done_total=len(progress.done), failures_total=len(merged))
     summary = runstate.build_summary(
         cfg=cfg,
@@ -132,7 +132,7 @@ def _finalize(
         status=progress.status,
         abort_reason=progress.abort_reason,
     )
-    store.write_summary(paths.summary, summary)
+    store.write_summary(path=paths.summary, summary=summary)
     return summary
 
 
@@ -207,9 +207,38 @@ def _settle(progress: _Progress, stopped: bool, secrets: Sequence[str]) -> None:
     """Fix status and the redacted abort_reason before the finalizer reads them."""
     if progress.abort_reason is not None:
         progress.status = "aborted"
-        progress.abort_reason = redact_secrets(progress.abort_reason, secrets)
+        progress.abort_reason = redact_secrets(text=progress.abort_reason, secrets=secrets)
     elif stopped or progress.status == "interrupted":
         progress.status = "interrupted"
+
+
+def _start(cfg: RunConfig, paths: store.OutputPaths) -> tuple[store.CheckpointWriter, _Plan]:
+    """Load inputs, take the checkpoint lock and plan the work; the lock is released on failure."""
+    df = inputs.load_inputs(source=cfg.source, in_dir=cfg.in_dir)
+    docs = _load_docs(df=df, source=cfg.source)
+    writer = store.CheckpointWriter(paths.jsonl)
+    try:
+        return writer, _prepare(cfg=cfg, paths=paths, docs=docs)
+    except BaseException:
+        writer.close()
+        raise
+
+
+def _make_loop(
+    cfg: RunConfig,
+    writer: store.CheckpointWriter,
+    plan: _Plan,
+    secrets: Sequence[str],
+    log: Callable[[str], None],
+) -> _LoopState:
+    return _LoopState(
+        writer=writer,
+        progress_every=cfg.progress_every,
+        log=lambda message: log(redact_secrets(text=message, secrets=secrets)),
+        todo_count=len(plan.todo_docs),
+        secrets=secrets,
+        max_consecutive_failures=cfg.max_consecutive_failures,
+    )
 
 
 def run(
@@ -223,32 +252,13 @@ def run(
     log: Callable[[str], None] = lambda message: None,
 ) -> RunResult:
     paths = store.output_paths(source=cfg.source, out_dir=cfg.out_dir)
-    df = inputs.load_inputs(source=cfg.source, in_dir=cfg.in_dir)
-    docs = _load_docs(df=df, source=cfg.source)
-    writer = store.CheckpointWriter(paths.jsonl)
-    try:
-        plan = _prepare(cfg=cfg, paths=paths, docs=docs)
-    except BaseException:
-        writer.close()
-        raise
+    writer, plan = _start(cfg=cfg, paths=paths)
     progress = _Progress(done=plan.done)
     stop = stop or threading.Event()
     abort = threading.Event()
-    work = _make_work(
-        client=client,
-        cfg=cfg,
-        throttle=Throttle(clock, sleep),
-        secrets=secrets,
-        sleep=sleep,
-    )
-    loop = _LoopState(
-        writer=writer,
-        progress_every=cfg.progress_every,
-        log=lambda message: log(redact_secrets(message, secrets)),
-        todo_count=len(plan.todo_docs),
-        secrets=secrets,
-        max_consecutive_failures=cfg.max_consecutive_failures,
-    )
+    throttle = Throttle(clock=clock, sleep=sleep)
+    work = _make_work(client=client, cfg=cfg, throttle=throttle, secrets=secrets, sleep=sleep)
+    loop = _make_loop(cfg=cfg, writer=writer, plan=plan, secrets=secrets, log=log)
     try:
         results = pool.run_pool(
             items=plan.todo_docs, fn=work, workers=cfg.workers, stop=stop, abort=abort
@@ -261,6 +271,5 @@ def run(
         writer.close()
         _settle(progress=progress, stopped=stop.is_set(), secrets=secrets)
         summary = _finalize(cfg=cfg, paths=paths, progress=progress, facts=plan.facts)
-    return RunResult(
-        exit_code=runstate.exit_code_for(progress.status, progress.counters), summary=summary
-    )
+    exit_code = runstate.exit_code_for(status=progress.status, counters=progress.counters)
+    return RunResult(exit_code=exit_code, summary=summary)

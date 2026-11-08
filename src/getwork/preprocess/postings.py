@@ -80,8 +80,9 @@ def clean_posting_text(raw: str) -> str:
     """html.unescape; remove tags matching </?[A-Za-z][^>]*>; convert \\r\\n and \\r to \\n;
     replace "\\xa0" with " "; collapse runs of spaces and tabs to one space;
     strip trailing spaces on each line; collapse 3 or more consecutive newlines to
-    exactly 2; strip the whole string. Idempotent. Keeps single and double newlines,
-    "**", and all other characters."""
+    exactly 2; strip the whole string. Idempotent on its own output for ordinary text whose
+    entities decode only once; not guaranteed for double-escaped entities such as "&amp;lt;".
+    Keeps single and double newlines, "**", and all other characters."""
     text = HTML_TAG.sub("", html.unescape(raw))
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\xa0", " ")
     text = SPACE_TAB_RUN.sub(" ", text)
