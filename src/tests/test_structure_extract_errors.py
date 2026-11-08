@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import pytest
 
 from getwork.llm.client import (
@@ -97,7 +99,7 @@ def test_fatal_error_propagates() -> None:
         _run(client, ExtractConfig(model="m"))
 
 
-def _raiser(error: Exception):
+def _raiser(error: Exception) -> Callable[[LLMRequest], str]:
     def handler(request: LLMRequest) -> str:
         raise error
 

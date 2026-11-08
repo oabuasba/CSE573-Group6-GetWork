@@ -1,5 +1,7 @@
 import json
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -14,7 +16,7 @@ def _ok(request: LLMRequest) -> str:
     return make_output_json()
 
 
-def _fake(handler=_ok, **kw) -> FakeLLMClient:
+def _fake(handler: Callable[[LLMRequest], str] = _ok, **kw: Any) -> FakeLLMClient:
     return FakeLLMClient(handler=handler, **kw)
 
 
@@ -40,14 +42,18 @@ def _jsonl(tmp_path: Path) -> Path:
     return store.output_paths(source="resumes", out_dir=tmp_path / "out").jsonl
 
 
-def test_missing_input_file_exits_2(tmp_path, capsys):
+def test_missing_input_file_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     code = cli.main(_argv(tmp_path), client=_fake())
     assert code == 2
     assert "resumes_clean.parquet" in capsys.readouterr().err
     assert not (tmp_path / "out").exists()
 
 
-def test_corrupt_checkpoint_exits_2(write_clean_parquet, tmp_path, capsys):
+def test_corrupt_checkpoint_exits_2(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(2))
     path = _jsonl(tmp_path)
     path.parent.mkdir(parents=True)
@@ -59,8 +65,10 @@ def test_corrupt_checkpoint_exits_2(write_clean_parquet, tmp_path, capsys):
 
 
 def test_provenance_mismatch_exits_2_writes_nothing_and_allow_mixed_proceeds(
-    write_clean_parquet, tmp_path, capsys
-):
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(2))
     assert cli.main(_argv(tmp_path, "--limit", "1"), client=_fake()) == 0
     before = _snapshot(tmp_path / "out")
@@ -73,7 +81,11 @@ def test_provenance_mismatch_exits_2_writes_nothing_and_allow_mixed_proceeds(
     assert cli.main([*other, "--allow-mixed"], client=_fake()) == 0
 
 
-def test_second_instance_exits_2_writes_nothing(write_clean_parquet, tmp_path, capsys):
+def test_second_instance_exits_2_writes_nothing(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(2))
     path = _jsonl(tmp_path)
     with store.CheckpointWriter(path):
@@ -83,7 +95,11 @@ def test_second_instance_exits_2_writes_nothing(write_clean_parquet, tmp_path, c
     assert "another run" in capsys.readouterr().err
 
 
-def test_main_resumes_end_to_end(write_clean_parquet, tmp_path, capsys):
+def test_main_resumes_end_to_end(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     write_clean_parquet("resumes", _rows(3))
     assert cli.main(_argv(tmp_path), client=_fake()) == 0
     paths = store.output_paths(source="resumes", out_dir=tmp_path / "out")
@@ -92,14 +108,17 @@ def test_main_resumes_end_to_end(write_clean_parquet, tmp_path, capsys):
     assert summary["status"] == "complete"
 
 
-def test_main_postings_end_to_end_sends_title(write_clean_parquet, tmp_path):
+def test_main_postings_end_to_end_sends_title(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
     write_clean_parquet("postings", [{"id": "j-00001", "title": "Data Wrangler", "text_clean": "t"}])
     fake = _fake()
     assert cli.main(_argv(tmp_path, source="postings"), client=fake) == 0
     assert "TITLE: Data Wrangler" in fake.calls[0].user
 
 
-def test_preflight_prints_model_info(tmp_path, capsys):
+def test_preflight_prints_model_info(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     found = _fake(model_info={"id": "m", "found": True})
     assert cli.main(_argv(tmp_path, "--preflight"), client=found) == 0
     assert '"found": true' in capsys.readouterr().out
@@ -107,7 +126,7 @@ def test_preflight_prints_model_info(tmp_path, capsys):
     assert cli.main(_argv(tmp_path, "--preflight"), client=missing) == 3
 
 
-def test_preflight_failures_exit_3_or_2(tmp_path, capsys):
+def test_preflight_failures_exit_3_or_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     class Failing(FakeLLMClient):
         def describe_model(self, model: str) -> dict:
             raise FatalLLMError("denied", status=401)
@@ -122,7 +141,10 @@ def test_preflight_failures_exit_3_or_2(tmp_path, capsys):
     assert cli.main(_argv(tmp_path, "--preflight"), client=NoDescribe()) == 2
 
 
-def test_exit_codes_for_failures_and_fatal(write_clean_parquet, tmp_path):
+def test_exit_codes_for_failures_and_fatal(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
     write_clean_parquet("resumes", _rows(1))
     assert cli.main(_argv(tmp_path), client=_fake(lambda r: "garbage")) == 1
 
@@ -132,7 +154,11 @@ def test_exit_codes_for_failures_and_fatal(write_clean_parquet, tmp_path):
     assert cli.main(_argv(tmp_path, "--allow-mixed"), client=_fake(fatal)) == 3
 
 
-def test_options_reach_requests_and_records(write_clean_parquet, tmp_path, capsys):
+def test_options_reach_requests_and_records(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     rows = _rows(1)
     rows[0]["text_clean"] = "x" * 100
     write_clean_parquet("resumes", rows)
@@ -158,9 +184,28 @@ def test_options_reach_requests_and_records(write_clean_parquet, tmp_path, capsy
     assert record["prompt_version"] == "extract_v1"
 
 
-def test_temperature_and_schema_defaults(write_clean_parquet, tmp_path):
+def test_temperature_and_schema_defaults(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+) -> None:
     write_clean_parquet("resumes", _rows(1))
     fake = _fake()
     assert cli.main(_argv(tmp_path, "--temperature", "0.3"), client=fake) == 0
     assert fake.calls[0].temperature == 0.3
     assert fake.calls[0].response_schema is not None
+
+
+def test_sigint_restore_falls_back_to_default_when_previous_handler_is_unknown(
+    write_clean_parquet: Callable[[str, Sequence[dict]], Path],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_clean_parquet("resumes", _rows(2))
+    installed: list[object] = []
+
+    def fake_signal(signum: int, handler: object) -> None:
+        installed.append(handler)  # returns None, like a handler set outside Python
+
+    monkeypatch.setattr(cli.signal, "signal", fake_signal)
+    assert cli.main(_argv(tmp_path), client=_fake()) == 0
+    assert installed[-1] == cli.signal.SIG_DFL

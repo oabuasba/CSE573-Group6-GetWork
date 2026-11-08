@@ -1,4 +1,6 @@
 import json
+import os
+from dataclasses import asdict
 from pathlib import Path
 
 import pyarrow.parquet as pq
@@ -96,3 +98,40 @@ def test_write_summary_format(tmp_path: Path) -> None:
     path = tmp_path / "s.json"
     store.write_summary(path, {"b": 1, "a": "é"})
     assert path.read_text(encoding="utf-8") == json.dumps({"a": "é", "b": 1}, indent=2)
+
+
+def _mode(path: Path) -> int:
+    return path.stat().st_mode & 0o777
+
+
+def test_final_outputs_have_normal_permissions(tmp_path: Path) -> None:
+    old_umask = os.umask(0o022)
+    try:
+        paths = store.output_paths("resumes", tmp_path)
+        store.write_final(paths, {"r-1": _record("r-1")})
+        store.write_failures(paths.failures, [asdict(_failure("r-2"))])
+        store.write_summary(paths.summary, {"a": 1})
+    finally:
+        os.umask(old_umask)
+    for path in (paths.jsonl, paths.parquet, paths.failures, paths.summary):
+        assert _mode(path) == 0o644, path.name
+
+
+def test_atomic_write_failure_removes_temp_and_keeps_old_file(tmp_path: Path) -> None:
+    target = tmp_path / "out.txt"
+    target.write_text("old")
+
+    def explode(tmp: Path) -> None:
+        tmp.write_text("partial")
+        raise RuntimeError("disk full")
+
+    with pytest.raises(RuntimeError, match="disk full"):
+        store._atomic_write(target, explode)
+    assert target.read_text() == "old"
+    assert list(tmp_path.iterdir()) == [target]
+
+
+def test_atomic_write_creates_missing_parent_directory(tmp_path: Path) -> None:
+    target = tmp_path / "nested" / "out.txt"
+    store._atomic_write(target, lambda tmp: tmp.write_text("x"))
+    assert target.read_text() == "x"

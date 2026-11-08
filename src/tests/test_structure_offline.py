@@ -3,6 +3,7 @@ import os
 import re
 import socket
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -14,7 +15,7 @@ REQUIRED_LINE = 'pytestmark = pytest.mark.usefixtures("offline")'
 SDK_IMPORT = re.compile(r"^[ \t]*(?:import|from)[ \t]+(?:openai|httpx2?)\b", re.MULTILINE)
 
 
-def _load_conftest():
+def _load_conftest() -> ModuleType:
     spec = importlib.util.spec_from_file_location("conftest_under_test", TESTS_DIR / "conftest.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -28,7 +29,10 @@ def test_offline_fixture_blocks_sockets() -> None:
         socket.socket().connect(("127.0.0.1", 9))
 
 
-def test_apply_offline_unsets_env_set_earlier_and_changes_cwd(monkeypatch, tmp_path) -> None:
+def test_apply_offline_unsets_env_set_earlier_and_changes_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     names = ("VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL")
     for name in names:
         monkeypatch.setenv(name, "x")

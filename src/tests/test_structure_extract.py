@@ -1,8 +1,11 @@
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 from getwork.llm.fake import FakeLLMClient, make_output_json
 from getwork.llm.retry import Throttle
-from getwork.structure.extract import ExtractConfig, SourceDoc, structure_one
+from getwork.structure.extract import ExtractConfig, Outcome, SourceDoc, structure_one
 from getwork.structure.prompt import load_system_prompt
 
 pytestmark = pytest.mark.usefixtures("offline")
@@ -14,7 +17,7 @@ def _throttle() -> Throttle:
     return Throttle(clock=lambda: 0.0, sleep=lambda s: None)
 
 
-def _run(client: FakeLLMClient, cfg: ExtractConfig, doc: SourceDoc = DOC):
+def _run(client: FakeLLMClient, cfg: ExtractConfig, doc: SourceDoc = DOC) -> Outcome:
     return structure_one(
         client=client, cfg=cfg, throttle=_throttle(), doc=doc, sleep=lambda s: None
     )

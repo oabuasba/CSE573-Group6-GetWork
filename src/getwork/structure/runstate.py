@@ -51,13 +51,16 @@ class Counters:
     failures_by_stage: dict[str, int] = field(default_factory=_zero_stages)
 
     def add(self, outcome: Outcome) -> None:
+        """Raises ValueError, before changing any count, if the failure stage is unknown."""
+        if outcome.failure is not None and outcome.failure.stage not in self.failures_by_stage:
+            raise ValueError(f"unknown failure stage: {outcome.failure.stage!r}")
         self.attempted += 1
         if outcome.failure is None:
             self.succeeded += 1
         else:
             self.failed += 1
             stage = outcome.failure.stage
-            self.failures_by_stage[stage] = self.failures_by_stage.get(stage, 0) + 1
+            self.failures_by_stage[stage] += 1
         self.calls += outcome.stats.calls
         self.retries += outcome.stats.retries
         self.rate_limited += outcome.stats.rate_limited

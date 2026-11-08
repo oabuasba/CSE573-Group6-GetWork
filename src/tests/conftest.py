@@ -23,7 +23,7 @@ ENV_VARS = ("VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL")
 
 
 def apply_offline(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    def blocked(*args, **kwargs):
+    def blocked(*args: object, **kwargs: object) -> None:
         raise RuntimeError("network disabled in tests")
 
     monkeypatch.setattr(socket.socket, "connect", blocked)

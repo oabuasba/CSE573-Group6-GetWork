@@ -4,7 +4,7 @@ from functools import cache
 from pathlib import Path
 
 PROMPT_VERSION: str = "extract_v1"
-MAX_ERROR_CHARS: int = 300
+MAX_RETRY_ERROR_CHARS: int = 300
 
 
 @cache
@@ -26,6 +26,6 @@ def build_retry_message(user: str, error: str) -> str:
     return (
         user
         + "\n\nYour previous reply was rejected: "
-        + error[:MAX_ERROR_CHARS]
+        + error[:MAX_RETRY_ERROR_CHARS]
         + "\nReturn only the corrected JSON object."
     )
