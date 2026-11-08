@@ -315,7 +315,7 @@ ol.steps > li > strong:first-child { display: block; }
         <div class="constraint"><strong>Domain:</strong> software engineering and adjacent</div>
         <div class="constraint"><strong>Directions:</strong> resume→jobs, job→candidates</div>
         <div class="constraint"><strong>Language:</strong> Python backend, React UI</div>
-        <div class="constraint"><strong>Structuring LLM:</strong> self-hosted Qwen3-8B</div>
+        <div class="constraint"><strong>Structuring LLM:</strong> ASU Voyager-hosted model, id logged per record (<a href="#ADR-11">ADR-11</a>)</div>
         <div class="constraint"><strong>Timeline:</strong> 8 weeks</div>
         <div class="constraint"><strong>Team:</strong> 2 authors, joint work</div>
       </div>
@@ -344,7 +344,7 @@ ol.steps > li > strong:first-child { display: block; }
       <div class="arch-diagram">
         <svg viewBox="0 0 820 470" role="img" aria-labelledby="arch-title arch-desc">
           <title id="arch-title">GetWork component map</title>
-          <desc id="arch-desc">In the build phase, the build pipeline reads the raw datasets, calls Qwen3-8B on vLLM for structuring and Qwen3-Embedding-4B for embeddings, and writes artifacts. The evaluation harness reads the rankings from the artifacts. In the query phase, users work in the React frontend, which calls the FastAPI backend. The backend loads the artifacts, sends new documents through the same models, and calls ASU CreateAI for the explanation agent.</desc>
+          <desc id="arch-desc">In the build phase, the build pipeline reads the raw datasets, calls an ASU Voyager-hosted LLM for structuring and Qwen3-Embedding-4B for embeddings, and writes artifacts. The evaluation harness reads the rankings from the artifacts. In the query phase, users work in the React frontend, which calls the FastAPI backend. The backend loads the artifacts, sends new documents through the same models, and calls ASU CreateAI for the explanation agent.</desc>
           <defs>
             <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path class="arrow-head" d="M0,0 L10,5 L0,10 z"/>
@@ -385,8 +385,8 @@ ol.steps > li > strong:first-child { display: block; }
           <text class="t2" x="305" y="114" text-anchor="middle">steps 1–6</text>
 
           <rect class="platform" x="430" y="70" width="150" height="60" rx="6"/>
-          <text class="t1" x="505" y="96" text-anchor="middle">Qwen3-8B</text>
-          <text class="t2" x="505" y="114" text-anchor="middle">vLLM on ASU Sol</text>
+          <text class="t1" x="505" y="96" text-anchor="middle">Voyager LLM</text>
+          <text class="t2" x="505" y="114" text-anchor="middle">ASU RC API, ADR-11</text>
 
           <rect class="platform" x="630" y="70" width="150" height="60" rx="6"/>
           <text class="t1" x="705" y="96" text-anchor="middle">Qwen3-Emb-4B</text>
@@ -428,7 +428,7 @@ ol.steps > li > strong:first-child { display: block; }
           <thead><tr><th>Component</th><th>Tools</th><th>Responsibility</th></tr></thead>
           <tbody>
             <tr><td>Data processing</td><td>pandas</td><td>Rule-based quality and domain filters. No LLM.</td></tr>
-            <tr><td>Structuring</td><td>Qwen3-8B, vLLM, Pydantic</td><td>Turn raw text into schema-valid records. Batched and self-hosted (<a href="#ADR-3">ADR-3</a>).</td></tr>
+            <tr><td>Structuring</td><td>ASU Voyager API (OpenAI-compatible), <code>openai</code> SDK behind an <code>LLMClient</code> protocol, Pydantic</td><td>Turn cleaned text into schema-valid records with a resumable, rate-limit-aware loop run by the user (<a href="features/structurer.html">structurer</a>, <a href="#ADR-11">ADR-11</a>; the validate-and-regenerate rule is from <a href="#ADR-3">ADR-3</a>).</td></tr>
             <tr><td>Embeddings</td><td>Qwen3-Embedding-4B via sentence-transformers</td><td>Embed single skills (skill space) and serialized documents (document space) (<a href="#ADR-4">ADR-4</a>).</td></tr>
             <tr><td>Clustering</td><td>scikit-learn, UMAP, DBSCAN / HDBSCAN, k-means as reference</td><td>Build the skill taxonomy (<a href="#ADR-6">ADR-6</a>).</td></tr>
             <tr><td>Retrieval</td><td>NumPy</td><td>Cosine top-<em>k</em> in both directions and the B1+ lexical baseline (<a href="#ADR-7">ADR-7</a>, <a href="#ADR-8">ADR-8</a>).</td></tr>
@@ -446,7 +446,7 @@ ol.steps > li > strong:first-child { display: block; }
       <div class="flow-diagram">
         <div class="flow-node external" tabindex="0">1 · Filter (classical)<span class="tooltip">Drop empty, short, duplicate, non-English, or corrupted docs; keep software postings by title, with industry as a secondary check</span></div>
         <div class="flow-arrow"></div><div class="flow-label">filtered resumes + postings</div>
-        <div class="flow-node compute" tabindex="0">2 · Structure (both)<span class="tooltip">Qwen3-8B extracts title, skills, experience (with durations), and education; an alias table canonicalizes skills (JS→JavaScript)</span></div>
+        <div class="flow-node compute" tabindex="0">2 · Structure (both)<span class="tooltip">A Voyager-hosted LLM extracts title, skills, experience (with durations), and education; a separate alias table canonicalizes skills (JS→JavaScript)</span></div>
         <div class="flow-arrow"></div><div class="flow-label">structured records, canonical skills</div>
         <div class="flow-node compute" tabindex="0">3 · Select skills (both)<span class="tooltip">Count canonical skills across both corpora; keep the top 1,000; embed each one on its own</span></div>
         <div class="flow-arrow"></div><div class="flow-label">skill vectors</div>
@@ -470,7 +470,7 @@ ol.steps > li > strong:first-child { display: block; }
             <tr><td>Noise skills</td><td>Skills marked as noise in clustering have no cluster. They go under <code>Other</code>, so they still count for exact matches but earn no partial credit.</td></tr>
             <tr><td>Two vector spaces</td><td>The skill space (step 3) is used only for clustering. The document space (step 6) is used for matching. The two connect only through step 5.</td></tr>
             <tr><td>Experience level</td><td>Postings use their listed level. Resumes get a level derived from the total years of experience extracted in pass 1.</td></tr>
-            <tr><td>Reasoning mode</td><td>Qwen3 thinking mode stays off in both structuring passes.</td></tr>
+            <tr><td>Reasoning mode</td><td>Reasoning stays off in both structuring passes (<code>reasoning_effort="none"</code>, temperature 0).</td></tr>
           </tbody>
         </table>
       </div>
@@ -520,13 +520,13 @@ ol.steps > li > strong:first-child { display: block; }
 
     <section id="contracts">
       <h2>Core contracts</h2>
-      <p>These are the interfaces every feature shares. The first table is fixed by the project docs. The second holds engineering conventions the docs don't cover. They are <strong>proposed</strong> until we confirm them together, and feature specs must not depend on them before then.</p>
+      <p>These are the interfaces every feature shares. The first table is fixed by the project docs. The second holds engineering conventions the docs don't cover. The conventions in that second table are <strong>proposed</strong> until we confirm them together (Q-6), and feature specs must not depend on them before then. CC-9 and CC-10 (third table) are <strong>accepted</strong>: the user accepted them with the structurer spec and ADR-11. CC-1's entry fields were chosen by the planner and accepted with the same spec.</p>
       <h3>Fixed by the project docs</h3>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Id</th><th>Contract</th><th>Definition</th></tr></thead>
           <tbody>
-            <tr id="CC-1"><td>CC-1</td><td>Structured record</td><td>Every document, resume or posting, becomes one record with <code>title</code>, <code>skills</code> (list of canonical strings), <code>experience</code> (entries with durations), and <code>education</code> (entries). It is validated by one shared Pydantic model; invalid LLM output is regenerated.</td></tr>
+            <tr id="CC-1"><td>CC-1</td><td>Structured record</td><td>Every document, resume or posting, becomes one record with <code>title</code>, <code>skills</code> (list of strings; canonical after alias mapping, see CC-2 and the proposed <code>alias-table</code> feature; the structurer stores skills as written, structurer D-4), <code>experience</code> (entries with durations), and <code>education</code> (entries). It is validated by one shared Pydantic model; invalid LLM output is regenerated. Entry fields, decided in the <a href="features/structurer.html#decisions">structurer spec</a> (D-1 to D-3): <code>experience[]</code> = <code>{role, company, duration_months}</code>, <code>education[]</code> = <code>{degree, field, institution}</code>, plus <code>years_experience</code>. The model is <code>ModelOutput</code> in <code>src/getwork/structure/schema.py</code>.</td></tr>
             <tr id="CC-2"><td>CC-2</td><td>Canonical skill</td><td>Every skill string passes through the alias table before any counting, lookup, Jaccard, or serialization (e.g. <code>JS</code>→<code>JavaScript</code>, <code>k8s</code>→<code>Kubernetes</code>).</td></tr>
             <tr id="CC-3"><td>CC-3</td><td>Taxonomy</td><td>A mapping from canonical skill to cluster name, built from the top 1,000 skills. Noise and unassigned skills map to <code>Other</code>.</td></tr>
             <tr id="CC-4"><td>CC-4</td><td>Document serialization</td><td>Full: title, experience level, then skills grouped under cluster names, e.g. <code>Front-end: Vue, CSS; Cloud: AWS</code>, with an <code>Other</code> group. B2: the same title, level, and skills with no cluster labels. Resumes and postings use the same format and model.</td></tr>
@@ -544,10 +544,20 @@ ol.steps > li > strong:first-child { display: block; }
           <tbody>
             <tr><td>Repo layout</td><td>All code under <code>src/</code>: Python package <code>src/getwork/</code> (import name <code>getwork</code>) with one subpackage per pipeline stage; <code>src/app/</code> for FastAPI, <code>src/web/</code> for React, <code>src/tests/</code> mirroring the package. <code>pyproject.toml</code> stays at the repo root. Other top-level directories: <code>data/</code>, <code>docs/</code>, <code>specs/</code>, <code>evaluations/</code> (purpose not yet defined in the specs)</td><td>Matches the user's directory tree. Lets every feature spec name exact paths. uv and pytest look for <code>pyproject.toml</code> at the root.</td></tr>
             <tr><td>Tooling</td><td>Python 3.11+; <strong>uv</strong> is the package manager, with <code>pyproject.toml</code> and a committed <code>uv.lock</code> at the repo root; every command runs through <code>uv run</code> (tests: <code>uv run pytest</code>)</td><td>Every acceptance criterion needs a runnable test command.</td></tr>
-            <tr><td>Data and artifacts</td><td>Raw data lives under <code>data/</code> and is <strong>committed, not git-ignored</strong>, because the course instructor requires it. How the large files are committed is open (<a href="#open-questions">Q-7</a>). Cleaned data from preprocessing is also committed, under <code>data/processed/&lt;source&gt;/</code> (<code>resumes/</code>, <code>postings/</code>). Later derived artifacts (embeddings, taxonomy) go under a separate <code>artifacts/</code> directory. Tables as Parquet, vectors as <code>.npy</code> with a row-aligned id file</td><td>The instructor's requirement overrides the usual practice. Keeping raw data and derived artifacts apart lets artifacts stay out of git if they get large. Row alignment keeps <code>S</code> indices traceable to documents.</td></tr>
+            <tr><td>Data and artifacts</td><td>Raw data lives under <code>data/</code> and is <strong>committed, not git-ignored</strong>, because the course instructor requires it. How the large files are committed is open (<a href="#open-questions">Q-7</a>). Cleaned data from preprocessing is also committed, under <code>data/processed/&lt;source&gt;/</code> (<code>resumes/</code>, <code>postings/</code>), and so are structured records under <code>data/structured/&lt;source&gt;/</code> (<a href="#CC-9">CC-9</a>). Later derived artifacts (embeddings, taxonomy) go under a separate <code>artifacts/</code> directory. Tables as Parquet, vectors as <code>.npy</code> with a row-aligned id file</td><td>The instructor's requirement overrides the usual practice. Keeping raw data and derived artifacts apart lets artifacts stay out of git if they get large. Row alignment keeps <code>S</code> indices traceable to documents.</td></tr>
             <tr><td>Document ids</td><td>Stable string ids prefixed by side, e.g. <code>r-&lt;row&gt;</code>, <code>j-&lt;job_id&gt;</code></td><td>Rankings, labels, and the app all join on them.</td></tr>
             <tr><td>Determinism</td><td>Every sampling and clustering step takes an explicit seed from config</td><td>Test sets and the 5,000-posting cap must be reproducible.</td></tr>
-            <tr><td>Model access</td><td>One OpenAI-compatible client wrapper, configured by base URL and model name, used for vLLM, CreateAI, and judges</td><td>vLLM and CreateAI both expose OpenAI-compatible APIs, so switching models is a config change.</td></tr>
+            <tr><td>Model access</td><td>One <code>LLMClient</code> protocol in <code>src/getwork/llm/client.py</code> with a fake for tests and an <code>openai</code>-SDK implementation (<code>src/getwork/llm/voyager.py</code>), configured by base URL, model id, and key from the environment (<a href="#CC-10">CC-10</a>, <a href="#ADR-11">ADR-11</a>). CreateAI and judge models reuse it</td><td>Voyager, vLLM and CreateAI all expose OpenAI-compatible APIs, so switching models is a config change, and tests never need a network.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Decided with the structurer spec (status: accepted)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Id</th><th>Contract</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr id="CC-9"><td>CC-9</td><td>Structured output files</td><td>For <code>&lt;source&gt;</code> in {<code>resumes</code>, <code>postings</code>}, <code>data/structured/&lt;source&gt;/</code> holds <code>&lt;source&gt;_structured.jsonl</code> (checkpoint and sorted output, one record per line), <code>&lt;source&gt;_structured.parquet</code>, <code>&lt;source&gt;_structured_failures.csv</code>, and <code>&lt;source&gt;_structured_summary.json</code>. Every record carries the CC-1 fields plus <code>id</code>, <code>source</code>, <code>years_experience</code>, <code>model</code>, <code>prompt_version</code>, <code>schema_version</code>. Rows are sorted by the numeric part of <code>id</code>. Exact shapes: <a href="features/structurer.html#output-contract">structurer, Output contract</a>.</td></tr>
+            <tr id="CC-10"><td>CC-10</td><td>Secrets and offline tests</td><td>API keys live only in a git-ignored <code>.env</code> managed by the user, which no agent reads. Code reads them from environment variables (loaded from <code>.env</code> by the CLI entry point only), never logs or writes them, and fails with a message naming the missing variable. A committed <code>.env.example</code> holds placeholder values only. Every test runs against <code>FakeLLMClient</code> with sockets blocked, and no test or agent calls a real LLM API. Real-API validation is a user-run checklist.</td></tr>
           </tbody>
         </table>
       </div>
@@ -586,7 +596,8 @@ ol.steps > li > strong:first-child { display: block; }
       </section>
 
       <section id="ADR-3" class="card">
-        <div class="card-header"><span class="badge badge-safe">Accepted</span><h3>ADR-3 · Self-hosted Qwen3-8B on vLLM for structuring</h3></div>
+        <div class="card-header"><span class="badge badge-warning">Superseded by ADR-11</span><h3>ADR-3 · Self-hosted Qwen3-8B on vLLM for structuring</h3></div>
+        <p><strong>Status:</strong> superseded by <a href="#ADR-11">ADR-11</a> for where the model runs and which model. The rule that output is JSON validated against a Pydantic schema and regenerated on failure stays in force.</p>
         <p><strong>Date:</strong> 2026-11-07. <strong>Context:</strong> pass 1 needs tens of thousands of LLM calls. <strong>Decision:</strong> Host Qwen3-8B on ASU Sol GPUs, with Google Colab as a fallback, and serve it through vLLM's batched serving. Thinking mode is off. Output is JSON validated against a Pydantic schema and regenerated on failure. <strong>Alternatives rejected:</strong> a rate-limited external API, which has variable cost and is less reproducible. <strong>Consequences:</strong> structuring cost is fixed and reproducible. The structuring code depends on Sol GPU availability.</p>
       </section>
 
@@ -624,6 +635,21 @@ ol.steps > li > strong:first-child { display: block; }
         <div class="card-header"><span class="badge badge-safe">Accepted</span><h3>ADR-10 · Explanation agent on LangGraph via ASU CreateAI</h3></div>
         <p><strong>Date:</strong> 2026-11-07. <strong>Decision:</strong> A LangGraph agent takes a matched resume and posting and explains the match using tools for similarity search, cluster lookup, and side-by-side comparison. Its model is reached through CreateAI's OpenAI-compatible API. <strong>Alternatives rejected:</strong> self-hosting the agent model, which is unnecessary because agent traffic is interactive and low-volume. <strong>Consequences:</strong> the agent model is chosen in config. It must differ from both judge models.</p>
       </section>
+
+      <section id="ADR-11" class="card">
+        <div class="card-header"><span class="badge badge-safe">Accepted</span><h3>ADR-11 · Pass-1 structuring runs on the ASU Voyager API behind an LLMClient protocol</h3></div>
+        <p><strong>Date:</strong> 2026-11-07. <strong>Context:</strong> <a href="#ADR-3">ADR-3</a> chose self-hosted Qwen3-8B on vLLM and rejected a rate-limited external API. ASU Research Computing now offers Voyager, an OpenAI-compatible API on ASU-run hardware, with no cost and no published numeric rate limits (queue wait 5 minutes then 503, per-minute token budget then 429, 4 to 8 workers recommended). Voyager does not list Qwen3-8B. The user will run the structuring loop on their own machine with their own API key. <strong>Decision:</strong> (1) Pass-1 structuring is run by one resumable script, <code>structurer</code>, which talks to the model only through an <code>LLMClient</code> protocol (<code>src/getwork/llm/client.py</code>). (2) The first implementation uses the <code>openai</code> SDK against Voyager. A vLLM/Sol backend can be added later without changing the loop, prompt, or schema. (3) The model id has no default. It comes from <code>.env</code> or <code>--model</code>, and every output record stores <code>model</code>, <code>prompt_version</code>, and <code>schema_version</code>. (4) A model different from Qwen3-8B is acceptable. (5) The ADR-3 rule stays: output is validated against the Pydantic schema and regenerated on failure. <strong>Alternatives rejected:</strong> keeping vLLM-only (needs Sol GPU access the user has not arranged, and blocks structuring until it exists); hard-wiring Voyager into the loop (makes a later backend change a rewrite and forces tests to mock HTTP); defaulting a model id in code (a retired or replaced model would then change the dataset silently). <strong>Consequences:</strong> runs are hours long and can hit 429s, so the loop must resume, back off, and log failures per record. Reproducibility now depends on the logged model id and on Voyager keeping that model, and the model id is a reported experimental setting. The structuring model is part of the pipeline, so it should not be one of the judge models (<a href="#ADR-9">ADR-9</a> keeps judges out of the pipeline); ADR-10 separately keeps the agent model different from the judges, and neither ADR constrains the structuring model beyond that. Agents never hold the key or call the API (<a href="#CC-10">CC-10</a>).</p>
+        <details>
+          <summary>Wording in <code>docs/proposal.md</code> that no longer matches (not edited here)</summary>
+          <ul>
+            <li>Methods table, "Data structuring: Qwen3-8B, vLLM, Pydantic" (about line 118): replace with the Voyager-hosted model and Pydantic.</li>
+            <li>"Data Structuring" section (about lines 138 to 159): the paragraph that hosts Qwen3-8B on Sol with Colab fallback and rejects a rate-limited external API, and the sentence that thinking mode is disabled "for Qwen3". Rewrite as: structuring uses a model hosted on ASU Research Computing's Voyager API, the model id is recorded in every record, reasoning is disabled, and output is validated and regenerated.</li>
+            <li>"Step 2: Structuring": "Qwen3-8B returns each document in a fixed schema" (about line 279): name the logged model instead.</li>
+            <li>Timeline week 1 (about line 521): "set up Qwen3-8B with vLLM" becomes "set up the Voyager structuring script".</li>
+            <li>The proposal's wording about avoiding external APIs for cost and reproducibility should say how reproducibility is kept (logged model id and prompt version).</li>
+          </ul>
+        </details>
+      </section>
     </section>
 
     <section id="features">
@@ -633,10 +659,11 @@ ol.steps > li > strong:first-child { display: block; }
         <table>
           <thead><tr><th>Feature</th><th>Summary</th><th>Pipeline step</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td><code>project-foundation</code></td><td>Repo layout, config, shared Pydantic models (CC-1), id scheme, model client wrapper</td><td>—</td><td>proposed</td></tr>
+            <tr><td><code>project-foundation</code></td><td>Repo layout and shared config only. The CC-1 Pydantic models, the id scheme use, and the model client wrapper are now delivered by <a href="features/structurer.html"><code>structurer</code></a> (<code>getwork.llm</code>, <code>getwork.structure.schema</code>)</td><td>—</td><td>proposed</td></tr>
             <tr><td><a href="features/resume-preprocessing.html"><code>resume-preprocessing</code></a></td><td>Decode, clean, filter, and deduplicate the resume corpus (all resumes); label merge; drop log and summary; includes the minimal Python scaffold</td><td>1</td><td>done</td></tr>
             <tr><td><a href="features/posting-preprocessing.html"><code>posting-preprocessing</code></a></td><td>Six-family title domain filter (project managers need an IT signal), quality filters, and deduplication for the LinkedIn postings (all postings); reuses the resume feature's filter code</td><td>1</td><td>done</td></tr>
-            <tr><td><code>llm-structuring</code></td><td>vLLM batch client, pass-1 extraction, validate and retry, alias table</td><td>2</td><td>proposed</td></tr>
+            <tr><td><a href="features/structurer.html"><code>structurer</code></a></td><td>User-run, resumable loop calling the Voyager API through an <code>LLMClient</code> protocol; pass-1 extraction of title, skills, experience, education; validate and retry; offline tests with a fake client; replaces the proposed <code>llm-structuring</code></td><td>2</td><td>done</td></tr>
+            <tr><td><code>alias-table</code></td><td>Skill alias table and canonicalization (CC-2) applied to structured records</td><td>2</td><td>proposed</td></tr>
             <tr><td><code>skill-taxonomy</code></td><td>Skill counting, top-1,000 embedding, clustering grid, selection report, cluster naming</td><td>3–4</td><td>proposed</td></tr>
             <tr><td><code>cluster-relabeling</code></td><td>Lookup, LLM fallback for unseen skills, incomplete-document reprocessing</td><td>5</td><td>proposed</td></tr>
             <tr><td><code>document-embedding</code></td><td>Full and B2 serializers (CC-4), document vectors</td><td>6</td><td>proposed</td></tr>
@@ -659,13 +686,14 @@ ol.steps > li > strong:first-child { display: block; }
         <table>
           <thead><tr><th>Id</th><th>Question</th><th>Blocks</th></tr></thead>
           <tbody>
-            <tr><td>Q-1</td><td>Where do Qwen3-8B and Qwen3-Embedding-4B run for <em>new</em> documents at query time? Sol is a batch cluster, not an always-on server.</td><td><code>web-app</code>, <code>match-agent</code></td></tr>
+            <tr><td>Q-1</td><td>Where do the structuring model and Qwen3-Embedding-4B run for <em>new</em> documents at query time? Per ADR-11 the structuring model is Voyager-hosted, so the app server would need its own Voyager key (never an agent's) and a model that may be retired; Sol is a batch cluster, not an always-on server, so the embedding model's host is also open.</td><td><code>web-app</code>, <code>match-agent</code></td></tr>
             <tr><td>Q-2</td><td>The exact B1+ formula: how title overlap is measured (token Jaccard?), how seniority match is scored (exact vs. ordinal distance), and the weight search.</td><td><code>two-way-retrieval</code></td></tr>
-            <tr><td>Q-3</td><td>Experience level scale and the years-to-level mapping for resumes (LinkedIn uses Internship, Entry, Associate, Mid-Senior, Director, Executive).</td><td><code>llm-structuring</code>, <code>document-embedding</code></td></tr>
+            <tr><td>Q-3</td><td>Experience level scale and the years-to-level mapping for resumes (LinkedIn uses Internship, Entry, Associate, Mid-Senior, Director, Executive). The structurer emits only <code>years_experience</code> (structurer D-3), so the mapping is still open.</td><td><code>document-embedding</code></td></tr>
             <tr><td>Q-4</td><td>The noise-fraction cap for taxonomy selection, and the grid ranges.</td><td><code>skill-taxonomy</code></td></tr>
             <tr><td>Q-5</td><td>Which two judge models, from which families, and how they're accessed.</td><td><code>llm-judging</code></td></tr>
             <tr><td>Q-6</td><td>Whether to adopt the proposed engineering conventions in <a href="#contracts">Core contracts</a>.</td><td>all</td></tr>
             <tr><td>Q-7</td><td>How to commit the raw data. <code>data/job_postings/companies/postings.csv</code> is 517 MB, over GitHub's 100 MB per-file limit. <code>data/resume_corpus/</code> contains its own nested <code>.git</code> directory, so git would record it as an empty embedded repo instead of its files. What exactly does the instructor require?</td><td><code>data-preprocessing</code>, all</td></tr>
+            <tr><td>Q-8</td><td>Which Voyager model id to use for structuring. It must support structured output and have enough context, and it should not be a judge model (ADR-9 keeps judges out of the pipeline; ADR-10 only separates the agent model from the judges). The user decides after the preflight in the structurer checklist.</td><td>user-run structuring, <code>llm-judging</code></td></tr>
           </tbody>
         </table>
       </div>
