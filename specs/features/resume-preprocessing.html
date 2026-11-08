@@ -367,7 +367,9 @@ def decode_bytes(data: bytes) -&gt; tuple[str, str]:
 def clean_text(raw: str) -&gt; str:
     """Remove &lt;span ...&gt; and &lt;/span&gt; tags (case-insensitive), apply html.unescape,
     replace "\xa0" with " ", collapse every whitespace run to one space, strip.
-    Idempotent. Leaves other tags and all other characters (including "•") alone."""
+    Idempotent on text whose entities decode only once (the tested case); double-escaped
+    entities such as "&amp;amp;lt;" decode further on a second pass, so it is not idempotent in general.
+    Leaves other tags and all other characters (including "•") alone."""
 
 def alpha_ratio(text: str) -&gt; float:
     """Letters divided by non-whitespace characters. 1.0 if there are none."""
@@ -492,7 +494,7 @@ def main(argv: list[str] | None = None) -&gt; int:
       <ol>
         <li id="AC-1"><strong>AC-1</strong>: After <code>uv sync</code>, <code>uv run python -c "import getwork.preprocess"</code> succeeds and <code>uv run pytest</code> runs the suite. <em>Test:</em> <code>src/tests/test_package.py::test_package_imports</code></li>
         <li id="AC-2"><strong>AC-2</strong>: <code>decode_bytes</code> returns <code>("abc", "utf-8")</code> for ASCII/UTF-8 bytes, returns <code>("• item", "cp1252")</code> for <code>b"\x95 item"</code>, and raises <code>ValueError</code> for <code>b"\x81\x8d"</code> (invalid UTF-8, undefined in cp1252). <em>Test:</em> <code>src/tests/test_text.py::test_decode_utf8</code>, <code>::test_decode_cp1252</code>, <code>::test_decode_invalid_raises</code></li>
-        <li id="AC-3"><strong>AC-3</strong>: <code>clean_text</code> removes <code>&lt;span class="hl"&gt;</code> and <code>&lt;/SPAN&gt;</code> but leaves <code>&lt;div&gt;</code> intact, unescapes <code>&amp;amp;</code> and <code>&amp;nbsp;</code>, turns <code>\xa0</code> into a space, collapses whitespace, keeps <code>•</code>, and is idempotent. <em>Test:</em> <code>src/tests/test_text.py::test_clean_text_strips_spans_only</code>, <code>::test_clean_text_entities_and_whitespace</code>, <code>::test_clean_text_idempotent</code></li>
+        <li id="AC-3"><strong>AC-3</strong>: <code>clean_text</code> removes <code>&lt;span class="hl"&gt;</code> and <code>&lt;/SPAN&gt;</code> but leaves <code>&lt;div&gt;</code> intact, unescapes <code>&amp;amp;</code> and <code>&amp;nbsp;</code>, turns <code>\xa0</code> into a space, collapses whitespace, keeps <code>•</code>, and is idempotent on its own output for ordinary text (a second pass changes nothing; not guaranteed for double-escaped entities such as <code>&amp;amp;lt;</code>, which decode one more level). <em>Test:</em> <code>src/tests/test_text.py::test_clean_text_strips_spans_only</code>, <code>::test_clean_text_entities_and_whitespace</code>, <code>::test_clean_text_idempotent</code></li>
         <li id="AC-4"><strong>AC-4</strong>: <code>alpha_ratio</code> and <code>control_ratio</code> return the documented values on hand-computed examples, including empty text. <em>Test:</em> <code>src/tests/test_text.py::test_alpha_ratio</code>, <code>::test_control_ratio</code></li>
         <li id="AC-5"><strong>AC-5</strong>: <code>detect_language</code> returns <code>("en", p)</code> with <code>p &gt;= 0.9</code> for a multi-sentence English resume snippet, <code>("es", p)</code> with <code>p &gt;= 0.9</code> for a Spanish one, and <code>("unknown", 0.0)</code> for <code>"1234 5678"</code>, and gives the same result on repeated calls. <em>Test:</em> <code>src/tests/test_text.py::test_detect_language_english</code>, <code>::test_detect_language_spanish</code>, <code>::test_detect_language_unknown_and_deterministic</code></li>
         <li id="AC-6"><strong>AC-6</strong>: <code>load_resumes</code> on a fixture zip returns the documented columns, ids <code>r-&lt;stem&gt;</code> sorted ascending, labels in file order with repeats removed, <code>[]</code> for an empty <code>.lab</code> (including blank lines and CRLF), and the right <code>encoding</code> per file. <em>Test:</em> <code>src/tests/test_resume_loader.py::test_load_pairs_and_schema</code></li>
@@ -556,7 +558,9 @@ def decode_bytes(data: bytes) -&gt; tuple[str, str]:
 def clean_text(raw: str) -&gt; str:
     """Remove &lt;span ...&gt; and &lt;/span&gt; tags (case-insensitive), apply html.unescape,
     replace "\xa0" with " ", collapse every whitespace run to one space, strip.
-    Idempotent. Leaves other tags and all other characters (including "•") alone."""
+    Idempotent on text whose entities decode only once (the tested case); double-escaped
+    entities such as "&amp;amp;lt;" decode further on a second pass, so it is not idempotent in general.
+    Leaves other tags and all other characters (including "•") alone."""
 
 def alpha_ratio(text: str) -&gt; float:
     """Letters divided by non-whitespace characters. 1.0 if there are none."""
