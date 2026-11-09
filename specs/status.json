@@ -1058,7 +1058,7 @@
     },
     "two-way-retrieval": {
       "spec": "specs/features/two-way-retrieval.html",
-      "phase": "awaiting-approval",
+      "phase": "done",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
       "tasks": {
@@ -1073,9 +1073,88 @@
           "fix_rounds": 0,
           "notes": "prerequisite for web-app T-3 (user asked for backend); feature otherwise awaiting approval Reviewer pass. Non-blocking: Design docstrings omitted; assert for typing.",
           "developer_agent": "a18a7bd6b686baf21"
+        },
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "RT-1",
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "RT-1",
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "DE-T-4",
+            "DE-T-5"
+          ],
+          "batch": "RT-1",
+          "notes": ""
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-3",
+            "T-4"
+          ],
+          "batch": "RT-2",
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-5"
+          ],
+          "batch": "RT-2",
+          "notes": ""
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-6"
+          ],
+          "batch": "RT-2",
+          "notes": ""
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "batch": "RT-2",
+          "notes": ""
         }
       },
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "notes": "User approved build 2026-11-08. T-2 already merged. In place on dev, no commits unless asked; standing rules. | RT-2 passed (819). Planner list: k_effective is scalar but differs per direction (min rule) - define per direction; query_matches vs stored run can disagree on exact-duplicate docs (float32 last-bit ties by block shape) - quantize/round scores before ordering or relax AC-9. Follow-ups sent to dev (no re-review): dedupe systems, p-10 id, query_matches weights test, EmbeddingMismatchError CLI case, show B1+ without vectors, >8 shared skills end-to-end, keyword calls, block_size spy.",
+      "batches": {
+        "RT-1": {
+          "tasks": [
+            "T-1",
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "a2bc2c01d42873791",
+          "fix_rounds": 0
+        },
+        "RT-2": {
+          "tasks": [
+            "T-5",
+            "T-6",
+            "T-7",
+            "T-8"
+          ],
+          "developer_agent": "a2bc2c01d42873791",
+          "fix_rounds": 0
+        }
+      }
     },
     "web-app": {
       "spec": "specs/features/web-app.html",
@@ -1378,6 +1457,97 @@
       "branch": "dev",
       "tasks": {},
       "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6). User decisions: keep LangGraph (proposal); host agent on Voyager (deviation from ADR-10 CreateAI, record in deviations.md); model failure shows natural-language error (not rules fallback); split T-9 and T-16 into 9a/9b.., 16a/16b... Revision sent to planner a8e7495744e8a281a; re-present for approval. Revised: 23 tasks, 32 ACs, no large flags (T-9a-d, T-16a-b, new T-1b). Failure = HTTP 502 assistant_failed envelope. ADR-21 Voyager hosting, P-19 deviation. Assumptions to confirm: A-6 wire form, T-14 touches web-app describeError."
+    },
+    "taxonomy-viz": {
+      "spec": null,
+      "phase": "done",
+      "branch": "dev",
+      "tasks": {
+        "V-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "VB-1",
+          "notes": "data loading + projection"
+        },
+        "V-2": {
+          "phase": "merged",
+          "deps": [
+            "V-1"
+          ],
+          "batch": "VB-1",
+          "notes": "static + interactive plots"
+        },
+        "V-3": {
+          "phase": "merged",
+          "deps": [
+            "V-2"
+          ],
+          "batch": "VB-1",
+          "notes": "CLI, tests, README"
+        }
+      },
+      "batches": {
+        "VB-1": {
+          "tasks": [
+            "V-1",
+            "V-2",
+            "V-3"
+          ],
+          "developer_agent": "aa665b4d3e9c04fe1",
+          "fix_rounds": 2
+        }
+      },
+      "notes": "Off-spec, user-requested 2026-11-08: visualize generated clusters and how the 1000 skills interact with them. Developer chooses toolset. No planner spec; recorded in README. In place on dev. | Passed after 2 fix rounds (894). Open non-blocking: spread/overlap check vacuous in annotation tests (spread_labels skipped still passes), arrowprops/LABEL_LIFT sign/LIMIT_PAD_LOW unpinned, test_taxonomy_viz_plots.py 385 lines. Empty stray dir mm/ at repo root (user may delete)."
+    },
+    "pipeline-script": {
+      "spec": null,
+      "phase": "done",
+      "branch": "dev",
+      "tasks": {
+        "S-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "SB-1",
+          "notes": "simplified per user; plain script"
+        },
+        "S-2": {
+          "phase": "blocked",
+          "deps": [
+            "S-1"
+          ],
+          "batch": "SB-1",
+          "notes": "dropped per user (scope simplified)"
+        },
+        "S-3": {
+          "phase": "blocked",
+          "deps": [
+            "S-2"
+          ],
+          "batch": "SB-1",
+          "notes": "dropped per user (scope simplified)"
+        }
+      },
+      "batches": {
+        "SB-1": {
+          "tasks": [
+            "S-1",
+            "S-2",
+            "S-3"
+          ],
+          "developer_agent": null,
+          "fix_rounds": 0
+        }
+      },
+      "notes": "Off-spec, user-requested 2026-11-08: bash script running all steps after structuring up to the web client (alias-table .. retrieve run). Real runs are user-only; tests use --dry-run only."
+    }
+  },
+  "adhoc": {
+    "readme-update": {
+      "phase": "merged",
+      "batch": "README install + pipeline script",
+      "worktree": ".",
+      "developer_agent": null,
+      "notes": "Nits applied; uncommitted in-place on dev. Flipped test_gitignore_ignores_trial_artifacts_only assertion (artifacts/ now ignored) - flag spec/test intent."
     }
   }
 }
