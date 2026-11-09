@@ -15,7 +15,7 @@ from getwork.embed import factory
 from getwork.embed.client import EmbeddingClient, EmbeddingError
 from getwork.llm.client import LLMClient, LLMError, redact_secrets
 from getwork.llm.settings import ConfigError
-from getwork.taxonomy import cli_common, cli_grid, cli_name, counts, embed_skills
+from getwork.taxonomy import cli_common, cli_grid, cli_name, cli_plot, counts, embed_skills
 from getwork.taxonomy.cli_common import EXIT_FATAL, EXIT_OK, EXIT_USAGE, FatalError
 from getwork.taxonomy.reduce import ReduceFn, umap_reduce
 
@@ -45,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_embed_parser(sub)
     cli_grid.add_parsers(sub)
     cli_name.add_parsers(sub)
+    cli_plot.add_parser(sub)
     for p in sub.choices.values():
         p.add_argument("--artifacts-dir", type=Path, default=paths.DEFAULT_ARTIFACTS_DIR)
     return parser
@@ -151,6 +152,8 @@ def main(
             return cli_grid.run_select(args)
         if args.command == "name":
             return cli_name.run_name(args, llm_client, environ)
+        if args.command == "plot":
+            return cli_plot.run_plot(args, reduce_fn)
         return cli_name.run_build(args)
     except FatalError as exc:
         print(f"error: {exc}", file=sys.stderr)

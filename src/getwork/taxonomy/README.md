@@ -30,7 +30,7 @@ uv run taxonomy build [--names PATH]
 - `taxonomy embed` embeds the selected skills (exact canonical string, no prefix) through the
   embedding client (see `src/getwork/embed/README.md`) and writes `skills/skill_vectors.npy`,
   `skill_vectors_ids.json`, `skill_vectors_meta.json`. Chunks are cached in
-  `skills/_embed_cache/`, so a rerun makes no client calls.
+  `skills/_embed_cache/`, so a rerun embeds no cached chunk (Voyager still sends one probe request at start-up).
 - `taxonomy grid` refuses vectors from another counts run, reduces with UMAP (`--umap-components`
   5, `--umap-neighbors` 15), runs every configuration, and writes `taxonomy/grid_context.json`,
   `grid_results.csv`, `grid_labels.npy`. If a configuration is eligible it also writes
@@ -66,6 +66,45 @@ LLM or embedding error.
 
 Merging or splitting clusters by hand is not supported in this round; pick another configuration
 or change the grid.
+
+## Plots
+
+`uv run taxonomy plot` draws the chosen clustering and how the skills relate to it. It reads
+saved artifacts only (no API calls, nothing is embedded) and writes to
+`<artifacts-dir>/taxonomy/plots/` (change with `--out-dir`). Open `index.html`: it embeds every
+plot. Options: `--artifacts-dir`, `--out-dir`, `--seed` (seed of the 2-D map, default 0),
+`--no-interactive` (skip the 5 MB standalone `cluster_map.html`), `--max-label-chars`
+(cluster-name length on the map, default 22). Exit 0 on success; exit 2 with a message naming the
+missing file and the command to run (`taxonomy embed`, `grid`, `name`) when an input is missing or
+does not belong together (stale selection, vectors of another skill list, names of another
+clustering). On an input error (exit 2 before drawing) nothing is written; an I/O error while writing
+(for example a full disk) can leave a partial set of files, each of them complete. Run it after `taxonomy name` (it reads
+`cluster_names.csv`, so edited names show up without `taxonomy build`).
+
+How to read each output:
+
+- `cluster_map.png` / `cluster_map.html`: every skill as a dot, colored by cluster, noise in grey,
+  cluster names near the centroids (leader lines when labels had to move apart). Positions come
+  from a separate 2-component cosine UMAP of the same vectors, so distances are not those of the
+  5-D clustering space: a cluster may look split and neighbours may be far apart. In the HTML,
+  hover shows skill, cluster, `df_resumes` and `df_postings`; click a legend entry to hide a
+  cluster.
+- `cluster_sizes.png`: skills per cluster, largest first, noise bar on top. A long tail of tiny
+  clusters or a dominant bar means the configuration is lopsided.
+- `cluster_corpus_balance.png`: one point per cluster (size = skills), x = summed resume
+  mentions, y = summed posting mentions, log axes (a count of 0 sits on the lowest line,
+  labelled 0). The dashed line is the overall postings-to-resumes ratio; points far below it are
+  resume-heavy, points on the lowest line are never mentioned in postings.
+- `cluster_one_corpus.png`: per cluster, how many skills occur in both corpora, in resumes only
+  or in postings only (title shows the overall one-corpus share). Clusters with long colored
+  segments only describe one corpus.
+- `skill_document_frequency.png`: each skill at (`df_resumes`, `df_postings`), colored by
+  cluster, noise grey, top skills named. Dots on the lowest line (0) occur in one corpus only.
+- `grid_overview.png`: every grid configuration as clusters vs noise fraction, colored by
+  silhouette (marker per method); the chosen configuration is ringed in red. Skipped
+  configurations are left out and counted in the title.
+- `cluster_summary.csv`: the numbers behind the cluster plots (size, summed df per corpus, skill
+  counts by corpus).
 
 ## Trial caveat
 
