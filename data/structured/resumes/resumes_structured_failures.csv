@@ -1,0 +1,9 @@
+id,stage,error_type,message,attempts
+r-01130,validation,OutputValidationError,"skills: Value error, each skill must be at most 100 characters",3
+r-01283,validation,OutputValidationError,"skills: Value error, at most 200 skills",3
+r-04416,validation,OutputValidationError,"skills: Value error, at most 200 skills",3
+r-09272,validation,OutputValidationError,"skills: Value error, each skill must be at most 100 characters",3
+r-18120,validation,OutputValidationError,"skills: Value error, at most 200 skills",3
+r-21879,validation,OutputValidationError,"skills: Value error, each skill must be at most 100 characters",3
+r-27184,validation,OutputValidationError,"skills: Value error, at most 200 skills",3
+r-28228,validation,OutputValidationError,"experience.1.duration_months: Value error, must be between 0 and 720",3
