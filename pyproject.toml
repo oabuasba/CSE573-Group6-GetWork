@@ -7,9 +7,11 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "langdetect",
+    "matplotlib",
     "numpy>=2.4.6",
     "openai>=3.46.0",
     "pandas",
+    "plotly",
     "pyarrow",
     "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
@@ -27,6 +29,7 @@ webapp = "getwork.webapp.cli:main"
 taxonomy = "getwork.taxonomy.cli:main"
 relabel = "getwork.relabel.cli:main"
 doc-embed = "getwork.docembed.cli:main"
+retrieve = "getwork.retrieval.cli:main"
 
 [project.optional-dependencies]
 embed = [
