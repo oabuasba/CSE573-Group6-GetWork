@@ -690,34 +690,391 @@
     },
     "skill-taxonomy": {
       "spec": "specs/features/skill-taxonomy.html",
-      "phase": "awaiting-approval",
+      "phase": "done",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
-      "tasks": {},
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "tasks": {
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "alias-table T-4"
+          ],
+          "batch": "UP-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "prerequisite for web-app T-3 (user asked for backend); feature otherwise awaiting approval Reviewer pass. SPEC (held): \"no numpy\" rule conflicts with required getwork.fileio (pyarrow/numpy); relax rule or lazy-import pyarrow. Follow-up sent: load_taxonomy AttributeError / noise string handling.",
+          "developer_agent": "a18a7bd6b686baf21"
+        },
+        "T-1": {
+          "phase": "merged",
+          "deps": [
+            "AL-T-6",
+            "EC-T-8"
+          ],
+          "batch": "ST-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "ST-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "ST-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4",
+            "AL-T-2"
+          ],
+          "batch": "ST-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "AL-T-3",
+            "LB-T-1"
+          ],
+          "batch": "ST-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "T-6"
+          ],
+          "batch": "ST-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-5",
+            "EC-T-2",
+            "EC-T-3",
+            "EC-T-4",
+            "AL-T-6"
+          ],
+          "batch": "ST-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: split inside batch (T-8a/b/c)"
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-7",
+            "T-8",
+            "LB-T-3"
+          ],
+          "batch": "ST-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [
+            "T-9"
+          ],
+          "batch": "ST-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        }
+      },
+      "notes": "User approved build (2026-11-08): skill taxonomy parts 1 and 2. In place on dev, commits only when user says. Batches of >=3 (sub)tasks run in sequence ST-1..ST-4; T-8 and T-9 split inside batch. T-1 adds scikit-learn, scipy, umap-learn: developer may run `uv lock` + `uv sync --inexact` (no extras). Tests: fake embedding client / injected reducer only; no real Voyager/embedding calls, no .env, no data/ artifacts. Embeddings will be Voyager qwen3-embedding-8b when the user runs the real step (deviation from ADR-4, planner list). | ST-1 done (540 tests). Q-4 default grid values used as proposed in spec; confirm with user. | ST-2 passed (554 tests). Non-blocking nits to fold into ST-4 dev: report._review_row 5 positional params + positional calls; naming test for RetriesExhausted and load_name_prompt cache; build tests: full NAMES_COLUMNS tuple, '1.5'/empty id + line number, length-mismatch ValueError; read_names should open with utf-8-sig (Excel BOM). Spec issue (planner list): names file BOM tolerance. | Spec issues for planner list: AC-16 no-eligible example (all-noise) also fails via min-clusters, name a noise-only case; failed grid run leaves stale selection.json/review paired with new grid (build should check selection.context vs grid_context or grid should invalidate); CLI+tests ~300 line estimate unrealistic (774). cli.py 338 lines. | ST-3 passed (586). Non-blocking for ST-4: main should catch OSError/KeyError -> exit 2; LLMError mapping around embed_skills untested; n_eligible not pinned vs max-noise/min-clusters; _expected_review circular, use non-symmetric df; grid should check vectors.ids == selected skills. | ST-4 review: T-10 pass; T-9 fail (stale selection vs new counts/embed run, fix round 1). Planner list: T-9 file list/test paths (cli_common/grid/name modules, test_taxonomy_cli_name.py); add edge-case: name/build refuse selection from older counts/embed run; AC-21 git status check is vacuous (dirs gitignored); pyproject webapp script line belongs to webapp commit.",
+      "batches": {
+        "ST-1": {
+          "tasks": [
+            "T-1",
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "abd134ed77c47999f",
+          "fix_rounds": 1
+        },
+        "ST-2": {
+          "tasks": [
+            "T-5",
+            "T-6",
+            "T-7"
+          ],
+          "developer_agent": "a72b7231704c83e1a",
+          "fix_rounds": 0
+        },
+        "ST-3": {
+          "tasks": [
+            "T-8"
+          ],
+          "subparts": [
+            "T-8a",
+            "T-8b",
+            "T-8c"
+          ],
+          "developer_agent": "a102b629921e9401f",
+          "fix_rounds": 1
+        },
+        "ST-4": {
+          "tasks": [
+            "T-9",
+            "T-10"
+          ],
+          "subparts": [
+            "T-9a",
+            "T-9b",
+            "T-10"
+          ],
+          "developer_agent": "a102b629921e9401f",
+          "fix_rounds": 1
+        }
+      }
     },
     "cluster-relabeling": {
       "spec": "specs/features/cluster-relabeling.html",
-      "phase": "awaiting-approval",
+      "phase": "done",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
-      "tasks": {},
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [
+            "TX-T-2",
+            "TX-T-10"
+          ],
+          "batch": "RB-1",
+          "notes": ""
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "RB-1",
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "RB-1",
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "RB-2",
+          "notes": ""
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "RB-2",
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-2"
+          ],
+          "batch": "RB-2",
+          "notes": "large: split inside batch (T-6a/b)"
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-3",
+            "T-4",
+            "T-5"
+          ],
+          "batch": "RB-3",
+          "notes": ""
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-6",
+            "T-7"
+          ],
+          "batch": "RB-3",
+          "notes": ""
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-8"
+          ],
+          "batch": "RB-3",
+          "notes": ""
+        }
+      },
+      "notes": "User approved build 2026-11-08. In place on dev, no commits. Standing rules apply (no .env, fakes only, no data/ artifacts_trial/). T-6 large: split inside batch. | RB-1 passed (654). Nits for RB-3 dev: lookup test lower vs linear (counts [0,100]); unseen tests: 61-char cut absent, max_validation_attempts=2, RetriesExhausted path/cfg.retry; keyword calls in tests. | RB-2 passed (691). Planner list: spec silent whether missing text counts in n_reextract_failed (dev counts it). | RB-3 passed (720). Spec issue for planner: read_relabeled silently drops an unparseable truncated tail (repair=False); state it or cross-check n_records. AC-17 env-unset command lists -u LLM_BACKEND (wrong var names). Test-gap follow-ups sent to developer (no re-review): check-all-sources-before-write, fatal redaction via bundle secret, option wiring, fatal in 2nd source, null text_clean, reextract cache allow_mixed, max_input_chars/retry/secrets forwarding, keyword calls.",
+      "batches": {
+        "RB-1": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": "a39825c06870e0541",
+          "fix_rounds": 0
+        },
+        "RB-2": {
+          "tasks": [
+            "T-4",
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "a47cd072d1ab13155",
+          "fix_rounds": 0
+        },
+        "RB-3": {
+          "tasks": [
+            "T-7",
+            "T-8",
+            "T-9"
+          ],
+          "developer_agent": "a47cd072d1ab13155",
+          "fix_rounds": 0
+        }
+      }
     },
     "document-embedding": {
       "spec": "specs/features/document-embedding.html",
-      "phase": "awaiting-approval",
+      "phase": "done",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
-      "tasks": {},
-      "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "UP-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "prerequisite for web-app T-3 (user asked for backend); feature otherwise awaiting approval Reviewer pass.",
+          "developer_agent": "a18a7bd6b686baf21"
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "DB-1",
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "DB-1",
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "DB-1",
+          "notes": ""
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "DB-2",
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-5"
+          ],
+          "batch": "DB-2",
+          "notes": ""
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "DB-2",
+          "notes": ""
+        }
+      },
+      "notes": "User approved build 2026-11-08. T-1 already merged. In place on dev, no commits; standing rules. | DB-1 passed (746). Test-gap follow-ups sent to DB-1 dev (no re-review). Planner list: serialize_b2 record order also raises on unknown cluster (beyond spec); read_documents robustness for malformed rows. | DB-2: T-5,T-7 pass; T-6 fail (build wrote resumes before validating postings Parquet), fix round 1. Planner list: DE-8 'writes nothing partial' ambiguous across sources (per-source completion accepted); construction-time redaction only knows VOYAGER_API_KEY env; AC-15 env list names LLM_BACKEND; cli_build.py split; serialize_b2 record order unknown cluster raises. | DB-2 passed after round 1 (782). Open non-blocking: dry-run does not cover pa.Table.from_pylist conversion; type-corrupt hand-edited relabeled records could leave partial output (needs hand-edited input); dead KeyError in _read_listed_levels except; _dry_run 5 kw-only params.",
+      "batches": {
+        "DB-1": {
+          "tasks": [
+            "T-2",
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "ade730516051acedb",
+          "fix_rounds": 0
+        },
+        "DB-2": {
+          "tasks": [
+            "T-5",
+            "T-6",
+            "T-7"
+          ],
+          "developer_agent": "a80bb7dad4bd27d40",
+          "fix_rounds": 1
+        }
+      }
     },
     "two-way-retrieval": {
       "spec": "specs/features/two-way-retrieval.html",
       "phase": "awaiting-approval",
       "planner_agent": "aa40644379b4020a6",
       "branch": "dev",
-      "tasks": {},
+      "tasks": {
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "document-embedding T-1",
+            "alias-table T-4"
+          ],
+          "batch": "UP-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "prerequisite for web-app T-3 (user asked for backend); feature otherwise awaiting approval Reviewer pass. Non-blocking: Design docstrings omitted; assert for typing.",
+          "developer_agent": "a18a7bd6b686baf21"
+        }
+      },
       "notes": "Specced; tasks to be recorded on approval. Large flags: skill-taxonomy T-8, cluster-relabeling T-6 (ask user)."
     },
     "web-app": {
@@ -748,7 +1105,7 @@
           "notes": "Reviewer pass. SPEC (held for planner): T-2 wording for query view clusters unsatisfiable literally (\"Vue, CSS, JavaScript, SQL, Excel under Other\"); correct to Vue/CSS/JavaScript under Front-end, SQL+Excel under Other (also contradicts AC-4 example). Fixture follow-up sent to dev: match 2 related/gaps/title_overlap per I-2; query incomplete_reason."
         },
         "T-3": {
-          "phase": "held",
+          "phase": "merged",
           "deps": [
             "T-1",
             "U-docembed-levels",
@@ -756,48 +1113,48 @@
             "U-taxonomy"
           ],
           "large": false,
-          "batch": null,
+          "batch": "T-3-T-6",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": ""
         },
         "T-4": {
-          "phase": "held",
+          "phase": "merged",
           "deps": [
             "T-1",
             "T-3"
           ],
           "large": true,
-          "batch": null,
+          "batch": "T-3-T-6",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": "large: ask user HELD by user 2026-11-08 (UI only for now)."
+          "notes": "large: ask user"
         },
         "T-5": {
-          "phase": "held",
+          "phase": "merged",
           "deps": [
             "T-3",
             "T-4"
           ],
           "large": false,
-          "batch": null,
+          "batch": "T-3-T-6",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": "Reviewer pass. Non-blocking: _install_api_routes 58 lines; catch-all /api/{rest:path} matches all methods so wrong-method calls return 404 not_found (contradicts developer deviation 2; fix or document); malformed JSON gives field \"1\"; /api/explain does not check query.side vs direction; positional multi-arg calls. SPEC (held): ServerErrorMiddleware re-raises after custom 500 handler so uvicorn logs the unredacted traceback (T-9/planner: uvicorn log config or middleware); /docs loads Swagger assets from cdn.jsdelivr.net (T-18 guardrail scope)."
         },
         "T-6": {
-          "phase": "held",
+          "phase": "merged",
           "deps": [
             "T-5"
           ],
           "large": false,
-          "batch": null,
+          "batch": "T-3-T-6",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": "Reviewer pass. Non-blocking: redundant condition in _install_static."
         },
         "T-7": {
-          "phase": "held",
+          "phase": "blocked",
           "deps": [
             "T-4",
             "U-pipeline"
@@ -806,10 +1163,10 @@
           "batch": null,
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": ""
         },
         "T-8": {
-          "phase": "held",
+          "phase": "blocked",
           "deps": [
             "T-7"
           ],
@@ -817,20 +1174,20 @@
           "batch": null,
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": "large: ask user HELD by user 2026-11-08 (UI only for now)."
+          "notes": "large: ask user"
         },
         "T-9": {
-          "phase": "held",
+          "phase": "passed",
           "deps": [
             "T-6",
             "T-8",
             "T-1"
           ],
           "large": false,
-          "batch": null,
+          "batch": "T-9-demo",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": "USER OK (2026-11-08): build a demo-only slice of T-9 (webapp serve --demo / check --demo / script entry); artifact options wait for T-7/T-8. Also fold in review non-blockers (catch-all 405, malformed-JSON field, uvicorn log redaction). | Demo slice passed review (523 tests). AC-22/AC-24 artifact + client-capability parts deferred until T-7/T-8. Non-blocking: port<=65535 check, ipaddress loopback + [::1] URL, use DEFAULT_MAX_QUERY_CHARS, thread bundle.secrets into _serve, add cli to heavy-import test, 405/400 use invalid_request (spec says 422), /favicon.svg 404 in single-process, T-6 catch-all text outdated."
         },
         "T-10": {
           "phase": "merged",
@@ -922,7 +1279,7 @@
           "notes": "Reviewer pass. Non-blocking: Privacy sentence ungrammatical when structure unavailable; vite.config.js http://127.0.0.1:8000 may trip AC-39 scan in T-18; version rows unasserted. SPEC (held): collapse-keeps-text vs AC-33/AC-34 conflict."
         },
         "T-18": {
-          "phase": "held",
+          "phase": "blocked",
           "deps": [
             "T-9",
             "T-17"
@@ -931,10 +1288,10 @@
           "batch": null,
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": " HELD by user 2026-11-08 (UI only for now)."
+          "notes": ""
         }
       },
-      "notes": "User said build (2026-11-08). In place on dev; no commits unless user says. Started T-1,T-2 (not large, no upstream). Large tasks (T-4,T-8,T-10,T-12..T-16) need user decision before dispatch. T-3,T-5..T-9 wait on upstream specs (docembed levels, b1plus, taxonomy, pipeline). Open questions unanswered: ADR-15 demo model, logo (default none), scope split. User (2026-11-08): split large tasks into sub-tasks, each developer gets >=3 subtasks, avoid planner. Done by batching and instructing developers to split large tasks internally into reported sub-parts (a/b); spec unchanged. Frontend batches F1 T-10..T-12, F2 T-13..T-15, F3 T-16a,T-16b,T-17 run in sequence. Backend T-3+ waits on upstream specs. npm install from public registry allowed (no ASU packages, --ignore-scripts). USER (2026-11-08): backend ON HOLD; wants to see the UI only. Frontend batches F2/F3 continue. Plan: add an off-spec dev-only mock of /api (serving contract.json) in F2 so the UI is viewable without a backend; record as deviation. SPEC (held): dev-mock.js and dev-mock.test.js are off-spec files (record as task); dev-mock.js http://localhost URL must be removed before T-18 guardrail AC-39. FRONTEND COMPLETE (T-10..T-17 merged; T-1,T-2 merged). Backend T-3..T-9 and T-18 held by user.",
+      "notes": "User said build (2026-11-08). In place on dev; no commits unless user says. Started T-1,T-2 (not large, no upstream). Large tasks (T-4,T-8,T-10,T-12..T-16) need user decision before dispatch. T-3,T-5..T-9 wait on upstream specs (docembed levels, b1plus, taxonomy, pipeline). Open questions unanswered: ADR-15 demo model, logo (default none), scope split. User (2026-11-08): split large tasks into sub-tasks, each developer gets >=3 subtasks, avoid planner. Done by batching and instructing developers to split large tasks internally into reported sub-parts (a/b); spec unchanged. Frontend batches F1 T-10..T-12, F2 T-13..T-15, F3 T-16a,T-16b,T-17 run in sequence. Backend T-3+ waits on upstream specs. npm install from public registry allowed (no ASU packages, --ignore-scripts). USER (2026-11-08): backend ON HOLD; wants to see the UI only. Frontend batches F2/F3 continue. Plan: add an off-spec dev-only mock of /api (serving contract.json) in F2 so the UI is viewable without a backend; record as deviation. SPEC (held): dev-mock.js and dev-mock.test.js are off-spec files (record as task); dev-mock.js http://localhost URL must be removed before T-18 guardrail AC-39. FRONTEND COMPLETE (T-10..T-17 merged; T-1,T-2 merged). Backend T-3..T-9 and T-18 held by user. USER (2026-11-08, later): hold lifted, build the backend. T-3 needs U-docembed-levels (document-embedding T-1), U-b1plus (two-way-retrieval T-2), U-taxonomy (skill-taxonomy T-2): building ONLY those 3 prerequisite tasks first as one developer batch (specs otherwise still awaiting approval). T-7/T-8 (ArtifactEngine) need the full pipeline (U-pipeline) so stay blocked; T-9 needs T-8. Plan: T-3,T-4(split),T-5,T-6 for demo-mode API. fastapi/uvicorn/httpx/starlette missing in .venv; network works (npm did); developer allowed `uv lock` then `uv sync --inexact` (no extras, no removals) to install them for TestClient. uv lock ran online: uv.lock +~1290 lines, 59 new packages (the embed extra was never locked); no existing pin changed; only fastapi, starlette, uvicorn, httpx, httpcore, click, certifi, annotated-doc, opentelemetry-api installed (no torch). Model note (user 2026-11-08): embeddings via Voyager qwen3-embedding-8b instead of local Qwen3-Embedding-4B: deviation from ADR-4 to record for planner (model + hosting).",
       "batches": {
         "T-1-T-2": {
           "tasks": [
@@ -973,6 +1330,35 @@
             "T-17"
           ],
           "developer_agent": "a766e5f173394a202",
+          "fix_rounds": 0
+        },
+        "T-3-T-6": {
+          "tasks": [
+            "T-3",
+            "T-4",
+            "T-5",
+            "T-6"
+          ],
+          "subparts": [
+            "T-3",
+            "T-4a",
+            "T-4b",
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "a5bcc97e3a01d3a7c",
+          "fix_rounds": 0
+        },
+        "T-9-demo": {
+          "tasks": [
+            "T-9"
+          ],
+          "subparts": [
+            "T-9a",
+            "T-9b",
+            "T-9c"
+          ],
+          "developer_agent": "a5bcc97e3a01d3a7c",
           "fix_rounds": 0
         }
       }
