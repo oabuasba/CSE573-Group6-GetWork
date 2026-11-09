@@ -7,7 +7,7 @@ from getwork.structure import schema
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_default_dirs_are_trial_dirs() -> None:
@@ -50,7 +50,7 @@ def test_gitignore_ignores_trial_artifacts_only() -> None:
     assert "artifacts_trial/" in lines
     assert ".env" in lines
     assert "data/structured_trial/" in lines
-    assert "artifacts/" not in lines
+    assert "artifacts/" in lines  # full-data output tree, ignored per run_pipeline.sh
     assert "data/structured" not in lines
     assert not any(line.startswith("data/structured/") for line in lines)
     assert not any(line in (".env*", "*.env*", ".env.*") for line in lines)

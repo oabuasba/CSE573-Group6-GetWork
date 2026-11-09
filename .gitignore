@@ -231,6 +231,7 @@ data/structured_trial_*/
 
 # Trial pipeline artifacts (never committed)
 artifacts_trial/
+artifacts/
 
 # Frontend (src/web)
 node_modules/
