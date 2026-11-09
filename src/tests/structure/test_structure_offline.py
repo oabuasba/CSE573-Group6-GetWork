@@ -9,7 +9,7 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-TESTS_DIR = Path(__file__).parent
+TESTS_DIR = Path(__file__).resolve().parents[1]
 SRC_DIR = TESTS_DIR.parent
 REQUIRED_LINE = 'pytestmark = pytest.mark.usefixtures("offline")'
 SDK_IMPORT = re.compile(r"^[ \t]*(?:import|from)[ \t]+(?:openai|httpx2?)\b", re.MULTILINE)
@@ -54,7 +54,7 @@ def test_apply_offline_unsets_env_set_earlier_and_changes_cwd(
 
 
 def test_all_llm_and_structure_tests_use_offline_fixture() -> None:
-    files = [*TESTS_DIR.glob("test_llm_*.py"), *TESTS_DIR.glob("test_structure_*.py")]
+    files = [*TESTS_DIR.rglob("test_llm_*.py"), *TESTS_DIR.rglob("test_structure_*.py")]
     offenders = [f.name for f in files if REQUIRED_LINE not in f.read_text().splitlines()]
     assert not offenders, f"missing offline pytestmark: {offenders}"
 
@@ -63,10 +63,10 @@ def test_openai_imported_only_in_voyager_module_and_its_test() -> None:
     allowed = {
         SRC_DIR / "getwork" / "llm" / "voyager.py",
         SRC_DIR / "getwork" / "embed" / "voyager_embed.py",
-        TESTS_DIR / "test_llm_voyager.py",
-        TESTS_DIR / "test_embed_voyager.py",
+        TESTS_DIR / "llm" / "test_llm_voyager.py",
+        TESTS_DIR / "embed" / "test_embed_voyager.py",
     }
-    candidates = [*(SRC_DIR / "getwork").rglob("*.py"), *TESTS_DIR.glob("*.py")]
+    candidates = [*(SRC_DIR / "getwork").rglob("*.py"), *TESTS_DIR.rglob("*.py")]
     matches = {
         f for f in candidates
         if f != Path(__file__) and SDK_IMPORT.search(f.read_text())

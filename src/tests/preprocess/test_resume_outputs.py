@@ -6,7 +6,7 @@ import pytest
 
 from getwork.preprocess.resumes import RESUME_CLASSES
 
-PROCESSED = Path(__file__).resolve().parents[2] / "data" / "processed" / "resumes"
+PROCESSED = Path(__file__).resolve().parents[3] / "data" / "processed" / "resumes"
 MAX_PARQUET_BYTES = 90 * 1024 * 1024
 MIN_KEPT_FRACTION = 0.90
 EXPECTED_LOADED = 29783

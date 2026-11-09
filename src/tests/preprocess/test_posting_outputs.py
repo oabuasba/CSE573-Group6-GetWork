@@ -6,7 +6,7 @@ import pytest
 
 from getwork.preprocess.domain import DOMAIN_FAMILIES, TECH_INDUSTRIES
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 PROCESSED = ROOT / "data" / "processed" / "postings"
 INDUSTRIES_CSV = ROOT / "data" / "job_postings" / "mappings" / "industries.csv"
 MAX_PARQUET_BYTES = 90 * 1024 * 1024

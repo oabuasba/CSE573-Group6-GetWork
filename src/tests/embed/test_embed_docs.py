@@ -5,7 +5,7 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 VOYAGER_NAMES = ("VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL")
 
 

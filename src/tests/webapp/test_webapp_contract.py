@@ -7,7 +7,7 @@ from getwork.webapp import models
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-CONTRACT = Path(__file__).resolve().parents[1] / "web" / "src" / "fixtures" / "contract.json"
+CONTRACT = Path(__file__).resolve().parents[2] / "web" / "src" / "fixtures" / "contract.json"
 SECTIONS = {
     "health": models.HealthResponse,
     "examples": models.ExamplesResponse,

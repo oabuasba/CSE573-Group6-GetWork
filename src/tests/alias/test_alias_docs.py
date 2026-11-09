@@ -6,7 +6,7 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-README = Path(__file__).resolve().parents[1] / "getwork" / "alias" / "README.md"
+README = Path(__file__).resolve().parents[2] / "getwork" / "alias" / "README.md"
 REQUIRED_STRINGS = [
     "alias-table build",
     "alias-table apply",

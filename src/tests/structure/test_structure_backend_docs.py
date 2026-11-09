@@ -7,7 +7,7 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 README = ROOT / "src" / "getwork" / "structure" / "README.md"
 VOYAGER_NAMES = {"VOYAGER_API_KEY", "VOYAGER_BASE_URL", "VOYAGER_MODEL"}
 LOCAL_NAMES = ("LLM_BACKEND", "LOCAL_LLM_BASE_URL", "LOCAL_LLM_MODEL", "LOCAL_LLM_API_KEY")

@@ -6,7 +6,7 @@ import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / "src" / "getwork" / "docembed"
 HEAVY = ("torch", "sentence_transformers", "openai")
 REQUIRED_STRINGS = [

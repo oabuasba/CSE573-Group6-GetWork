@@ -14,7 +14,7 @@ from getwork.webapp import cli, models
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[3]
 FAKE_SECRET = "fake-secret-xyz-789"
 
 
