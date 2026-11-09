@@ -13,6 +13,9 @@ dependencies = [
     "pyarrow",
     "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
+    "scikit-learn",
+    "scipy",
+    "umap-learn",
     "uvicorn",
 ]
 
@@ -20,6 +23,10 @@ dependencies = [
 structurer = "getwork.structure.cli:main"
 alias-table = "getwork.alias.cli:main"
 embed-preflight = "getwork.embed.cli:main"
+webapp = "getwork.webapp.cli:main"
+taxonomy = "getwork.taxonomy.cli:main"
+relabel = "getwork.relabel.cli:main"
+doc-embed = "getwork.docembed.cli:main"
 
 [project.optional-dependencies]
 embed = [
@@ -44,6 +51,8 @@ include = ["getwork*"]
 [tool.setuptools.package-data]
 "getwork.structure" = ["prompts/*.md"]
 "getwork.alias" = ["alias_curated.csv", "prompts/*.md"]
+"getwork.taxonomy" = ["prompts/*.md"]
+"getwork.relabel" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]
