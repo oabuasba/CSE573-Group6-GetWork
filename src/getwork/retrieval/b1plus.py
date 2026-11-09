@@ -10,6 +10,9 @@ from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+import scipy.sparse as sp
+
 from getwork.alias import normalize
 from getwork.docembed import levels
 
@@ -134,3 +137,105 @@ def grid_search_weights(
                 best = (w, score)
     assert best is not None
     return best
+
+
+@dataclass(frozen=True)
+class B1Features:
+    ids: list[str]
+    skills: sp.csr_matrix  # (n, V) float32 0/1
+    skill_counts: np.ndarray  # (n,) float32
+    titles: sp.csr_matrix  # (n, T) float32 0/1
+    title_counts: np.ndarray  # (n,) float32
+    ranks: np.ndarray  # (n,) float32, NaN when the level is unspecified
+
+
+def _incidence(sets: Sequence[AbstractSet[str]], vocab: Mapping[str, int]) -> sp.csr_matrix:
+    rows = [i for i, members in enumerate(sets) for _ in members]
+    cols = [vocab[token] for members in sets for token in members]
+    data = np.ones(len(rows), dtype=np.float32)
+    return sp.csr_matrix((data, (rows, cols)), shape=(len(sets), len(vocab)), dtype=np.float32)
+
+
+def _vocabulary(*sides: Sequence[AbstractSet[str]]) -> dict[str, int]:
+    tokens = sorted({token for sets in sides for members in sets for token in members})
+    return {token: i for i, token in enumerate(tokens)}
+
+
+def _side_features(
+    *,
+    docs: Mapping[str, Mapping[str, object]],
+    skill_sets: Sequence[AbstractSet[str]],
+    title_sets: Sequence[AbstractSet[str]],
+    skill_vocab: Mapping[str, int],
+    title_vocab: Mapping[str, int],
+) -> B1Features:
+    skills = _incidence(skill_sets, skill_vocab)
+    titles = _incidence(title_sets, title_vocab)
+    ranks = [
+        None if doc["level"] is None else levels.level_rank(doc["level"])
+        for doc in docs.values()
+    ]
+    return B1Features(
+        ids=list(docs),
+        skills=skills,
+        skill_counts=np.asarray(skills.sum(axis=1), dtype=np.float32).ravel(),
+        titles=titles,
+        title_counts=np.asarray(titles.sum(axis=1), dtype=np.float32).ravel(),
+        ranks=np.array([np.nan if r is None else r for r in ranks], dtype=np.float32),
+    )
+
+
+def build_features(
+    resume_docs: Mapping[str, Mapping[str, object]],
+    posting_docs: Mapping[str, Mapping[str, object]],
+) -> tuple[B1Features, B1Features]:
+    """Shared skill and title vocabularies over both sides (sorted); ids in the dicts' order."""
+    skill_sets = [
+        [skill_keys(list(d["skills"])) for d in docs.values()]
+        for docs in (resume_docs, posting_docs)
+    ]
+    title_sets = [
+        [title_tokens(d["title"]) for d in docs.values()] for docs in (resume_docs, posting_docs)
+    ]
+    skill_vocab = _vocabulary(*skill_sets)
+    title_vocab = _vocabulary(*title_sets)
+    resumes = _side_features(
+        docs=resume_docs, skill_sets=skill_sets[0], title_sets=title_sets[0],
+        skill_vocab=skill_vocab, title_vocab=title_vocab,
+    )
+    postings = _side_features(
+        docs=posting_docs, skill_sets=skill_sets[1], title_sets=title_sets[1],
+        skill_vocab=skill_vocab, title_vocab=title_vocab,
+    )
+    return resumes, postings
+
+
+def _block_jaccard(
+    *,
+    q_matrix: sp.csr_matrix,
+    d_matrix: sp.csr_matrix,
+    q_counts: np.ndarray,
+    d_counts: np.ndarray,
+) -> np.ndarray:
+    inter = (q_matrix @ d_matrix.T).toarray().astype(np.float32)
+    union = q_counts[:, None] + d_counts[None, :] - inter
+    return np.divide(inter, union, out=np.zeros_like(inter), where=union > 0)
+
+
+def b1plus_block(
+    q: B1Features, d: B1Features, start: int, stop: int, w: B1PlusWeights
+) -> np.ndarray:
+    """Scores of queries start..stop against all documents; float32 (stop - start, len(d.ids))."""
+    skills = _block_jaccard(
+        q_matrix=q.skills[start:stop], d_matrix=d.skills,
+        q_counts=q.skill_counts[start:stop], d_counts=d.skill_counts,
+    )
+    titles = _block_jaccard(
+        q_matrix=q.titles[start:stop], d_matrix=d.titles,
+        q_counts=q.title_counts[start:stop], d_counts=d.title_counts,
+    )
+    distance = np.abs(q.ranks[start:stop, None] - d.ranks[None, :])
+    level = 1 - distance / (len(levels.LEVELS) - 1)
+    level = np.where(np.isnan(distance), np.float32(SENIORITY_UNKNOWN), level)
+    score = w.skills * skills + w.title * titles + w.level * level
+    return score.astype(np.float32)
