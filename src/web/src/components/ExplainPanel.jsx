@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { describeError, postExplain } from "../api.js";
+import ClaimList from "./ClaimList.jsx";
 import Notice from "./Notice.jsx";
 
 function explainerLine(explainer) {
@@ -39,15 +40,21 @@ export default function ExplainPanel({ direction, query, matchId, fetchImpl }) {
       </Notice>
     );
   }
-  const { summary, bullets, explainer } = state.data;
+  const { summary, bullets, explainer, claims, facts } = state.data;
   return (
     <div>
-      <p className="measure">{summary}</p>
-      <ul>
-        {bullets.map((bullet) => (
-          <li key={bullet}>{bullet}</li>
-        ))}
-      </ul>
+      {claims?.length ? (
+        <ClaimList claims={claims} facts={facts ?? []} />
+      ) : (
+        <>
+          <p className="measure">{summary}</p>
+          <ul>
+            {bullets.map((bullet) => (
+              <li key={bullet}>{bullet}</li>
+            ))}
+          </ul>
+        </>
+      )}
       <p>{explainerLine(explainer)}</p>
     </div>
   );

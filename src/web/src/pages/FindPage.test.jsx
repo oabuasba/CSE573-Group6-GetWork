@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import FindPage from "./FindPage.jsx";
 import contract from "../fixtures/contract.json";
+import agent from "../fixtures/contract_agent.json";
 
 const health = {
   ...contract.health,
@@ -161,4 +162,77 @@ test("real FindPage without injected props makes a small number of network calls
   await screen.findByText(contract.explain.summary);
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(fetchImpl).toHaveBeenCalledTimes(3);
+});
+
+const agentHealth = { ...health, explainer: { kind: "agent", model: "demo-model" } };
+
+function agentFetch({ explain = reply(agent.explain_agent) } = {}) {
+  return vi.fn(async (path) => {
+    if (path.startsWith("/api/match")) return reply(contract.match);
+    if (path.startsWith("/api/explain")) return explain;
+    if (path.startsWith("/api/chat")) return reply(agent.chat);
+    if (path.startsWith("/api/examples")) return reply(contract.examples);
+    throw new Error(`unexpected ${path}`);
+  });
+}
+
+async function openCard(user, health_, fetchImpl, index = 0) {
+  const view = render(<FindPage direction="resume_to_posting" health={health_} fetchImpl={fetchImpl} />);
+  await fillAndSubmit(user);
+  await screen.findByRole("heading", { name: "Results" });
+  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[index]);
+  return view;
+}
+
+test("chat appears only for the agent explainer", async () => {
+  const user = userEvent.setup();
+  const template = await openCard(user, health, routedFetch());
+  await screen.findByText(contract.explain.summary);
+  expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
+  template.unmount();
+
+  const fetchImpl = agentFetch();
+  await openCard(user, agentHealth, fetchImpl);
+  expect(await screen.findByRole("heading", { name: "Ask about this match" })).toBeInTheDocument();
+  await user.type(screen.getByLabelText("Your question"), "Why?");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await screen.findByText(agent.chat.claims[0].text);
+  const call = fetchImpl.mock.calls.find(([p]) => p === "/api/chat");
+  const body = JSON.parse(call[1].body);
+  expect(body.focus_id).toBe(contract.match.matches[0].id);
+  expect(body.matches[0]).toEqual({
+    id: contract.match.matches[0].id,
+    rank: contract.match.matches[0].rank,
+    score: contract.match.matches[0].score,
+  });
+});
+
+test("chat moves with the expanded card", async () => {
+  const user = userEvent.setup();
+  await openCard(user, agentHealth, agentFetch());
+  await user.type(await screen.findByLabelText("Your question"), "Why?");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await screen.findByText(agent.chat.claims[0].text);
+  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[1]);
+  expect(await screen.findAllByRole("heading", { name: "Ask about this match" })).toHaveLength(1);
+  expect(screen.getByRole("log")).toBeEmptyDOMElement();
+  expect(screen.queryByText("Why?")).not.toBeInTheDocument();
+});
+
+test("evidence stays when the assistant fails", async () => {
+  const user = userEvent.setup();
+  await openCard(user, agentHealth, agentFetch({ explain: reply(agent.chat_error, 502) }));
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("The assistant could not answer");
+  expect(alert).toHaveTextContent(agent.chat_error.error.message);
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  const card = alert.closest("article");
+  expect(card.querySelector(".chip")).not.toBeNull();
+});
+
+test("one cta button with chat open", async () => {
+  const user = userEvent.setup();
+  const { container } = await openCard(user, agentHealth, agentFetch());
+  await screen.findByRole("heading", { name: "Ask about this match" });
+  expect(ctaCount(container)).toBe(1);
 });

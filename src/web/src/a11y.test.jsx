@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
 import FindPage from "./pages/FindPage.jsx";
 import contract from "./fixtures/contract.json";
+import agent from "./fixtures/contract_agent.json";
 
 // jsdom cannot compute colors, so contrast is covered by the token test instead (AC-27).
 const AXE_OPTIONS = { rules: { "color-contrast": { enabled: false } } };
@@ -66,4 +67,39 @@ test("no axe violations with an error alert", async () => {
 
 test("no axe violations with an expanded explanation", async () => {
   await searchAndAxe(reply(contract.match), true);
+});
+
+const agentHealth = { ...health, explainer: { kind: "agent", model: "demo-model" } };
+
+async function openAgentCard(explainReply) {
+  const user = userEvent.setup();
+  const fetchImpl = vi.fn(async (path) => {
+    if (path.startsWith("/api/match")) return reply(contract.match);
+    if (path.startsWith("/api/explain")) return explainReply;
+    if (path.startsWith("/api/chat")) return reply(agent.chat_error, 502);
+    return reply(contract.examples);
+  });
+  const view = render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={fetchImpl} />);
+  await user.click(screen.getByRole("button", { name: "Fill in a form" }));
+  await user.type(screen.getByLabelText("Skills"), "Vue");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  await screen.findByRole("heading", { name: "Results" });
+  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[0]);
+  return { user, ...view };
+}
+
+test("no axe violations with chat open", async () => {
+  const { container } = await openAgentCard(reply(agent.explain_agent));
+  await screen.findByRole("heading", { name: "Ask about this match" });
+  await screen.findByText(agent.explain_agent.claims[0].text);
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations with an assistant error", async () => {
+  const { container, user } = await openAgentCard(reply(agent.chat_error, 502));
+  await user.type(await screen.findByLabelText("Your question"), "Why?");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  expect(await screen.findAllByRole("alert")).toHaveLength(2);
+  expect(container.querySelectorAll(".btn-cta").length).toBeLessThanOrEqual(1);
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });

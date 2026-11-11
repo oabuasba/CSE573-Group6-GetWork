@@ -6,10 +6,12 @@ import {
   describeError,
   getExamples,
   getHealth,
+  postChat,
   postExplain,
   postMatch,
 } from "./api.js";
 import contract from "./fixtures/contract.json";
+import agent from "./fixtures/contract_agent.json";
 
 const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data });
 const fakeFetch = (data, status) => vi.fn().mockResolvedValue(reply(data, status));
@@ -88,4 +90,25 @@ describe("describeError titles", () => {
     expect(describeError(unknown).title).toBe("Something went wrong");
     expect(describeError(new Error("boom")).title).toBe("Something went wrong");
   });
+});
+
+test("postChat calls the chat endpoint", async () => {
+  const body = { direction: "resume_to_posting", message: "Why?", history: [] };
+  const ok = fakeFetch(agent.chat);
+  expect(await postChat(body, ok)).toEqual(agent.chat);
+  expect(ok.mock.calls[0][0]).toBe("/api/chat");
+  expect(ok.mock.calls[0][1]).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+  expect(JSON.parse(ok.mock.calls[0][1].body)).toEqual(body);
+
+  const error = await caught(postChat(body, fakeFetch(agent.chat_error, 502)));
+  expect(error).toBeInstanceOf(ApiError);
+  expect(error).toMatchObject({ status: 502, ...agent.chat_error.error });
+});
+
+test("describeError titles the assistant error", () => {
+  const { code, message, hint } = agent.chat_error.error;
+  const err = new ApiError({ status: 502, code, message, hint });
+  expect(describeError(err)).toEqual({ title: "The assistant could not answer", body: message, hint });
+  const other = new ApiError({ status: 400, code: "weird", message: "m" });
+  expect(describeError(other).title).toBe("Something went wrong");
 });

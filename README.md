@@ -12,7 +12,7 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
 | Document embeddings (`doc-embed`) | Built |
 | Retrieval (B1+, B2, Full) | Built |
 | FastAPI backend and React UI (`webapp`, `src/web`) | Demo mode built; artifact mode and final checks pending |
-| LLM explanation agent (only the template explainer exists) | Planned |
+| LLM explanation agent (`webapp serve --explainer agent`, `src/getwork/agent`) | Built |
 | Evaluation | Planned |
 
 ## Architecture
@@ -45,7 +45,7 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
                                    |
                                    v
    [BUILT, demo data] FastAPI backend + React UI + template explainer
-   [PLANNED] LLM explanation agent
+   [BUILT, optional extra] LLM explanation agent + chat (webapp serve --explainer agent)
 ```
 
 ## Prerequisites
@@ -87,6 +87,14 @@ uv run webapp serve --demo          # http://127.0.0.1:8000, API docs at /docs
 ```
 
 `webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Only `--demo` works for now. Frontend tests: `npm --prefix src/web test`.
+
+The default explainer is the rules-based template. To use the explanation agent and the per-match chat, install the extra and add the agent flags (the model call is made by you, with your own key; see `src/getwork/agent/README.md`):
+
+```
+uv sync --extra agent
+uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
+# optional: --agent-backend voyager|local, --agent-model MODEL, --agent-timeout SECONDS (default 60)
+```
 
 ## Preprocess and structure
 
