@@ -32,6 +32,7 @@ def add_parsers(sub: argparse._SubParsersAction) -> None:
     llm_factory.add_llm_args(parser)
     parser = sub.add_parser("build", help="write taxonomy.json from the edited names")
     parser.add_argument("--names", type=Path, default=None)
+    parser.add_argument("--allow-member-names", action="store_true")
 
 
 def _members_by_cluster(state: SelectionState) -> dict[int, list[str]]:
@@ -75,7 +76,7 @@ def _name_rows(
         else:
             names[cluster_id] = naming.heuristic_name(skills)
             methods[cluster_id] = HEURISTIC_ROW if llm is None else FALLBACK_ROW
-    status = build.name_status(names)
+    status = build.name_status(names, members)
     rows = []
     for cluster_id in sorted(members):
         from_llm = methods[cluster_id] == LLM_ROW and bundle is not None
@@ -126,9 +127,21 @@ def run_name(
         "n_clusters": len(rows),
         "n_fallback": n_fallback,
         "n_duplicate": sum(1 for row in rows if row[5] == "duplicate"),
+        "n_member_list": sum(1 for row in rows if row[5] == "member_list"),
     }
     print(json.dumps(summary))
     return cli_common.EXIT_FALLBACK if n_fallback else cli_common.EXIT_OK
+
+
+def _refuse_member_list_names(
+    names: Mapping[int, str], members: Mapping[int, list[str]], *, allow: bool
+) -> None:
+    bad = sorted(i for i, n in names.items() if model.member_list_reason(n, members.get(i, ())))
+    if bad and not allow:
+        raise ValueError(
+            f"names for cluster ids {bad} are lists of member skills; "
+            "write a concept label or pass --allow-member-names"
+        )
 
 
 def run_build(args: argparse.Namespace) -> int:
@@ -137,6 +150,7 @@ def run_build(args: argparse.Namespace) -> int:
     names_path = args.names or out / NAMES_FILE
     names = build.read_names(names_path)
     state = cli_common.load_selection_state(root)
+    _refuse_member_list_names(names, _members_by_cluster(state), allow=args.allow_member_names)
     summary = cli_common.read_counts_summary(root)
     vectors = cli_common.read_skill_vectors(root)
     if vectors.meta.get("selected_skills_version") != summary["selected_skills_version"]:

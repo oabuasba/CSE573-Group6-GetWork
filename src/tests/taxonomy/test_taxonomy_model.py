@@ -26,6 +26,19 @@ def test_check_name_rules() -> None:
         assert len(str(e.value)) <= 120
 
 
+def test_member_list_reason() -> None:
+    members = ["junit", "Selenium", "TDD", "JMS", "RabbitMQ", "Java", "Spring", "Windows",
+               "Active Directory", "Windows 7", "AWS", "Python"]
+    for listed in ["JUnit / Selenium / TDD", "JUnit Selenium", "JMS & RabbitMQ", "Java and Spring",
+                   "Windows / Active Directory / Windows 7", "JUNIT  /  selenium"]:
+        reason = model.member_list_reason(listed, members)
+        assert reason is not None and "member skills" in reason
+    for fine in ["Unit Testing", "Java Frameworks", "Cloud & AWS", "CI/CD Pipelines", "Front-end",
+                 "Python"]:
+        assert model.member_list_reason(fine, members) is None
+    assert model.member_list_reason("JUnit / Selenium / TDD", []) is None
+
+
 def test_make_taxonomy_validation() -> None:
     def make(clusters: list[Cluster], noise: list[str] | None = None) -> model.Taxonomy:
         return model.make_taxonomy(clusters, noise or [], "v", {})

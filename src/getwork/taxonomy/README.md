@@ -20,7 +20,7 @@ uv run taxonomy grid [--max-noise 0.30] [--min-clusters 2] [--seed 0] [--grid-fi
                      [--umap-components 5] [--umap-neighbors 15]
 uv run taxonomy select --config-id ID
 uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--force]
-uv run taxonomy build [--names PATH]
+uv run taxonomy build [--names PATH] [--allow-member-names]
 ```
 
 - `taxonomy counts` reads `canonical/<source>/<source>_canonical.jsonl` for both sources (all
@@ -40,13 +40,28 @@ uv run taxonomy build [--names PATH]
 - `taxonomy select` rewrites `selection.json` (`source: manual`) and the review file for another
   configuration; a skipped or unknown id is exit 2.
 - `taxonomy name` writes `taxonomy/cluster_names.csv` (columns `cluster_id, name, size,
-  top_members, method, status, model, backend, prompt_version`). The heuristic joins the three
-  most frequent members; `--method llm` asks the model one question per cluster (options
-  `--backend`, `--model`, `--env-file`, `--extra-body`). Clusters the model fails get a heuristic
-  name, method `heuristic_fallback`, and exit 1. An existing file is never overwritten without
-  `--force`, so hand edits are safe.
+  top_members, method, status, model, backend, prompt_version`). `--method llm` asks the model
+  one question per cluster, in id order (options `--backend`, `--model`, `--env-file`,
+  `--extra-body`), with the prompt `name_v2`. Clusters the model fails get a heuristic name,
+  method `heuristic_fallback`, and exit 1. The heuristic joins the three most frequent members;
+  that is a list of member skills, so heuristic names are for offline runs only. An existing file
+  is never overwritten without `--force`, so hand edits are safe.
 - `taxonomy build` reads the edited names file, the selection, and the labels, and writes
-  `taxonomy/taxonomy.json`.
+  `taxonomy/taxonomy.json`. It exits 2 naming the cluster ids (never the text) and writes nothing
+  when any name is a list of member skills, unless `--allow-member-names` is given.
+
+## Concept-label names
+
+The cluster name goes into every document's embedded text, so a name that just lists members
+repeats skills and carries no concept. `name_v2` asks for a short concept label (one to four
+words, for example "Unit Testing" for JUnit, Selenium and Mockito) that differs from the names
+already given. The model's reply is rejected, with feedback and a retry, when the name is generic
+(Tools, Other, Cluster 4), longer than 5 words, a list of member skills, equal to one member
+skill, or equal (ignoring case) to a name already used. A name is a member list when it splits on
+`/`, `|`, `&`, `+` or "and" (or on spaces) into two or more parts and more than half of the parts
+are member skills. In `cluster_names.csv` the `status` column is `member_list` for such a name,
+else `duplicate` for a repeated name, else `ok`; `taxonomy name` prints `n_member_list`. A
+human-edited single-member name (for example Python) is accepted by `taxonomy build`.
 
 `name` and `build` both refuse a `selection.json` that does not belong to the current grid files
 or to the current counts (for example after a grid run that found no eligible configuration, or
@@ -60,8 +75,8 @@ LLM or embedding error.
 1. Open `review_<config_id>.csv` and `grid_results.csv`; check that clusters are recognizable
    and that `largest_cluster_fraction` is not one giant cluster.
 2. Optionally run `taxonomy select --config-id <other id>`.
-3. Run `taxonomy name`, then edit the name cells in `cluster_names.csv`: no `:`, `;`, `,`, unique,
-   not "Other".
+3. Run `taxonomy name --method llm`, then edit the name cells in `cluster_names.csv`: each name is
+   a concept label, not a list of member skills; no `:`, `;`, `,`, unique, not "Other".
 4. Run `taxonomy build`.
 
 Merging or splitting clusters by hand is not supported in this round; pick another configuration
@@ -137,12 +152,26 @@ grid (`--grid-file`). Open `grid_results.csv` and the review file.
 Configure `.env` (Voyager or the local backend), then `uv run taxonomy name --method llm --model
 <id>`. Pass: `cluster_names.csv` has method `llm` for most rows; read every name.
 
-### TU-5: heuristic names
+### TU-5: heuristic names (offline runs only)
 
-Without an LLM: `uv run taxonomy name`. Edit the names until each is a clear label. Pass: no row
-has status `duplicate`.
+Without an LLM: `uv run taxonomy name`. Heuristic names normally get status `member_list`: rewrite
+each into a concept label, or pass `--allow-member-names` to `taxonomy build`. Pass: no row has
+status `duplicate`.
 
 ### TU-6: build
 
 `uv run taxonomy build`, then `git status`. Pass: exit 0; `taxonomy.json` lists your names;
 nothing under `artifacts_trial/`, `data/structured/`, or `data/processed/` shows as changed.
+
+### AV-4: full pipeline with LLM names (uses your keys)
+
+`bash scripts/run_pipeline.sh` makes embedding and LLM calls; `NAME_METHOD` defaults to `llm`
+(set the model in `.env` or run `taxonomy name` by hand with its options). `NAME_METHOD=heuristic`
+is for offline runs only and adds `--allow-member-names` to `taxonomy build`. Pass: every step
+exits 0 (or 1 from `name` if some clusters fell back, see AV-5).
+
+### AV-5: read the names
+
+Open `ROOT/taxonomy/cluster_names.csv`. Pass: every row has method `llm` and status `ok`, and each
+name is a concept label. A `heuristic_fallback` row (status `member_list`) must be edited by hand
+before `taxonomy build` succeeds.

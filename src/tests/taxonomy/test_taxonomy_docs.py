@@ -36,6 +36,15 @@ def test_runbook_mentions_commands_and_steps() -> None:
         assert any(f"TU-{step}" in heading for heading in headings), step
 
 
+def test_readme_documents_concept_names() -> None:
+    text = (PACKAGE / "README.md").read_text(encoding="utf-8")
+    for needle in ["--allow-member-names", "member_list", "name_v2", "NAME_METHOD", "offline runs only"]:
+        assert needle in text, needle
+    headings = [line for line in text.splitlines() if line.startswith("#")]
+    for step in ("AV-4", "AV-5"):
+        assert any(step in heading for heading in headings), step
+
+
 def _imported_modules(line: str) -> list[str]:
     plain = re.match(r"\s*import\s+(.+)", line)
     if plain:

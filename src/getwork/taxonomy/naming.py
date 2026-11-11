@@ -5,16 +5,38 @@ from __future__ import annotations
 import functools
 import re
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from getwork.alias import normalize
 from getwork.llm.client import LLMClient, LLMRequest, PermanentLLMError
 from getwork.llm.retry import CallStats, RetriesExhausted, RetryConfig, Throttle
 from getwork.llm.validated import ValidationExhausted, complete_validated, parse_json_object
 from getwork.taxonomy import model
 
-NAME_PROMPT_VERSION: str = "name_v1"
+NAME_PROMPT_VERSION: str = "name_v2"
+MAX_NAME_WORDS: int = 5
+GENERIC_NAMES: frozenset[str] = frozenset(
+    {
+        "other",
+        "others",
+        "misc",
+        "miscellaneous",
+        "general",
+        "various",
+        "mixed",
+        "tools",
+        "technologies",
+        "technology",
+        "skills",
+        "software",
+        "technical skills",
+        "it",
+        "unknown",
+    }
+)
+_CLUSTER_PLACEHOLDER = re.compile(r"cluster\s*\d*", re.IGNORECASE)
 HEURISTIC_MEMBERS = 3
 HEURISTIC_SEPARATOR = " / "
 _WHITESPACE = re.compile(r"\s+")
@@ -36,15 +58,39 @@ def heuristic_name(members: Sequence[str]) -> str:
     return model.check_name(text[: model.MAX_NAME_CHARS].strip())
 
 
-def build_name_message(members: Sequence[str]) -> str:
-    return "MEMBERS:\n" + "\n".join("- " + m for m in members)
+def build_name_message(members: Sequence[str], used: Sequence[str] = ()) -> str:
+    text = "MEMBERS:\n" + "\n".join("- " + m for m in members)
+    if used:
+        text += "\n\nUSED NAMES:\n" + "\n".join("- " + u for u in used)
+    return text
 
 
-def parse_name(text: str) -> str:
+def check_concept_name(
+    name: str, members: Sequence[str] = (), used: Collection[str] = ()
+) -> str:
+    """Rule N-2: model.check_name plus the concept-label rules; ValueError names the broken rule."""
+    name = model.check_name(name)
+    if name.casefold() in GENERIC_NAMES or _CLUSTER_PLACEHOLDER.fullmatch(name):
+        raise ValueError(f"{name!r} is too vague; name the concept the members share")
+    if len(name.split()) > MAX_NAME_WORDS:
+        raise ValueError(f"{name!r} has more than {MAX_NAME_WORDS} words; use one to four words")
+    reason = model.member_list_reason(name, members)
+    if reason is not None:
+        raise ValueError(reason)
+    if normalize.normalize_key(name) in {normalize.normalize_key(m) for m in members}:
+        raise ValueError(
+            f"{name!r} is one of the member skills; give the broader concept they share"
+        )
+    if name.casefold() in {u.casefold() for u in used}:
+        raise ValueError(f"{name!r} is already the name of another cluster; make it more specific")
+    return name
+
+
+def parse_name(text: str, members: Sequence[str] = (), used: Collection[str] = ()) -> str:
     value = parse_json_object(text).get("name")
     if not isinstance(value, str):
         raise ValueError('"name" must be a string')
-    return model.check_name(value)
+    return check_concept_name(value, members, used)
 
 
 @dataclass(frozen=True)
@@ -65,10 +111,10 @@ class NameResult:
     stats: CallStats = field(default_factory=CallStats)
 
 
-def _request(cfg: NameConfig, members: Sequence[str]) -> LLMRequest:
+def _request(cfg: NameConfig, shown: Sequence[str], used: Sequence[str]) -> LLMRequest:
     return LLMRequest(
         system=load_name_prompt(),
-        user=build_name_message(members[: cfg.top_members]),
+        user=build_name_message(shown, used),
         model=cfg.model,
         temperature=0,
         max_tokens=cfg.max_tokens,
@@ -89,18 +135,23 @@ def name_clusters(
     # secrets is accepted for a uniform step signature; results hold only cluster text.
     result = NameResult(names={}, failed=[])
     throttle = Throttle()
+    accepted: list[str] = []
     for cluster_id in sorted(members):
+        shown = tuple(members[cluster_id][: cfg.top_members])
+        used = tuple(accepted)
         try:
-            result.names[cluster_id] = complete_validated(
+            name = complete_validated(
                 client,
-                _request(cfg, members[cluster_id]),
-                parse_name,
+                _request(cfg, shown, used),
+                lambda text, shown=shown, used=used: parse_name(text, shown, used),
                 cfg=cfg.retry,
                 throttle=throttle,
                 sleep=sleep,
                 stats=result.stats,
                 max_attempts=cfg.max_validation_attempts,
             )
+            result.names[cluster_id] = name
+            accepted.append(name)
         except (ValidationExhausted, RetriesExhausted, PermanentLLMError):
             result.failed.append(cluster_id)
     return result

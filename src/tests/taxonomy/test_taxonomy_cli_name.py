@@ -25,6 +25,7 @@ SKILLS = [f"{theme} item{n:02d}" for theme in THEMES for n in range(20)]
 N_DOCS = 40
 SKILLS_PER_DOC = 6
 # one kmeans entry; the other methods cannot produce an eligible configuration
+ALLOW = "--allow-member-names"
 GRID_FILE = {
     "dbscan_eps": [0.001], "dbscan_min_samples": [5],
     "hdbscan_min_cluster_size": [100], "kmeans_k": [3],
@@ -89,6 +90,7 @@ def test_name_heuristic_writes_csv(tmp_path: Path, capsys: pytest.CaptureFixture
     assert _run(root, "name") == 0
     summary = json.loads(capsys.readouterr().out)
     assert (summary["n_clusters"], summary["n_fallback"], summary["method"]) == (3, 0, "heuristic")
+    assert summary["n_member_list"] == 3
     path = root / "taxonomy" / "cluster_names.csv"
     assert path.read_text(encoding="utf-8").splitlines()[0] == ",".join(build.NAMES_COLUMNS)
     rows = _names_rows(root)
@@ -96,7 +98,8 @@ def test_name_heuristic_writes_csv(tmp_path: Path, capsys: pytest.CaptureFixture
     for row in rows:
         skills = members[int(row["cluster_id"])]
         assert row["name"] == naming.heuristic_name(skills)
-        assert (row["size"], row["method"], row["status"]) == (str(len(skills)), "heuristic", "ok")
+        assert (row["size"], row["method"], row["status"]) == (
+            str(len(skills)), "heuristic", "member_list")
         assert row["top_members"] == "; ".join(skills[:5])
         assert (row["model"], row["backend"], row["prompt_version"]) == ("", "", "")
 
@@ -128,34 +131,63 @@ def test_name_llm_columns_fallback_and_duplicates(
     root = tmp_path / "art"
     _through_grid(root)
     members = _members(root)
-    wanted = {members[0][0]: "Same", members[1][0]: "same", members[2][0]: "Other"}
+    wanted = {members[0][0]: "Frontend Tooling", members[1][0]: "frontend tooling",
+              members[2][0]: "Other"}
     client = FakeLLMClient(handler=_llm_handler(wanted))
     capsys.readouterr()
     code = _run(root, "name", "--method", "llm", "--model", "m-1", "--backend", "local",
                 llm_client=client)
     assert code == 1
     printed = json.loads(capsys.readouterr().out)
-    assert (printed["n_fallback"], printed["n_duplicate"], printed["n_clusters"]) == (1, 2, 3)
+    assert (printed["n_fallback"], printed["n_duplicate"], printed["n_clusters"]) == (2, 0, 3)
+    assert printed["n_member_list"] == 2
     rows = _names_rows(root)
     assert [(r["method"], r["status"]) for r in rows] == [
-        ("llm", "duplicate"), ("llm", "duplicate"), ("heuristic_fallback", "ok"),
+        ("llm", "ok"), ("heuristic_fallback", "member_list"), ("heuristic_fallback", "member_list"),
     ]
-    assert [r["name"] for r in rows][:2] == ["Same", "same"]
-    assert rows[2]["name"] == naming.heuristic_name(members[2])
-    for row in rows[:2]:
-        assert (row["model"], row["backend"], row["prompt_version"]) == ("m-1", "local", "name_v1")
-    assert (rows[2]["model"], rows[2]["backend"], rows[2]["prompt_version"]) == ("", "", "")
+    assert rows[0]["name"] == "Frontend Tooling"
+    for i in (1, 2):
+        assert rows[i]["name"] == naming.heuristic_name(members[i])
+    assert (rows[0]["model"], rows[0]["backend"], rows[0]["prompt_version"]) == (
+        "m-1", "local", "name_v2")
+    for row in rows[1:]:
+        assert (row["model"], row["backend"], row["prompt_version"]) == ("", "", "")
     assert {c.model for c in client.calls} == {"m-1"}
 
 
-def test_name_llm_all_succeed_exit_0(tmp_path: Path) -> None:
+def test_name_llm_member_list_falls_back(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    members = _members(root)
+    listed = " / ".join(members[0][:3])
+    wanted = {members[0][0]: listed, members[1][0]: "Data Stores", members[2][0]: "Cloud Hosting"}
+    client = FakeLLMClient(handler=_llm_handler(wanted))
+    capsys.readouterr()
+    assert _run(root, "name", "--method", "llm", "--model", "m", llm_client=client) == 1
+    printed = json.loads(capsys.readouterr().out)
+    assert (printed["n_fallback"], printed["n_member_list"]) == (1, 1)
+    rows = _names_rows(root)
+    assert [(r["method"], r["status"]) for r in rows] == [
+        ("heuristic_fallback", "member_list"), ("llm", "ok"), ("llm", "ok"),
+    ]
+    assert rows[0]["name"] == naming.heuristic_name(members[0])
+
+
+def test_name_llm_all_succeed_exit_0(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     root = tmp_path / "art"
     _through_grid(root)
     members = _members(root)
     wanted = {members[i][0]: f"Group {i}" for i in range(3)}
+    capsys.readouterr()
     code = _run(root, "name", "--method", "llm", "--model", "m",
                 "--top-members", "2", llm_client=FakeLLMClient(handler=_llm_handler(wanted)))
     assert code == 0
+    assert {r["status"] for r in _names_rows(root)} == {"ok"}
+    assert json.loads(capsys.readouterr().out)["n_member_list"] == 0
     assert [(r["name"], r["method"]) for r in _names_rows(root)] == [
         (f"Group {i}", "llm") for i in range(3)
     ]
@@ -214,7 +246,7 @@ def test_build_writes_loadable_taxonomy(
     )
     names_path.write_text(text, encoding="utf-8")
     capsys.readouterr()
-    assert _run(root, "build") == 0
+    assert _run(root, "build", ALLOW) == 0
     summary = json.loads(capsys.readouterr().out)
     target = root / "taxonomy" / "taxonomy.json"
     tax = model.load_taxonomy(target)
@@ -239,8 +271,8 @@ def test_build_accepts_excel_bom_and_custom_names_path(tmp_path: Path) -> None:
     custom = tmp_path / "edited.csv"
     custom.write_bytes(b"\xef\xbb\xbf" + names_path.read_bytes())
     names_path.unlink()
-    assert _run(root, "build") == 2
-    assert _run(root, "build", "--names", str(custom)) == 0
+    assert _run(root, "build", ALLOW) == 2
+    assert _run(root, "build", ALLOW, "--names", str(custom)) == 0
     assert model.load_taxonomy(root / "taxonomy" / "taxonomy.json").cluster_names()
 
 
@@ -265,7 +297,7 @@ def test_build_rejects_bad_names_and_writes_nothing(
         writer.writeheader()
         writer.writerows(rows)
     capsys.readouterr()
-    assert _run(root, "build") == 2
+    assert _run(root, "build", ALLOW) == 2
     assert message in capsys.readouterr().err
     assert not (root / "taxonomy" / "taxonomy.json").exists()
 
@@ -273,11 +305,11 @@ def test_build_rejects_bad_names_and_writes_nothing(
 def test_build_failure_keeps_existing_taxonomy(tmp_path: Path) -> None:
     root = tmp_path / "art"
     names_path = _name_all(root)
-    assert _run(root, "build") == 0
+    assert _run(root, "build", ALLOW) == 0
     target = root / "taxonomy" / "taxonomy.json"
     before = target.read_bytes()
     names_path.write_text("cluster_id,name\n0,Only: one\n", encoding="utf-8")
-    assert _run(root, "build") == 2
+    assert _run(root, "build", ALLOW) == 2
     assert target.read_bytes() == before
 
 
@@ -291,7 +323,7 @@ def test_stale_selection_after_failed_grid_is_refused(
     assert _run(root, "grid", "--grid-file", str(all_noise)) == 2
     assert (root / "taxonomy" / "selection.json").exists()
     capsys.readouterr()
-    assert _run(root, "build") == 2
+    assert _run(root, "build", ALLOW) == 2
     assert "does not belong to the current grid" in capsys.readouterr().err
     assert not (root / "taxonomy" / "taxonomy.json").exists()
     assert _run(root, "name", "--force") == 2
@@ -304,7 +336,7 @@ def test_pipeline_end_to_end_is_deterministic(tmp_path: Path) -> None:
         root = tmp_path / label / "art"
         _through_grid(root)
         assert _run(root, "name") == 0
-        assert _run(root, "build") == 0
+        assert _run(root, "build", ALLOW) == 0
         outputs.append((root / "taxonomy" / "taxonomy.json").read_bytes())
         tax = model.load_taxonomy(root / "taxonomy" / "taxonomy.json")
         assert all(tax.lookup(skill) is not None for skill in SKILLS)
@@ -322,7 +354,7 @@ def test_name_llm_top_members_and_extra_body_reach_the_request(tmp_path: Path) -
                 "--extra-body", '{"thinking": false}', llm_client=client)
     assert code == 0 and len(client.calls) == 3
     for call in client.calls:
-        assert call.user.count("\n- ") == 2
+        assert call.user.split("\n\nUSED NAMES:")[0].count("\n- ") == 2
         assert call.extra_body == {"thinking": False}
         assert call.temperature == 0
     assert _run(root, "name", "--method", "llm", "--model", "m", "--force",
@@ -339,7 +371,7 @@ def test_build_uses_alias_version_from_counts_summary_not_selection(tmp_path: Pa
     summary_path.write_text(json.dumps(summary))
     selection = report.read_selection(root / "taxonomy")
     assert selection["context"]["alias_table_version"] == VERSION
-    assert _run(root, "build") == 0
+    assert _run(root, "build", ALLOW) == 0
     tax = model.load_taxonomy(root / "taxonomy" / "taxonomy.json")
     assert tax.alias_table_version == "sha256:cccccccccccc"
 
@@ -353,7 +385,7 @@ def test_build_refuses_vectors_from_another_selected_list(
     meta = {**vectors.meta, "selected_skills_version": "sha256:000000000000"}
     store.write_vectors(root / "skills", "skill_vectors", vectors.ids, vectors.vectors, meta)
     capsys.readouterr()
-    assert _run(root, "build") == 2
+    assert _run(root, "build", ALLOW) == 2
     assert "stale" in capsys.readouterr().err
     assert not (root / "taxonomy" / "taxonomy.json").exists()
 
@@ -370,7 +402,48 @@ def test_name_and_build_refuse_selection_for_a_different_skill_list(
     capsys.readouterr()
     assert _run(root, "name", "--force") == 2
     assert "taxonomy grid again" in capsys.readouterr().err
-    assert _run(root, "build") == 2
+    assert _run(root, "build", ALLOW) == 2
     assert "taxonomy grid again" in capsys.readouterr().err
     assert names_path.read_bytes() == names_before
     assert not (root / "taxonomy" / "taxonomy.json").exists()
+
+
+def _write_names(root: Path, names: dict[int, str]) -> None:
+    rows = _names_rows(root)
+    for row in rows:
+        row["name"] = names[int(row["cluster_id"])]
+    with open(root / "taxonomy" / "cluster_names.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=build.NAMES_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_build_refuses_member_list_names(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    heuristic = [r["name"] for r in _names_rows(root)]
+    capsys.readouterr()
+    assert _run(root, "build") == 2
+    err = capsys.readouterr().err
+    assert "cluster ids [0, 1, 2]" in err and "member skills" in err
+    assert not any(name in err for name in heuristic)
+    assert not (root / "taxonomy" / "taxonomy.json").exists()
+
+
+def test_build_allow_member_names_flag(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    assert _run(root, "build", ALLOW) == 0
+    assert (root / "taxonomy" / "taxonomy.json").exists()
+
+
+def test_build_accepts_concept_and_single_member_names(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    members = _members(root)
+    _write_names(root, {0: "Frontend Work", 1: members[1][0], 2: "Cloud Hosting"})
+    assert _run(root, "build") == 0
+    tax = model.load_taxonomy(root / "taxonomy" / "taxonomy.json")
+    assert set(tax.cluster_names()) == {"Frontend Work", members[1][0], "Cloud Hosting"}
