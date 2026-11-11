@@ -2306,6 +2306,22 @@
           "fix_rounds": 0
         }
       }
+    },
+    "e2e-runbook": {
+      "spec": null,
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "D-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "DOC-1",
+          "notes": "Docs-only: docs/running-end-to-end.md linked from README. No code, no .env, no Voyager, no pipeline runs. | Dev found/fixed README mismatches (step 7 flags, NAME_* vars, Voyager warning). Notes: alias-table --structured-dir default data/structured_trial vs structurer data/structured; script ARTIFACTS_DIR default artifacts vs webapp artifacts_trial; pipeline_run.txt only via orchestrator convention (script writes no log). | Review fail (2 blocking factual errors: run_pipeline credentials incomplete (VOYAGER_MODEL at step 7), stale resumes_clean_preview.json) + 6 nits. Fix sent. | Fix round 1 landed; light Haiku docs re-review dispatched. | Re-review pass; final two wording nits sent. Open: src/getwork/structure/README.md line 94 mentions stale *_clean_preview.json; tracked data/processed/*_clean_preview.json no longer produced.",
+          "fix_rounds": 1
+        }
+      },
+      "notes": "User asked (2026-11-11) for a developer to document everything needed to run end to end. Reviewer: docs check against code. | USER (2026-11-11): after the docs are done, commit them and push all unpushed commits on dev (web-app artifact mode commits 0f2c84f, dbf6bcf + docs commit). No Claude attribution."
     }
   },
   "adhoc": {

@@ -2,6 +2,8 @@
 
 GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engineering and adjacent fields. Given a resume it returns the top-k job postings; given a posting it returns the top-k candidates. The full design builds a skill taxonomy from the corpus so that related skills (React and Vue) earn partial credit, then has an agent explain each match. See `docs/proposal.md` and `specs/architecture.html`.
 
+New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the single runbook from a fresh clone to the web UI.
+
 ## Status
 
 | Stage | State |
@@ -145,9 +147,12 @@ Environment variables (all optional):
 | `STRUCTURED_DIR` | `data/structured` | `alias-table build` and `apply` only (`--structured-dir`) |
 | `ARTIFACTS_DIR` | `artifacts` (a fresh tree, separate from `artifacts_trial/`) | every step (`--artifacts-dir`) |
 | `PROCESSED_DIR` | `data/processed` | `relabel` and `doc-embed build` (`--processed-dir`) |
+| `NAME_METHOD` | `llm` | `taxonomy name --method` (`heuristic` is offline-only and adds `--allow-member-names` to `taxonomy build`) |
+| `NAME_WORKERS` | `4` | `taxonomy name --workers` |
+| `NAME_OVERLAP_ROUNDS` | `2` | `taxonomy name --overlap-rounds` (`0` disables) |
 
 - `CONFIG_ID` (optional first argument, for example `kmeans-04`) or the environment variable `CLUSTER_CONFIG_ID`: the configuration that `taxonomy select --config-id` picks right after `taxonomy grid`. The default is `kmeans-01` (k=10, so exactly 10 clusters and no noise); the argument wins over the variable. `grid`'s own pick in `selection.json` is always overridden (the previous file is archived, see below). Pick other ids from `$ARTIFACTS_DIR/taxonomy/grid_results.csv`.
-- The script changes into the repo root itself, so it can be run from anywhere, but relative `STRUCTURED_DIR`, `ARTIFACTS_DIR` and `PROCESSED_DIR` resolve against the repo root, not your current directory (use absolute paths to avoid surprises). The embed steps need `.env` (you provide it; not in git) with `VOYAGER_API_KEY` and `VOYAGER_BASE_URL`. `VOYAGER_EMBED_MODEL` is commented out in `.env.example` and is not needed here, because the script passes `--embed-backend voyager --embed-model qwen3-embedding-8b`.
+- The script changes into the repo root itself, so it can be run from anywhere, but relative `STRUCTURED_DIR`, `ARTIFACTS_DIR` and `PROCESSED_DIR` resolve against the repo root, not your current directory (use absolute paths to avoid surprises). The embed steps need `.env` (you provide it; not in git) with `VOYAGER_API_KEY` and `VOYAGER_BASE_URL`. With the default `NAME_METHOD=llm`, step 7 also needs `VOYAGER_MODEL` (or `LLM_BACKEND=local` with `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL`), because the script cannot pass `--model`; without it the run fails at step 7 after the billed `taxonomy embed`. `NAME_METHOD=heuristic` needs no LLM variables. `VOYAGER_EMBED_MODEL` is commented out in `.env.example` and is not needed here, because the script passes `--embed-backend voyager --embed-model qwen3-embedding-8b`.
 - Inputs per step: steps 1-2 read `STRUCTURED_DIR`; steps 3-9 and 13 read only `ARTIFACTS_DIR`; step 10 (`relabel`) also reads `PROCESSED_DIR` (the clean parquet per source); step 11 (`doc-embed build`) also reads `PROCESSED_DIR/postings/postings_clean.parquet` for listed experience levels (if it is missing, posting levels are derived from years of experience and a note is printed); step 12 reads `ARTIFACTS_DIR` only.
 - Archive behavior: `taxonomy name --force` overwrites `cluster_names.csv`, and `taxonomy grid` and `select` overwrite `selection.json`. Before those steps the script copies an existing file to `$ARTIFACTS_DIR/taxonomy/archive/<name>_<UTC timestamp>.<ext>` (for example `cluster_names_20261109T060353Z.csv`), and skips quietly if the file does not exist.
 
@@ -159,7 +164,7 @@ Environment variables (all optional):
 | 4 | `taxonomy embed` (Voyager call) | `skills/skill_vectors.npy` |
 | 5 | `taxonomy grid` | `taxonomy/grid_results.csv`, `taxonomy/selection.json` |
 | 6 | `taxonomy select` (always; default `kmeans-01`) | `taxonomy/selection.json` |
-| 7 | `taxonomy name --method heuristic --force` | `taxonomy/cluster_names.csv` |
+| 7 | `taxonomy name --method $NAME_METHOD --workers $NAME_WORKERS --overlap-rounds $NAME_OVERLAP_ROUNDS --force` (default `llm`, real LLM calls) | `taxonomy/cluster_names.csv` |
 | 8 | `taxonomy build` | `taxonomy/taxonomy.json` |
 | 9 | `taxonomy plot` (offline) | `taxonomy/plots/` (`index.html`, `cluster_map.png`, `cluster_sizes.png`, ...) |
 | 10 | `relabel` (lookup-only mode) | `relabeled/<source>/` |
@@ -169,8 +174,7 @@ Environment variables (all optional):
 
 Warnings:
 
-- Steps 4 and 12 make real Voyager calls.
-- Step 7 uses `--force`, so it overwrites `cluster_names.csv`, including hand edits; the previous copy is archived as described above. If you edit names, restore from the archive or run steps individually instead (see [`src/getwork/taxonomy/README.md`](src/getwork/taxonomy/README.md)).
+- Steps 4, 7 (with the default `NAME_METHOD=llm`) and 12 make real Voyager calls. Step 7 uses `--force`, so it overwrites `cluster_names.csv`, including hand edits; the previous copy is archived as described above. If you edit names, restore from the archive or run steps individually instead (see [`src/getwork/taxonomy/README.md`](src/getwork/taxonomy/README.md)).
 - `taxonomy grid` exits 2 when no configuration is eligible, which stops the script.
 - `embed-preflight` and `structurer --preflight` exit 3 when the model is not found or the preflight request fails.
 
