@@ -1458,6 +1458,153 @@
       "tasks": {},
       "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6). User decisions: keep LangGraph (proposal); host agent on Voyager (deviation from ADR-10 CreateAI, record in deviations.md); model failure shows natural-language error (not rules fallback); split T-9 and T-16 into 9a/9b.., 16a/16b... Revision sent to planner a8e7495744e8a281a; re-present for approval. Revised: 23 tasks, 32 ACs, no large flags (T-9a-d, T-16a-b, new T-1b). Failure = HTTP 502 assistant_failed envelope. ADR-21 Voyager hosting, P-19 deviation. Assumptions to confirm: A-6 wire form, T-14 touches web-app describeError."
     },
+    "alias-and-naming-v2": {
+      "spec": "specs/features/alias-and-naming-v2.html",
+      "phase": "done",
+      "planner_agent": "a0d4e81ad45588424",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "AV-A1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "AV-A1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: self-map test assertion weak (follow-up sent)."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2"
+          ],
+          "batch": "AV-A1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: two lines >100 chars (follow-up sent)."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "batch": "AV-A2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish: add candidate with different count to sort test (sent)."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "AV-A2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-4",
+            "T-5"
+          ],
+          "batch": "AV-A2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. SPEC (held): AV-1 pass condition lists \"Windows Server\" as canonical but it folds to Windows; Design seed CSV block is only the tail of the shipped file."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "AV-B1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "batch": "AV-B1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-8"
+          ],
+          "large": true,
+          "batch": "AV-B1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass (T-9a/T-9b, ~150 line diff). Polish follow-ups sent (no re-review): long lines, GENERIC_NAMES layout, all-succeed test asserts, top_members validation test."
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [
+            "T-6",
+            "T-9"
+          ],
+          "batch": "AV-T10",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish follow-ups sent (script-test branch check; TU-5 wording)."
+        }
+      },
+      "batches": {
+        "AV-A1": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": "a8ad6967ee0833b6a",
+          "fix_rounds": 0
+        },
+        "AV-B1": {
+          "tasks": [
+            "T-7",
+            "T-8",
+            "T-9"
+          ],
+          "developer_agent": "a545aa7631720cc01",
+          "fix_rounds": 0
+        },
+        "AV-A2": {
+          "tasks": [
+            "T-4",
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "a8ad6967ee0833b6a",
+          "fix_rounds": 0
+        },
+        "AV-T10": {
+          "tasks": [
+            "T-10"
+          ],
+          "developer_agent": "a8ad6967ee0833b6a",
+          "fix_rounds": 0
+        }
+      },
+      "notes": "User request 2026-11-10: stronger alias table (collapse version variants like Windows 7/10/11) and concept-label cluster names (not member-skill lists). Spec ready (10 tasks, 24 ACs). User decisions 2026-11-10: Windows Server merges into Windows (A-1 changed, spec update sent to planner); fold major versions; seed list accepted; build gate refuses; naming model = structurer's; build-time fold only; T-9 large -> split inside batch; docs/deviations.md untouched. Awaiting planner revision, then user approval to build. Standing rules apply. | All 10 tasks merged (997 tests). Consolidated spec feedback sent to planner (no deviations.md). USER-RUN next: see rebuild order in src/getwork/alias/README.md (alias build -> apply -> taxonomy counts -> embed -> grid -> name -> build -> relabel -> doc-embed -> retrieve), ideally with ARTIFACTS_DIR=artifacts_trial/v2."
+    },
     "taxonomy-viz": {
       "spec": null,
       "phase": "done",
