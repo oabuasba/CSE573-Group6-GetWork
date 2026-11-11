@@ -1,4 +1,4 @@
-"""The webapp command: serve and check (demo mode only until the artifact engine exists)."""
+"""The webapp command: serve and check, in demo mode or over an artifacts run folder."""
 
 import argparse
 import logging
@@ -16,7 +16,8 @@ from getwork.llm import factory as llm_factory
 from getwork.llm.client import LLMClient
 from getwork.llm.settings import BACKENDS, ConfigError
 from getwork.retrieval import b1plus
-from getwork.webapp import api, demo, engine, explain, models
+from getwork.structure.extract import ExtractConfig
+from getwork.webapp import api, artifacts, demo, engine, explain, models
 
 if TYPE_CHECKING:
     from getwork.agent.explainer import AgentExplainer, ChatService
@@ -25,11 +26,11 @@ AgentParts = tuple["AgentExplainer", "ChatService", Sequence[str]]
 
 WEB_DIST: Path = Path(__file__).resolve().parents[2] / "web" / "dist"
 DEFAULT_ARTIFACTS_DIR = "artifacts_trial"
+ARTIFACTS_DIR_ENV = "WEBAPP_ARTIFACTS_DIR"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 ALL_SYSTEMS: tuple[str, ...] = ("B1+", "B2", "Full")
-NOT_BUILT_MESSAGE = "artifact mode is not built yet; use --demo"
 BUILD_COMMAND = "npm --prefix src/web run build"
 STRUCTURE_DISABLED = "Disabled with --no-structure."
 EMBED_DISABLED = "Disabled with --no-embed."
@@ -56,9 +57,16 @@ def _positive_float(text: str) -> float:
     return value
 
 
-def _build_parser() -> argparse.ArgumentParser:
+def _build_parser(environ: Mapping[str, str] | None = None) -> argparse.ArgumentParser:
+    """--artifacts-dir wins over WEBAPP_ARTIFACTS_DIR, which wins over the artifacts_trial default."""
+    env = os.environ if environ is None else environ
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--artifacts-dir", default=DEFAULT_ARTIFACTS_DIR)
+    common.add_argument(
+        "--artifacts-dir",
+        default=env.get(ARTIFACTS_DIR_ENV) or DEFAULT_ARTIFACTS_DIR,
+        help=f"a run folder or a folder of vN runs (env {ARTIFACTS_DIR_ENV}; default "
+        f"{DEFAULT_ARTIFACTS_DIR})",
+    )
     common.add_argument("--demo", action="store_true", help="use built-in demo data")
     common.add_argument("--systems", default="all", help="all or a list of B1+,B2,Full")
     common.add_argument("--b1plus-weights", default=None, help="JSON file for load_weights")
@@ -121,11 +129,67 @@ class _CapabilityOverride:
         return self._inner.match(request)
 
 
-def _build_engine(args: argparse.Namespace) -> engine.Engine:
-    if not args.demo:
-        raise UsageError(NOT_BUILT_MESSAGE)
-    return _CapabilityOverride(
-        demo.DemoEngine(), no_structure=args.no_structure, no_embed=args.no_embed
+def _structure_resources(
+    args: argparse.Namespace, environ: Mapping[str, str], llm_client: LLMClient | None
+) -> tuple[artifacts.StructureResources | None, str | None]:
+    if args.no_structure:
+        return None, STRUCTURE_DISABLED
+    try:
+        bundle = llm_factory.make_client(
+            backend=args.backend, model=args.model, env_file=Path(args.env_file),
+            environ=environ, client=llm_client,
+        )
+        cfg = ExtractConfig(
+            model=bundle.model, backend=bundle.backend,
+            extra_body=llm_factory.parse_extra_body(args.extra_body),
+        )
+    except ConfigError as exc:  # names variables, never values
+        return None, str(exc)
+    return artifacts.StructureResources(client=bundle.client, cfg=cfg, secrets=bundle.secrets), None
+
+
+def _embed_resources(
+    args: argparse.Namespace, environ: Mapping[str, str], embedding_client: EmbeddingClient | None
+) -> tuple[artifacts.EmbedResources | None, str | None]:
+    if args.no_embed:
+        return None, EMBED_DISABLED
+    if embedding_client is not None:
+        info = embedding_client.info
+        describe = f"{info.backend}, {info.model}"
+    else:
+        named = [part for part in (args.embed_backend, args.embed_model) if part]
+        describe = ", ".join(named) or "configured in .env"
+
+    def factory() -> EmbeddingClient:
+        return embed_factory.make_embedding_client(
+            args=args, environ=environ, client=embedding_client
+        ).client
+
+    return artifacts.EmbedResources(factory=factory, describe=describe), None
+
+
+def _build_engine(
+    args: argparse.Namespace,
+    *,
+    environ: Mapping[str, str],
+    llm_client: LLMClient | None,
+    embedding_client: EmbeddingClient | None,
+) -> engine.Engine:
+    if args.demo:
+        return _CapabilityOverride(
+            demo.DemoEngine(), no_structure=args.no_structure, no_embed=args.no_embed
+        )
+    structure, structure_reason = _structure_resources(args, environ, llm_client)
+    embed, embed_reason = _embed_resources(args, environ, embedding_client)
+    systems = ALL_SYSTEMS if args.systems == "all" else tuple(args.systems.split(","))
+    weights = (
+        b1plus.load_weights(Path(args.b1plus_weights)) if args.b1plus_weights
+        else b1plus.DEFAULT_WEIGHTS
+    )
+    return artifacts.ArtifactEngine.load(
+        Path(args.artifacts_dir), systems=systems, weights=weights, structure=structure,
+        structure_reason=structure_reason, embed=embed, embed_reason=embed_reason,
+        max_query_chars=args.max_query_chars,
     )
 
 
@@ -181,7 +245,9 @@ def build_agent(
         timeout_s=args.agent_timeout,
         extra_body=llm_factory.parse_extra_body(args.extra_body),
     )
-    vocabulary = vocab.demo_vocabulary() if args.demo else vocab.load_vocabulary(Path(args.artifacts_dir))
+    vocabulary = (
+        vocab.demo_vocabulary() if args.demo else vocab.load_vocabulary(_loaded_root(args, engine))
+    )
     runner = turn.AgentRunner(client=bundle.client, cfg=cfg, vocab=vocabulary, secrets=bundle.secrets)
     compiled = graph.build_graph(runner)
     return (
@@ -189,6 +255,12 @@ def build_agent(
         explainer.ChatService(graph=compiled, runner=runner, engine=engine),
         bundle.secrets,
     )
+
+
+def _loaded_root(args: argparse.Namespace, loaded: engine.Engine) -> Path:
+    """The run folder the engine actually resolved (e.g. artifacts_trial/v5), not the raw option."""
+    resolved = loaded.health().artifacts_dir
+    return Path(resolved if resolved else args.artifacts_dir)
 
 
 def _static_dir(args: argparse.Namespace) -> Path | None:
@@ -218,6 +290,7 @@ def _serve(
             file=sys.stderr,
         )
     print(f"GetWork is serving on http://{args.host}:{args.port} (API docs at /docs)")
+    print(f"Artifacts: {app_engine.health().artifacts_dir or 'demo data'}")
     if static_dir is None:
         print(f"The web UI is not built yet; build it with: {BUILD_COMMAND}")
     install_uvicorn_redaction(secrets)
@@ -245,16 +318,18 @@ def main(
 ) -> int:
     """Exit codes: 0 ok, 2 usage, configuration or artifact error. Never prints a key.
 
-    environ and llm_client configure the agent client; embedding_client is for artifact mode, not built yet.
+    environ and the injected clients replace os.environ and the real LLM and embedding clients (tests).
     """
-    del embedding_client
+    env = os.environ if environ is None else environ
     try:
-        args = _build_parser().parse_args(argv)
+        args = _build_parser(env).parse_args(argv)
     except SystemExit as exit_request:
         return int(exit_request.code or 0)
     try:
         _check_options(args)
-        app_engine = _build_engine(args)
+        app_engine = _build_engine(
+            args, environ=env, llm_client=llm_client, embedding_client=embedding_client
+        )
     except (UsageError, engine.EngineLoadError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -264,7 +339,7 @@ def main(
             agent = build_agent(
                 args,
                 engine=app_engine,
-                environ=os.environ if environ is None else environ,
+                environ=env,
                 llm_client=llm_client,
             )
         except (ConfigError, RuntimeError, ValueError, OSError) as exc:

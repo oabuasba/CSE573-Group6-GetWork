@@ -23,6 +23,10 @@ uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
 User-run step: it makes real model calls with your `VOYAGER_API_KEY`. Without `webapp serve --explainer agent` the
 server uses the rules explainer and has no chat route.
 
+With real artifacts, replace `--demo` by `--artifacts-dir artifacts_trial` (or `WEBAPP_ARTIFACTS_DIR`); the agent's skill
+vocabulary is read from the run folder the server resolved (for example `artifacts_trial/v5`), and the page works the
+same way.
+
 Pass: `uv run webapp check --demo --explainer agent --model MODEL` prints health with `"kind": "agent"`
 and makes no model call; the server prints the address it serves on.
 

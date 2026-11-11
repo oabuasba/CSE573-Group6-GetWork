@@ -134,3 +134,20 @@ def test_check_with_agent_makes_no_call(capsys: pytest.CaptureFixture[str]) -> N
     assert code == 0 and fake.calls == []
     health = models.HealthResponse.model_validate_json(capsys.readouterr().out)
     assert health.explainer.kind == "agent" and health.explainer.model == "m"
+
+
+def test_build_agent_loads_vocabulary_from_the_resolved_root(tmp_path: Path) -> None:
+    trial = tmp_path.resolve() / "artifacts_trial"
+    write_artifacts(trial / "v5")
+
+    class ResolvedEngine(demo.DemoEngine):
+        def health(self) -> models.EngineHealth:
+            return super().health().model_copy(update={"artifacts_dir": str(trial / "v5")})
+
+    args = cli._build_parser().parse_args(
+        ["check", "--artifacts-dir", str(trial), "--explainer", "agent", "--model", "m"]
+    )
+    agent, _, _ = cli.build_agent(
+        args, engine=ResolvedEngine(), environ={}, llm_client=FakeLLMClient(script=[])
+    )
+    assert agent.info.kind == "agent"
