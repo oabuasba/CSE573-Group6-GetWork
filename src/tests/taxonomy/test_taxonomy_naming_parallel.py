@@ -80,9 +80,16 @@ def test_result_and_log_independent_of_workers_and_finish_order() -> None:
     assert runs[0] == runs[1] == runs[2]
     names, failed, lines = runs[0]
     assert failed == [2] and names[1] == "Shared Group" and names[4] == "Eps1 Group"
-    counters = [line.split(":")[0].split()[-1] for line in lines]
+    final = [line for line in lines if not line.startswith("rejected")]
+    counters = [line.split(":")[0].split()[-1] for line in final]
     assert counters == [f"{i}/6" for i in range(1, 7)]
-    assert [line.split("cluster ")[1].split()[0] for line in lines] == list("012345")
+    assert [line.split("cluster ")[1].split()[0] for line in final] == list("012345")
+    other = "rejected cluster 2 attempt {}: cluster name must not be 'Other'"
+    assert lines[2:6] == [
+        other.format(1), other.format(2), other.format(3),
+        "fallback 3/6: cluster 2 (replies rejected, attempts 3)",
+    ]
+    assert "rejected cluster 4 attempt 1: 'Shared Group' is already the name of another cluster; make it more specific" in lines
 
 
 def _same_name_handler(request: LLMRequest) -> str:
@@ -112,7 +119,10 @@ def test_duplicate_draft_is_reasked_with_used_names() -> None:
     assert reasks["eps1"].endswith(
         "USED NAMES:\n- Name alpha1\n- Same Name\n- Name gamma1\n- Fresh delta1"
     )
-    assert lines[3] == 'named 4/5: cluster 3 -> "Fresh delta1" (attempts 2)'
+    dup = "'Same Name' is already the name of another cluster; make it more specific"
+    assert lines[lines.index(f"rejected cluster 3 attempt 1: {dup}") + 1] == (
+        'named 4/5: cluster 3 -> "Fresh delta1" (attempts 2)'
+    )
     assert result.stats.calls == len(client.calls) == 7
 
 
@@ -133,7 +143,10 @@ def test_duplicate_reask_exhausted_falls_back() -> None:
     assert len(beta) == 4  # one draft plus three re-ask attempts
     assert "USED NAMES" not in beta[0] and "USED NAMES" in beta[1]
     assert "already the name of another cluster" in beta[3]
-    assert lines[1] == "fallback 2/3: cluster 1 (replies rejected, attempts 4)"
+    dup = "'Name alpha1' is already the name of another cluster; make it more specific"
+    assert "rejected cluster 1 attempt 1: " + dup in lines
+    assert "fallback 2/3: cluster 1 (replies rejected, attempts 4)" in lines
+    assert len([l for l in lines if l.startswith("rejected cluster 1")]) == 4
 
 
 def test_member_list_draft_retried_in_worker() -> None:

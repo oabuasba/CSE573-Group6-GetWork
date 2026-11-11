@@ -110,8 +110,8 @@ def test_name_clusters_requests() -> None:
     ]
     first = client.calls[0]
     assert first.system == naming.load_name_prompt()
-    assert (first.temperature, first.reasoning_effort, first.response_schema) == (0, None, None)
-    assert (first.model, first.max_tokens, first.extra_body) == ("m", 256, {"k": 1})
+    assert (first.temperature, first.reasoning_effort, first.response_schema) == (0, "none", None)
+    assert (first.model, first.max_tokens, first.extra_body) == ("m", 1024, {"k": 1})
     assert list(result.names) == [2, 5, 9] and result.failed == []
     assert result.stats.calls == 3
 
@@ -256,8 +256,11 @@ def test_log_lines_sequential() -> None:
     lines: list[str] = []
     client = FakeLLMClient(handler=handler)
     naming.name_clusters(client, _cfg(), members, sleep=_no_sleep, log=lines.append)
+    rejected = "rejected cluster 1 attempt {}: cluster name must not be 'Other'"
     assert lines == [
+        "rejected cluster 0 attempt 1: not valid JSON",
         'named 1/5: cluster 0 -> "Good second" (attempts 2)',
+        rejected.format(1), rejected.format(2), rejected.format(3),
         "fallback 2/5: cluster 1 (replies rejected, attempts 3)",
         "fallback 3/5: cluster 2 (retries exhausted, attempts 2)",
         "fallback 4/5: cluster 3 (request refused, attempts 1)",
@@ -285,5 +288,75 @@ def test_log_lines_carry_no_raw_text() -> None:
     naming.name_clusters(
         FakeLLMClient(handler=handler), _cfg(), members, sleep=_no_sleep, log=lines.append
     )
-    assert len(lines) == 4 and all(marker not in line for line in lines)
-    assert lines[3] == 'named 4/4: cluster 3 -> "Good fine" (attempts 1)'
+    assert all(marker not in line for line in lines)
+    final = [line for line in lines if not line.startswith("rejected")]
+    assert len(final) == 4 and final[3] == 'named 4/4: cluster 3 -> "Good fine" (attempts 1)'
+    assert len(lines) == 4 + 3  # three rejected replies for cluster 0
+
+
+def test_rejection_reasons_are_short_one_line_and_never_echo_the_reply() -> None:
+    marker = "RAWMARKER"
+    replies = iter([marker + " not json", '["x"]', '{"name": 3, "note": "' + marker + '"}'])
+    long_name = '{"name": "' + "w " * 40 + marker + '"}'
+    lines: list[str] = []
+    members = {0: ["a"], 1: ["b"]}
+    client = FakeLLMClient(handler=lambda r: long_name if "- b" in r.user else next(replies))
+    naming.name_clusters(client, _cfg(), members, sleep=_no_sleep, log=lines.append)
+    rejected = [line for line in lines if line.startswith("rejected")]
+    assert rejected[:3] == [
+        "rejected cluster 0 attempt 1: not valid JSON",
+        "rejected cluster 0 attempt 2: expected a JSON object",
+        'rejected cluster 0 attempt 3: "name" must be a string',
+    ]
+    assert all(marker not in line and "\n" not in line and len(line) < 260 for line in lines)
+    assert naming.rejected_message(2, 1, "why") == "rejected cluster 2 attempt 1: why"
+
+
+def _env(client: FakeLLMClient) -> naming.Env:
+    return naming.Env(client=client, cfg=_cfg(), throttle=naming.Throttle(), sleep=_no_sleep)
+
+
+def _ask(client: FakeLLMClient) -> naming.Asked[str]:
+    request = naming._request(_cfg(), ("a",), ())
+    return naming.ask_validated(_env(client), request, lambda t: naming.parse_name(t, ("a",), ()))
+
+
+def test_ask_validated_outcomes() -> None:
+    ok = _ask(FakeLLMClient(script=["oops", '{"name": "Good"}']))
+    assert (ok.value, ok.reason, ok.rejections) == ("Good", "", ("not valid JSON",))
+    assert (ok.stats.calls, ok.stats.retries) == (2, 0)
+
+    rejected = _ask(FakeLLMClient(script=['{"name": "Other"}'] * 3))
+    assert rejected.value is None and rejected.reason == "replies rejected"
+    assert len(rejected.rejections) == 3 and rejected.stats.calls == 3
+
+    down = _ask(FakeLLMClient(script=[TransientLLMError("x")] * 2))
+    assert (down.value, down.reason, down.stats.calls) == (None, "retries exhausted", 2)
+
+    refused = _ask(FakeLLMClient(script=[PermanentLLMError("no")]))
+    assert (refused.value, refused.reason, refused.rejections) == (None, "request refused", ())
+
+    with pytest.raises(FatalLLMError):
+        _ask(FakeLLMClient(script=[FatalLLMError("denied")]))
+
+
+def test_add_stats() -> None:
+    first = naming.CallStats(calls=1, retries=2, rate_limited=3)
+    second = naming.CallStats(calls=10, retries=20, rate_limited=30)
+    total = naming.add_stats(first, second)
+    assert (total.calls, total.retries, total.rate_limited) == (11, 22, 33)
+    assert first.calls == 1
+
+
+def test_ask_validated_calls_on_one_env_have_independent_stats() -> None:
+    client = FakeLLMClient(script=["oops", '{"name": "Good"}', '{"name": "Better"}'])
+    env = _env(client)
+    request = naming._request(_cfg(), ("a",), ())
+
+    def parse(text: str) -> str:
+        return naming.parse_name(text, ("a",), ())
+
+    first = naming.ask_validated(env, request, parse)
+    second = naming.ask_validated(env, request, parse)
+    assert (first.value, first.stats.calls, first.rejections) == ("Good", 2, ("not valid JSON",))
+    assert (second.value, second.stats.calls, second.rejections) == ("Better", 1, ())

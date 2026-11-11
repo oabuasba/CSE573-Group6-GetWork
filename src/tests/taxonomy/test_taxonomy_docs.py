@@ -48,8 +48,20 @@ def test_readme_documents_concept_names() -> None:
 def test_readme_documents_parallel_naming() -> None:
     text = (PACKAGE / "README.md").read_text(encoding="utf-8")
     for needle in ["--workers", "NAME_WORKERS", "stderr", "2 or more", "differ from `--workers 1`",
-                   "re-asked", "id order"]:
+                   "re-asked", "id order",
+                   "--max-tokens", "--reasoning-effort", "empty reply"]:
         assert needle in text, needle
+
+
+def test_readme_documents_overlap_review() -> None:
+    text = (PACKAGE / "README.md").read_text(encoding="utf-8")
+    needles = ["--overlap-rounds", "--no-overlap-judge", "NAME_OVERLAP_ROUNDS", "`overlap`",
+               "name_v2+rename_v1", "overlap_v1", "renamed", "kept", "overlap review done",
+               "only warns", "AV-6", "n_overlap_groups"]
+    for needle in needles:
+        assert needle in text, needle
+    headings = [line for line in text.splitlines() if line.startswith("#")]
+    assert any("AV-6" in heading for heading in headings)
 
 
 def _imported_modules(line: str) -> list[str]:

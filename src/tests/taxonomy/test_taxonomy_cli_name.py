@@ -15,7 +15,7 @@ from getwork.embed.fake import FakeEmbeddingClient
 from getwork.llm import factory as llm_factory
 from getwork.llm.client import FatalLLMError, LLMRequest
 from getwork.llm.fake import FakeLLMClient
-from getwork.taxonomy import build, cli, cli_name, model, naming, report
+from getwork.taxonomy import build, cli, cli_name, model, naming, overlap, report
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -165,7 +165,8 @@ def test_name_llm_member_list_falls_back(
     wanted = {members[0][0]: listed, members[1][0]: "Data Stores", members[2][0]: "Cloud Hosting"}
     client = FakeLLMClient(handler=_llm_handler(wanted))
     capsys.readouterr()
-    assert _run(root, "name", "--method", "llm", "--model", "m", llm_client=client) == 1
+    assert _run(root, "name", "--method", "llm", "--model", "m", "--overlap-rounds", "0",
+                llm_client=client) == 1
     printed = json.loads(capsys.readouterr().out)
     assert (printed["n_fallback"], printed["n_member_list"]) == (1, 1)
     rows = _names_rows(root)
@@ -184,7 +185,8 @@ def test_name_llm_all_succeed_exit_0(
     wanted = {members[i][0]: f"Group {i}" for i in range(3)}
     capsys.readouterr()
     code = _run(root, "name", "--method", "llm", "--model", "m",
-                "--top-members", "2", llm_client=FakeLLMClient(handler=_llm_handler(wanted)))
+                "--overlap-rounds", "0", "--top-members", "2",
+                llm_client=FakeLLMClient(handler=_llm_handler(wanted)))
     assert code == 0
     assert {r["status"] for r in _names_rows(root)} == {"ok"}
     assert json.loads(capsys.readouterr().out)["n_member_list"] == 0
@@ -351,7 +353,7 @@ def test_name_llm_top_members_and_extra_body_reach_the_request(tmp_path: Path) -
     wanted = {members[i][0]: f"Group {i}" for i in range(3)}
     client = FakeLLMClient(handler=_llm_handler(wanted))
     code = _run(root, "name", "--method", "llm", "--model", "m", "--top-members", "2",
-                "--extra-body", '{"thinking": false}', llm_client=client)
+                "--overlap-rounds", "0", "--extra-body", '{"thinking": false}', llm_client=client)
     assert code == 0 and len(client.calls) == 3
     for call in client.calls:
         assert call.user.split("\n\nUSED NAMES:")[0].count("\n- ") == 2
@@ -450,7 +452,9 @@ def test_build_accepts_concept_and_single_member_names(tmp_path: Path) -> None:
 
 
 def _llm_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
-    return _run(root, "name", "--method", "llm", "--model", "m", *extra, llm_client=client)
+    defaults = ["--overlap-rounds", "0"]  # later options win; review tests pass their own
+    return _run(root, "name", "--method", "llm", "--model", "m", *defaults, *extra,
+                llm_client=client)
 
 
 def _own_name_client(root: Path) -> FakeLLMClient:
@@ -474,7 +478,7 @@ def test_name_workers_same_file_and_progress_on_stderr(
     assert len(outputs[1].out.splitlines()) == 1
     summary = json.loads(outputs[1].out)
     assert set(summary) == {"names_file", "method", "n_clusters", "n_fallback", "n_duplicate",
-                            "n_member_list"}
+                            "n_member_list", "n_renamed", "n_overlap"}
     lines = outputs[1].err.splitlines()
     assert [line.split(" -> ")[0] for line in lines] == [
         f"named {i + 1}/3: cluster {i}" for i in range(3)
@@ -531,3 +535,277 @@ def test_stderr_log_redacts_secrets(capsys: pytest.CaptureFixture[str]) -> None:
     cli_name._stderr_log(["sk-test-secret"])("named 1/1: cluster 0 -> sk-test-secret")
     out = capsys.readouterr()
     assert out.out == "" and out.err == "named 1/1: cluster 0 -> ***\n"
+
+
+def test_name_rejection_lines_are_redacted_on_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    reply = json.dumps({"name": "sk-SECRET one two three four five"})
+    client = FakeLLMClient(handler=lambda r: reply)
+    bundle = llm_factory.ClientBundle(client=client, backend="voyager", model="m",
+                                      secrets=["sk-SECRET"])
+    monkeypatch.setattr(llm_factory, "make_client", lambda **kw: bundle)
+    capsys.readouterr()
+    assert _run(root, "name", "--method", "llm", "--model", "m", "--workers", "2") == 1
+    err = capsys.readouterr().err
+    assert "sk-SECRET" not in err and "rejected cluster 0 attempt 1: '***" in err
+
+
+def _request_fields(tmp_path: Path, *extra: str) -> tuple[int, int, object, int]:
+    root = tmp_path / "art"
+    _through_grid(root)
+    client = _own_name_client(root)
+    code = _llm_run(root, *extra, client=client)
+    call = client.calls[0]
+    return code, call.max_tokens, call.reasoning_effort, len(client.calls)
+
+
+def test_name_request_defaults_and_overrides(tmp_path: Path) -> None:
+    assert _request_fields(tmp_path / "a") == (0, 1024, "none", 3)
+    assert _request_fields(tmp_path / "b", "--max-tokens", "77", "--reasoning-effort", "low") == (
+        0, 77, "low", 3,
+    )
+    assert _request_fields(tmp_path / "c", "--reasoning-effort", "omit")[2] is None
+
+
+def test_name_reasoning_effort_default_follows_backend(tmp_path: Path) -> None:
+    local = _request_fields(tmp_path / "a", "--backend", "local")
+    assert local[2] is None
+    voyager = _request_fields(tmp_path / "b", "--backend", "voyager")
+    assert voyager[2] == "none"
+
+
+def test_name_max_tokens_and_reasoning_validated(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    for bad in (("--max-tokens", "0"), ("--max-tokens", "x"), ("--reasoning-effort", "max")):
+        client = _own_name_client(root)
+        assert _llm_run(root, *bad, client=client) == 2 and client.calls == []
+
+
+NAMED = ["Frontend Tools", "Frontend Tools Suite", "Cloud Platforms"]
+RENAMED = {0: "Interface Engineering", 1: "Data Storage"}
+
+
+def _review_client(
+    root: Path, *, renames: dict[int, str] | None = None, fatal: bool = False
+) -> FakeLLMClient:
+    firsts = {skills[0]: cid for cid, skills in _members(root).items()}
+    renames = RENAMED if renames is None else renames
+
+    def handler(request: LLMRequest) -> str:
+        if request.user.startswith("CLUSTERS:"):
+            return '{"groups": []}'
+        if "OVERLAPS WITH:" in request.user:
+            if fatal:
+                raise FatalLLMError("denied")
+            first = request.user.split("MEMBERS:\n- ")[1].split("\n")[0]
+            return json.dumps({"name": renames[firsts[first]]})
+        first = request.user.splitlines()[1].removeprefix("- ")
+        return json.dumps({"name": NAMED[firsts[first]]})
+
+    return FakeLLMClient(handler=handler)
+
+
+def _review_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
+    return _run(root, "name", "--method", "llm", "--model", "m", *extra, llm_client=client)
+
+
+def _kinds(client: FakeLLMClient) -> dict[str, int]:
+    judge = sum(c.user.startswith("CLUSTERS:") for c in client.calls)
+    rename = sum("OVERLAPS WITH:" in c.user for c in client.calls)
+    return {"judge": judge, "rename": rename, "name": len(client.calls) - judge - rename}
+
+
+def test_name_review_renames_overlapping_clusters(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    assert _review_run(root, client=_review_client(root)) == 0
+    out = capsys.readouterr()
+    summary = json.loads(out.out)
+    assert (summary["n_renamed"], summary["n_overlap"], summary["n_fallback"]) == (2, 0, 0)
+    rows = _names_rows(root)
+    assert [r["name"] for r in rows] == ["Interface Engineering", "Data Storage", "Cloud Platforms"]
+    renamed_version = "name_v2+rename_v1"
+    assert [r["prompt_version"] for r in rows] == [renamed_version, renamed_version, "name_v2"]
+    assert {r["status"] for r in rows} == {"ok"} and {r["method"] for r in rows} == {"llm"}
+    lines = out.err.splitlines()
+    assert any(line.startswith("renamed 1/2: cluster 0") for line in lines)
+    assert lines[-1] == "overlap review done: no overlapping names"
+
+
+def test_name_review_unresolved_marks_overlap(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    stubborn = {0: "Frontend Tool Kit", 1: "Frontend Tools Core"}
+    capsys.readouterr()
+    assert _review_run(root, client=_review_client(root, renames=stubborn)) == 0
+    out = capsys.readouterr()
+    rows = _names_rows(root)
+    assert [r["name"] for r in rows] == NAMED
+    assert [r["status"] for r in rows] == ["overlap", "overlap", "ok"]
+    assert {r["prompt_version"] for r in rows} == {"name_v2"}
+    summary = json.loads(out.out)
+    assert (summary["n_renamed"], summary["n_overlap"]) == (0, 2)
+    assert "overlap review done: 2 cluster(s) still overlapping: 0, 1" in out.err
+
+
+def test_name_review_flags(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    off = _review_client(root)
+    capsys.readouterr()
+    assert _review_run(root, "--overlap-rounds", "0", client=off) == 0
+    assert _kinds(off) == {"judge": 0, "rename": 0, "name": 3}
+    assert "overlap" not in capsys.readouterr().err
+    no_judge = _review_client(root)
+    assert _review_run(root, "--no-overlap-judge", "--force", client=no_judge) == 0
+    assert _kinds(no_judge) == {"judge": 0, "rename": 2, "name": 3}
+    one_round = _review_client(root)
+    assert _review_run(root, "--overlap-rounds", "1", "--force", client=one_round) == 0
+    assert _kinds(one_round)["judge"] == 1
+
+
+def test_name_review_same_file_for_workers(tmp_path: Path) -> None:
+    files = []
+    for workers in ("2", "3"):
+        root = tmp_path / f"art{workers}"
+        _through_grid(root)
+        assert _review_run(root, "--workers", workers, client=_review_client(root)) == 0
+        files.append((root / "taxonomy" / "cluster_names.csv").read_bytes())
+    assert files[0] == files[1]
+
+
+def test_name_review_fatal_exit_3(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    assert _review_run(root, client=_review_client(root, fatal=True)) == 3
+    assert "denied" in capsys.readouterr().err
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_overlap_rounds_invalid_exit_2(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    for bad in ("-1", "x"):
+        client = _review_client(root)
+        assert _review_run(root, "--overlap-rounds", bad, client=client) == 2
+        assert client.calls == []
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_overlap_flags_ignored_for_heuristic(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plain, flagged = tmp_path / "plain", tmp_path / "flagged"
+    for root, extra in ((plain, ()), (flagged, ("--overlap-rounds", "3", "--no-overlap-judge"))):
+        _through_grid(root)
+        capsys.readouterr()
+        assert _run(root, "name", *extra) == 0
+    out = capsys.readouterr()
+    summary = json.loads(out.out)
+    assert (summary["method"], summary["n_renamed"], summary["n_overlap"]) == ("heuristic", 0, 0)
+    assert "overlap" not in out.err
+    names = "taxonomy/cluster_names.csv"
+    assert (plain / names).read_bytes() == (flagged / names).read_bytes()
+
+
+def test_name_rows_keep_duplicate_status_for_unresolved_ids() -> None:
+    members = {0: ["a1", "a2"], 1: ["b1", "b2"], 2: ["c1", "c2"]}
+    llm = naming.NameResult(names={0: "Same Name", 1: "same name", 2: "Other Area"}, failed=[])
+    review = overlap.ReviewResult(
+        names=dict(llm.names), renamed={}, unresolved=[0, 1, 2], rounds_run=1,
+        judge_failures=0, stats=naming.CallStats(),
+    )
+    bundle = llm_factory.ClientBundle(client=FakeLLMClient(script=[]), backend="voyager",
+                                      model="m", secrets=[])
+    rows = cli_name._name_rows(members=members, llm=llm, bundle=bundle, review=review)
+    assert [row[5] for row in rows] == ["duplicate", "duplicate", "overlap"]
+
+
+def test_review_skips_fallback_clusters(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    firsts = {skills[0]: cid for cid, skills in _members(root).items()}
+
+    def handler(request: LLMRequest) -> str:
+        first = request.user.splitlines()[1].removeprefix("- ")
+        return json.dumps({"name": "Frontend Tools" if firsts[first] == 0 else "Other"})
+
+    client = FakeLLMClient(handler=handler)
+    assert _review_run(root, client=client) == 1
+    assert _kinds(client)["judge"] == 0 and _kinds(client)["rename"] == 0
+    assert [r["method"] for r in _names_rows(root)] == ["llm", "heuristic_fallback",
+                                                         "heuristic_fallback"]
+
+
+def test_nonnegative_int() -> None:
+    import argparse
+
+    from getwork.taxonomy import cli_common
+
+    assert (cli_common.nonnegative_int("0"), cli_common.nonnegative_int("7")) == (0, 7)
+    for bad in ("-1", "x", "1.5", ""):
+        with pytest.raises(argparse.ArgumentTypeError):
+            cli_common.nonnegative_int(bad)
+
+
+def test_build_warns_but_builds_on_overlap(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    _write_names(root, {0: "Frontend Tools", 1: "Frontend Tools Suite", 2: "Cloud Platforms"})
+    capsys.readouterr()
+    assert _run(root, "build") == 0
+    out = capsys.readouterr()
+    warnings = [line for line in out.err.splitlines() if line.startswith("warning: clusters")]
+    assert len(warnings) == 1 and "clusters 0, 1 have overlapping names" in warnings[0]
+    assert json.loads(out.out)["n_overlap_groups"] == 1
+    assert (root / "taxonomy" / "taxonomy.json").exists()
+    _write_names(root, {0: "Frontend Work", 1: "Database Storage", 2: "Cloud Platforms"})
+    capsys.readouterr()
+    assert _run(root, "build") == 0
+    clean = capsys.readouterr()
+    assert json.loads(clean.out)["n_overlap_groups"] == 0 and "warning" not in clean.err
+
+
+def test_build_overlap_count_ignores_member_list_names(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    first, second = _members(root)[1][:2]
+    member_list = f"{first} / {second}"
+    concept = f"{first} {second} Suite".title()
+    # the member list's words are a subset of the concept name's: a rules overlap if it counted
+    assert overlap.rule_overlap(member_list, concept) is not None
+    _write_names(root, {0: "Frontend Work", 1: member_list, 2: concept})
+    capsys.readouterr()
+    assert _run(root, "build", ALLOW) == 0
+    out = capsys.readouterr()
+    assert json.loads(out.out)["n_overlap_groups"] == 0
+    assert "warning: clusters" not in out.err
+    _write_names(root, {0: "Frontend Work", 1: concept, 2: concept + " Extra"})
+    capsys.readouterr()
+    assert _run(root, "build", ALLOW) == 0
+    assert json.loads(capsys.readouterr().out)["n_overlap_groups"] == 1
+
+
+def test_build_ignores_overlap_status_column(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    _write_names(root, {0: "Frontend Work", 1: "Database Storage", 2: "Cloud Platforms"})
+    path = root / "taxonomy" / "cluster_names.csv"
+    path.write_text(path.read_text(encoding="utf-8").replace("member_list", "overlap"),
+                    encoding="utf-8")
+    assert "overlap" in path.read_text(encoding="utf-8")
+    assert _run(root, "build") == 0

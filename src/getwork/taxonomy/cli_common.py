@@ -33,6 +33,16 @@ def positive_int(text: str) -> int:
     return value
 
 
+def nonnegative_int(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not an integer: {text!r}") from None
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"must be zero or a positive integer: {text}")
+    return value
+
+
 def read_counts_summary(root: Path) -> dict:
     path = paths.skills_dir(root) / counts.SUMMARY_FILE
     if not path.exists():

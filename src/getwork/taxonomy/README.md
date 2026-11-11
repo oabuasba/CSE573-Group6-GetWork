@@ -19,7 +19,9 @@ uv run taxonomy embed [embed options] [--chunk-size 256]
 uv run taxonomy grid [--max-noise 0.30] [--min-clusters 2] [--seed 0] [--grid-file PATH]
                      [--umap-components 5] [--umap-neighbors 15]
 uv run taxonomy select --config-id ID
-uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--workers 1] [--force]
+uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--workers 1] [--max-tokens 1024]
+                     [--reasoning-effort none|low|medium|high|omit]
+                     [--overlap-rounds 2] [--no-overlap-judge] [--force]
 uv run taxonomy build [--names PATH] [--allow-member-names]
 ```
 
@@ -84,12 +86,59 @@ Each cluster prints one progress line on stderr when its name is final, in id or
 the single JSON summary line (`2>/dev/null` silences the progress):
 
 ```
+rejected cluster 13 attempt 1: 'Java' is one of the member skills; give the broader concept they share
 named 7/71: cluster 12 -> "Unit Testing" (attempts 2)
 fallback 8/71: cluster 13 (replies rejected, attempts 3)
 ```
 
+Before a cluster's final `named` or `fallback` line, one `rejected cluster N attempt K: <reason>` line
+is printed for every reply of that cluster that failed validation (K counts the cluster's rejected
+replies, not model calls; a name repeated from an earlier cluster counts as one). The reason is the
+validation message, cut to 200 characters; it can show the rejected name (at most 40 characters)
+but never the raw reply: a reply that is not JSON shows `not valid JSON`. The lines of one cluster
+come together in id order for every `--workers`.
+
+Each naming request sends `max_tokens` 1024 (`--max-tokens`) and a reasoning effort
+(`--reasoning-effort`), the same choices as the structurer: by default `none` for the Voyager
+backend and omitted for `--backend local`; `omit` never sends it. A reasoning model with a small
+budget or default effort can spend it all thinking and return an empty reply (`not valid JSON` or
+`empty reply` in the `rejected` lines), so keep effort `none` or raise `--max-tokens`.
+
 `--workers` is accepted and ignored for `--method heuristic`. `scripts/run_pipeline.sh` passes
 `NAME_WORKERS` (default 4).
+
+## Overlap review of names
+
+A name can be unique and still too close to another ("Development Tools" and "Software Development
+Tools"). After naming, `taxonomy name --method llm` reviews the model-made names (heuristic fallbacks
+are skipped; fewer than two model-named clusters means no review). Each round (default 2,
+`--overlap-rounds N`, `0` turns the review off) finds groups of overlapping names two ways: word
+rules (same words, one name's words inside the other's, or at least half the words shared; plural
+and stop words ignored) and one judge call (prompt `overlap_v1`) that lists all names with five
+members each and catches synonyms; `--no-overlap-judge` uses the rules only, and a failed judge call
+falls back to the rules with a stderr line. Every cluster in a group is asked again (prompt
+`rename_v1`) with the other cluster's name and members and the reason, and must return a name that
+passes the concept rules and does not overlap another name. With `--workers` 2 or more the asks run
+concurrently and are checked in id order, so the result is the same for every value of 2 or more.
+
+A cluster that cannot be made distinct after three tries keeps its name, is not asked again, and
+gets status `overlap` in `cluster_names.csv` (status order: `member_list`, `duplicate`, `overlap`,
+`ok`). A renamed row has `prompt_version` `name_v2+rename_v1`. The JSON summary gains `n_renamed`
+and `n_overlap`; the exit code stays 0 when only overlap remains. Review lines on stderr:
+
+```
+overlap group 1/1: clusters 3, 5 (rules)
+overlap review round 1/2: 1 group(s), 2 cluster(s) to rename
+renamed 1/2: cluster 3 "Development Tools" -> "Build and Code Tools" (attempts 1)
+kept 2/2: cluster 5 "Software Development Tools" (replies rejected, attempts 3)
+overlap review done: 1 cluster(s) still overlapping: 5
+```
+
+`taxonomy build` only warns: it prints `warning: clusters 3, 5 have overlapping names (...)` to
+stderr for each rule-detected group (names that are member lists are ignored) and adds
+`n_overlap_groups` to its JSON summary. Overlap is a judgment call and the rules have false
+positives, so the build is never refused for it. `scripts/run_pipeline.sh` passes
+`NAME_OVERLAP_ROUNDS` (default 2).
 
 ## Review procedure
 
@@ -196,3 +245,10 @@ exits 0 (or 1 from `name` if some clusters fell back, see AV-5).
 Open `ROOT/taxonomy/cluster_names.csv`. Pass: every row has method `llm` and status `ok`, and each
 name is a concept label. A `heuristic_fallback` row (status `member_list`) must be edited by hand
 before `taxonomy build` succeeds.
+
+### AV-6: read the overlap review (uses your keys)
+
+Run the naming step with `--method llm` (or `bash scripts/run_pipeline.sh`; `NAME_OVERLAP_ROUNDS`
+sets the rounds). Read the stderr lines `overlap group`, `renamed`, `kept` and
+`overlap review done`, then open `cluster_names.csv`. Pass: no row has status `overlap`, or a short
+list that you fix by hand before `taxonomy build`; renamed rows show `name_v2+rename_v1`.

@@ -10,6 +10,7 @@ import time
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import Generic, TypeVar
 
 from getwork.alias import normalize
 from getwork.llm.client import LLMClient, LLMRequest, PermanentLLMError
@@ -18,6 +19,7 @@ from getwork.llm.validated import ValidationExhausted, complete_validated, parse
 from getwork.structure import pool
 from getwork.taxonomy import model
 
+T = TypeVar("T")
 NAME_PROMPT_VERSION: str = "name_v2"
 MAX_NAME_WORDS: int = 5
 GENERIC_NAMES: frozenset[str] = frozenset(
@@ -49,6 +51,7 @@ FALLBACK_REASONS: dict[type[Exception], str] = {
     PermanentLLMError: "request refused",
 }
 _CLUSTER_FAILURES = tuple(FALLBACK_REASONS)
+MAX_REASON_CHARS = 200
 
 
 @functools.cache
@@ -107,7 +110,8 @@ class NameConfig:
     model: str
     backend: str = "voyager"
     top_members: int = 25
-    max_tokens: int = 256
+    max_tokens: int = 1024
+    reasoning_effort: str | None = "none"
     max_validation_attempts: int = 3
     extra_body: Mapping[str, object] | None = None
     retry: RetryConfig = RetryConfig()
@@ -127,7 +131,7 @@ def _request(cfg: NameConfig, shown: Sequence[str], used: Sequence[str]) -> LLMR
         model=cfg.model,
         temperature=0,
         max_tokens=cfg.max_tokens,
-        reasoning_effort=None,
+        reasoning_effort=cfg.reasoning_effort,
         response_schema=None,
         extra_body=cfg.extra_body,
     )
@@ -141,6 +145,14 @@ def fallback_message(done: int, total: int, cluster_id: int, reason: str, attemp
     return f"fallback {done}/{total}: cluster {cluster_id} ({reason}, attempts {attempts})"
 
 
+def rejected_message(cluster_id: int, attempt: int, reason: str) -> str:
+    return f"rejected cluster {cluster_id} attempt {attempt}: {reason}"
+
+
+def short_reason(error: ValueError) -> str:
+    return " ".join(str(error).split())[:MAX_REASON_CHARS]
+
+
 @dataclass(frozen=True)
 class _Outcome:
     """One cluster's answer: a name, or the fixed fallback reason; stats cover only this cluster."""
@@ -148,10 +160,11 @@ class _Outcome:
     name: str | None
     reason: str
     stats: CallStats
+    rejections: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
-class _Env:
+class Env:
     """What every model call needs; the Throttle is the only shared mutable part."""
 
     client: LLMClient
@@ -160,7 +173,7 @@ class _Env:
     sleep: Callable[[float], None]
 
 
-def _add_stats(first: CallStats, second: CallStats) -> CallStats:
+def add_stats(first: CallStats, second: CallStats) -> CallStats:
     return CallStats(
         calls=first.calls + second.calls,
         retries=first.retries + second.retries,
@@ -172,13 +185,34 @@ def _fallback_reason(exc: Exception) -> str:
     return next(reason for kind, reason in FALLBACK_REASONS.items() if isinstance(exc, kind))
 
 
-def _name_one(env: _Env, shown: Sequence[str], used: Sequence[str]) -> _Outcome:
+@dataclass(frozen=True)
+class Asked(Generic[T]):
+    """One validated request: the parsed value, or None with a fixed FALLBACK_REASONS text."""
+
+    value: T | None
+    reason: str
+    stats: CallStats
+    rejections: tuple[str, ...] = ()
+
+
+def ask_validated(env: Env, request: LLMRequest, parse: Callable[[str], T]) -> Asked[T]:
+    """Send request and validate with parse, recording a short reason for every rejected reply."""
     stats = CallStats()
+    rejections: list[str] = []
+
+    def recording_parse(text: str) -> T:
+        # parse_json_object messages are fixed text; check_concept_name echoes only the short name
+        try:
+            return parse(text)
+        except ValueError as exc:
+            rejections.append(short_reason(exc))
+            raise
+
     try:
-        name = complete_validated(
+        value = complete_validated(
             env.client,
-            _request(env.cfg, shown, used),
-            lambda text: parse_name(text, shown, used),
+            request,
+            recording_parse,
             cfg=env.cfg.retry,
             throttle=env.throttle,
             sleep=env.sleep,
@@ -186,8 +220,17 @@ def _name_one(env: _Env, shown: Sequence[str], used: Sequence[str]) -> _Outcome:
             max_attempts=env.cfg.max_validation_attempts,
         )
     except _CLUSTER_FAILURES as exc:
-        return _Outcome(name=None, reason=_fallback_reason(exc), stats=stats)
-    return _Outcome(name=name, reason="", stats=stats)
+        return Asked(None, _fallback_reason(exc), stats, tuple(rejections))
+    return Asked(value, "", stats, tuple(rejections))
+
+
+def _name_one(env: Env, shown: Sequence[str], used: Sequence[str]) -> _Outcome:
+    asked = ask_validated(
+        env, _request(env.cfg, shown, used), lambda text: parse_name(text, shown, used)
+    )
+    return _Outcome(
+        name=asked.value, reason=asked.reason, stats=asked.stats, rejections=asked.rejections
+    )
 
 
 class _Tally:
@@ -200,9 +243,12 @@ class _Tally:
         self._log = log
 
     def finish(self, cluster_id: int, outcome: _Outcome) -> None:
-        self.result.stats = _add_stats(self.result.stats, outcome.stats)
+        self.result.stats = add_stats(self.result.stats, outcome.stats)
         done = len(self.result.names) + len(self.result.failed) + 1
         attempts = outcome.stats.calls
+        if self._log is not None:
+            for number, reason in enumerate(outcome.rejections, start=1):
+                self._log(rejected_message(cluster_id, number, reason))
         if outcome.name is None:
             self.result.failed.append(cluster_id)
             line = fallback_message(done, self._total, cluster_id, outcome.reason, attempts)
@@ -220,16 +266,21 @@ def _shown(
     return tuple(members[cluster_id][: cfg.top_members])
 
 
-def _resolve(env: _Env, shown: Sequence[str], draft: _Outcome, tally: _Tally) -> _Outcome:
+def _resolve(env: Env, shown: Sequence[str], draft: _Outcome, tally: _Tally) -> _Outcome:
     taken = {name.casefold() for name in tally.accepted}
     if draft.name is None or draft.name.casefold() not in taken:
         return draft
+    duplicate = f"{draft.name!r} is already the name of another cluster; make it more specific"
     again = _name_one(env, shown, tuple(tally.accepted))
-    return replace(again, stats=_add_stats(draft.stats, again.stats))
+    return replace(
+        again,
+        stats=add_stats(draft.stats, again.stats),
+        rejections=(*draft.rejections, short_reason(ValueError(duplicate)), *again.rejections),
+    )
 
 
 def _name_in_parallel(
-    env: _Env, members: Mapping[int, Sequence[str]], workers: int, tally: _Tally
+    env: Env, members: Mapping[int, Sequence[str]], workers: int, tally: _Tally
 ) -> None:
     def draft_one(cluster_id: int) -> _Outcome:
         return _name_one(env, _shown(env.cfg, members, cluster_id), ())
@@ -269,7 +320,7 @@ def name_clusters(
     if workers < 1:
         raise ValueError(f"workers must be at least 1, got {workers}")
     tally = _Tally(total=len(members), log=log)
-    env = _Env(client=client, cfg=cfg, throttle=Throttle(), sleep=sleep)
+    env = Env(client=client, cfg=cfg, throttle=Throttle(), sleep=sleep)
     if workers >= 2:
         _name_in_parallel(env, members, workers, tally)
         return tally.result
