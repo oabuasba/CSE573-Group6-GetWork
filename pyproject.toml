@@ -53,7 +53,7 @@ include = ["getwork*"]
 
 [tool.setuptools.package-data]
 "getwork.structure" = ["prompts/*.md"]
-"getwork.alias" = ["alias_curated.csv", "prompts/*.md"]
+"getwork.alias" = ["alias_curated.csv", "version_families.csv", "prompts/*.md"]
 "getwork.taxonomy" = ["prompts/*.md"]
 "getwork.relabel" = ["prompts/*.md"]
 

@@ -4,6 +4,7 @@ import pytest
 
 from getwork.alias import build, normalize
 from getwork.alias.build import CuratedPair
+from getwork.alias.versions import VersionFamily
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -103,3 +104,53 @@ def test_shipped_curated_file_is_consistent() -> None:
     for pair in pairs:
         key = normalize.normalize_key(pair.canonical)
         assert table.entries[key] == normalize.clean_surface(pair.canonical)
+
+
+def _families(*rows: tuple[str, str, bool]) -> list[VersionFamily]:
+    return [VersionFamily(base, canonical, map_bare) for base, canonical, map_bare in rows]
+
+
+WINDOWS_FAMILIES = _families(("windows", "Windows", True), ("windows server", "Windows Server", True))
+
+
+def test_build_table_folds_versions() -> None:
+    forms = {"Windows 7": 3, "windows 10": 2, "Windows Server 2019": 1, "Cisco 3750": 1}
+    table = build.build_table(forms, [], WINDOWS_FAMILIES)
+    assert table.canonical("Windows 7") == "Windows"
+    assert table.canonical("windows 10") == "Windows"
+    assert table.canonical("Windows Server 2019") == "Windows Server"
+    assert table.canonical("Cisco 3750") == "Cisco 3750"
+
+
+def test_build_table_map_bare_and_self_map() -> None:
+    families = _families(("sql", "SQL Server", False), ("windows", "Windows", True))
+    table = build.build_table({"SQL": 5, "SQL 2008": 1, "Windows": 1, "win": 1}, [], families)
+    assert table.canonical("SQL") == "SQL"
+    assert table.canonical("SQL 2008") == "SQL Server"
+    assert table.canonical("SQL Server") == "SQL Server"
+    assert table.entries["sql server"] == "SQL Server"
+    assert table.canonical("windows") == "Windows"
+
+
+def test_build_table_family_conflict_rejected() -> None:
+    curated = [CuratedPair("windows", "Windows OS")]
+    with pytest.raises(ValueError, match="'windows'"):
+        build.build_table({"Windows 7": 1}, curated, _families(("windows", "Windows", True)))
+
+
+def test_build_table_without_families_is_unchanged() -> None:
+    forms = {"Windows 7": 2, "JAVA": 1, "js": 1}
+    curated = [CuratedPair("js", "JavaScript")]
+    plain = build.build_table(forms, curated)
+    assert build.build_table(forms, curated, ()).entries == plain.entries
+    assert build.build_table(forms, curated, ()).version == plain.version
+    with_families = build.build_table(forms, curated, WINDOWS_FAMILIES)
+    assert with_families.version != plain.version
+
+
+def test_curated_row_beats_family_fold() -> None:
+    forms = {"Win 7": 1, "Windows 7": 1}
+    curated = [CuratedPair("win 7", "Windows Seven")]
+    table = build.build_table(forms, curated, _families(("windows", "Windows", True)))
+    assert table.canonical("Win 7") == "Windows Seven"
+    assert table.canonical("Windows 7") == "Windows"

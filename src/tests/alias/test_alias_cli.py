@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from getwork import fileio
-from getwork.alias import build, cli
+from getwork.alias import build, cli, versions
 from getwork.llm.client import FatalLLMError, LLMRequest
 from getwork.llm.fake import FakeLLMClient
 from getwork.structure import schema
@@ -156,7 +156,7 @@ def test_propose_writes_draft_and_leaves_curated(tmp_path: Path) -> None:
     lines = (tmp_path / "a/alias/alias_draft.csv").read_text().splitlines()
     assert lines[0] == ",".join(cli.DRAFT_COLUMNS)
     assert lines[0].startswith("alias,canonical,alias_count,canonical_count,batch,status,")
-    assert len(lines) == 2 and lines[1].endswith(",new,m,voyager,alias_v1")
+    assert len(lines) == 2 and lines[1].endswith(",new,m,voyager,alias_v2")
     summary = json.loads((tmp_path / "a/alias/alias_draft_summary.json").read_text())
     assert summary["n_rows"] == 1 and summary["failed_batches"] == []
     assert set(summary) == {
@@ -197,7 +197,7 @@ def test_propose_conflict_status_and_backend_column(
     client = FakeLLMClient(handler=_pairing_handler)
     assert cli.main(["propose", *dirs, "--model", "m", "--backend", "local"], client=client) == 0
     rows = (tmp_path / "a/alias/alias_draft.csv").read_text().splitlines()[1:]
-    assert rows and all(row.endswith(",new,m,local,alias_v1") for row in rows)
+    assert rows and all(row.endswith(",new,m,local,alias_v2") for row in rows)
 
     # An alias can only repeat across batches if the skill list repeats it, so feed rows directly.
     def row(canonical: str, batch: int, status: str) -> dict:
@@ -225,3 +225,61 @@ def test_default_run_in_empty_cwd_exits_2_and_creates_nothing(
     assert cli.main(["build"]) == 2
     assert "data/structured_trial" in capsys.readouterr().err
     assert list(tmp_path.iterdir()) == []
+
+
+def test_build_writes_version_report_and_folds(tmp_path: Path) -> None:
+    structured = tmp_path / "s"
+    fileio.write_jsonl_atomic(
+        structured / "resumes" / "resumes_structured.jsonl",
+        [_record("r-0", ["Windows 7", "Windows Server 2019", "Windows"], "resumes")],
+    )
+    fileio.write_jsonl_atomic(
+        structured / "postings" / "postings_structured.jsonl",
+        [_record("p-0", ["windows 10", "Cisco", "Cisco 3750"], "postings")],
+    )
+    assert cli.main(["build", *_dirs(tmp_path)]) == 0
+    alias_dir = tmp_path / "a" / "alias"
+    table = json.loads((alias_dir / "alias_table.json").read_text())
+    assert table["entries"]["windows 7"] == "Windows"
+    assert table["entries"]["windows server 2019"] == "Windows"
+    assert table["entries"]["windows 10"] == "Windows"
+    assert table["meta"]["n_version_families"] == len(versions.load_families())
+    report = json.loads((alias_dir / cli.VERSION_REPORT_FILE).read_text())
+    assert report["alias_table_version"] == table["version"]
+    assert report["n_version_forms_folded"] == 3
+    assert [c["skill"] for c in report["version_candidates"]] == ["Cisco 3750"]
+    build_report = json.loads((alias_dir / "alias_build_report.json").read_text())
+    assert set(build_report) == {
+        "alias_table_version", "n_keys", "n_raw_forms", "n_curated_pairs",
+        "n_forms_merged", "top_merges",
+    }
+
+
+def test_build_custom_families_file(tmp_path: Path) -> None:
+    _write_structured(tmp_path / "s")
+    fileio.write_jsonl_atomic(
+        tmp_path / "s" / "resumes" / "resumes_structured.jsonl",
+        [_record("r-0", ["Windows 7", "Windows"], "resumes")],
+    )
+    empty = tmp_path / "empty.csv"
+    empty.write_text("base,canonical,map_bare\n", encoding="utf-8")
+    assert cli.main(["build", *_dirs(tmp_path), "--families", str(empty)]) == 0
+    table = json.loads((tmp_path / "a/alias/alias_table.json").read_text())
+    assert table["entries"]["windows 7"] == "Windows 7"
+    assert table["meta"]["n_version_families"] == 0
+    report = json.loads((tmp_path / "a/alias" / cli.VERSION_REPORT_FILE).read_text())
+    assert report["n_version_forms_folded"] == 0
+
+
+def test_build_bad_families_exits_2_and_writes_nothing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _write_structured(tmp_path / "s")
+    bad = tmp_path / "bad.csv"
+    bad.write_text("base,canonical,map_bare\nx,X,maybe\n", encoding="utf-8")
+    assert cli.main(["build", *_dirs(tmp_path), "--families", str(bad)]) == 2
+    assert "line 2" in capsys.readouterr().err
+    missing = tmp_path / "missing.csv"
+    assert cli.main(["build", *_dirs(tmp_path), "--families", str(missing)]) == 2
+    assert "missing.csv" in capsys.readouterr().err
+    assert not (tmp_path / "a").exists()
