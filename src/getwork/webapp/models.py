@@ -1,8 +1,15 @@
 """Pydantic types of the web API (CC-18). Must not import FastAPI."""
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+)
 
 Side = Literal["resume", "posting"]
 Direction = Literal["resume_to_posting", "posting_to_resume"]
@@ -176,6 +183,17 @@ class EngineHealth(BaseModel):
 class ExplainerInfo(BaseModel):
     kind: Literal["template", "agent"]
     model: str | None = None
+    backend: str | None = None
+    prompt_version: str | None = None
+
+    # Keeps the old JSON shape when the new fields are None.
+    @model_serializer(mode="wrap")
+    def _omit_unset_agent_fields(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data = handler(self)
+        for key in ("backend", "prompt_version"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
 
 
 class HealthResponse(EngineHealth):
@@ -198,6 +216,8 @@ class Explanation(BaseModel):
     bullets: list[str]
     evidence: Evidence
     explainer: ExplainerInfo
+    claims: list[dict] = Field(default_factory=list)  # Claim.model_dump() items; [] for template explanations
+    facts: list[dict] = Field(default_factory=list)  # Fact.model_dump() items
 
 
 class ErrorBody(BaseModel):

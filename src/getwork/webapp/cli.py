@@ -2,18 +2,26 @@
 
 import argparse
 import logging
+import os
 import sys
 import traceback
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from getwork.embed import factory as embed_factory
 from getwork.embed.client import EmbeddingClient
 from getwork.llm import client as llm_client_mod
 from getwork.llm import factory as llm_factory
 from getwork.llm.client import LLMClient
+from getwork.llm.settings import BACKENDS, ConfigError
 from getwork.retrieval import b1plus
 from getwork.webapp import api, demo, engine, explain, models
+
+if TYPE_CHECKING:
+    from getwork.agent.explainer import AgentExplainer, ChatService
+
+AgentParts = tuple["AgentExplainer", "ChatService", Sequence[str]]
 
 WEB_DIST: Path = Path(__file__).resolve().parents[2] / "web" / "dist"
 DEFAULT_ARTIFACTS_DIR = "artifacts_trial"
@@ -26,6 +34,8 @@ BUILD_COMMAND = "npm --prefix src/web run build"
 STRUCTURE_DISABLED = "Disabled with --no-structure."
 EMBED_DISABLED = "Disabled with --no-embed."
 LOG_LEVEL = "info"
+DEFAULT_AGENT_TIMEOUT_S = 60.0
+EXPLAINERS = ("template", "agent")
 
 
 class UsageError(ValueError):
@@ -39,6 +49,13 @@ def _positive_int(text: str) -> int:
     return value
 
 
+def _positive_float(text: str) -> float:
+    value = float(text)
+    if value <= 0:
+        raise argparse.ArgumentTypeError("must be greater than 0")
+    return value
+
+
 def _build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--artifacts-dir", default=DEFAULT_ARTIFACTS_DIR)
@@ -49,6 +66,10 @@ def _build_parser() -> argparse.ArgumentParser:
     common.add_argument("--no-structure", action="store_true")
     common.add_argument("--no-embed", action="store_true")
     llm_factory.add_llm_args(common)
+    common.add_argument("--explainer", choices=EXPLAINERS, default="template")
+    common.add_argument("--agent-backend", choices=BACKENDS, default=None)
+    common.add_argument("--agent-model", default=None)
+    common.add_argument("--agent-timeout", type=_positive_float, default=DEFAULT_AGENT_TIMEOUT_S)
     embed_factory.add_embed_args(common, with_env_file=False)
     parser = argparse.ArgumentParser(prog="webapp", description="GetWork web app")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -135,6 +156,41 @@ def install_uvicorn_redaction(secrets: Sequence[str]) -> None:
     logger.addFilter(RedactingFilter(secrets))
 
 
+def build_agent(
+    args: argparse.Namespace,
+    *,
+    engine: engine.Engine,
+    environ: Mapping[str, str],
+    llm_client: LLMClient | None,
+) -> AgentParts:
+    """The agent explainer and chat service over one client (ADR-21: the structuring backend and model unless
+    --agent-backend or --agent-model say otherwise), and the secrets to redact. Imports the agent lazily."""
+    from getwork.agent import explainer, graph, state, turn, vocab
+
+    bundle = llm_factory.make_client(
+        backend=args.agent_backend or args.backend,
+        model=args.agent_model or args.model,
+        env_file=Path(args.env_file),
+        environ=environ,
+        client=llm_client,
+        timeout_s=args.agent_timeout,
+    )
+    cfg = state.AgentConfig(
+        model=bundle.model,
+        backend=bundle.backend,
+        timeout_s=args.agent_timeout,
+        extra_body=llm_factory.parse_extra_body(args.extra_body),
+    )
+    vocabulary = vocab.demo_vocabulary() if args.demo else vocab.load_vocabulary(Path(args.artifacts_dir))
+    runner = turn.AgentRunner(client=bundle.client, cfg=cfg, vocab=vocabulary, secrets=bundle.secrets)
+    compiled = graph.build_graph(runner)
+    return (
+        explainer.AgentExplainer(graph=compiled, runner=runner, engine=engine),
+        explainer.ChatService(graph=compiled, runner=runner, engine=engine),
+        bundle.secrets,
+    )
+
+
 def _static_dir(args: argparse.Namespace) -> Path | None:
     if args.static_dir is not None:
         return Path(args.static_dir)
@@ -142,10 +198,19 @@ def _static_dir(args: argparse.Namespace) -> Path | None:
 
 
 def _serve(
-    args: argparse.Namespace, app_engine: engine.Engine, run: Callable[..., None] | None
+    args: argparse.Namespace,
+    app_engine: engine.Engine,
+    run: Callable[..., None] | None,
+    agent: AgentParts | None,
 ) -> int:
     static_dir = _static_dir(args)
-    app = api.create_app(app_engine, explain.TemplateExplainer(), static_dir=static_dir, secrets=())
+    secrets: Sequence[str] = agent[2] if agent else ()
+    explainer = agent[0] if agent else explain.TemplateExplainer()
+    app = api.create_app(app_engine, explainer, static_dir=static_dir, secrets=secrets)
+    if agent:
+        from getwork.agent.api import register_chat_routes
+
+        register_chat_routes(app, agent[1], secrets=secrets)
     if args.host not in LOOPBACK_HOSTS:
         print(
             f"warning: {args.host} is a public address and the server has no authentication; "
@@ -155,7 +220,7 @@ def _serve(
     print(f"GetWork is serving on http://{args.host}:{args.port} (API docs at /docs)")
     if static_dir is None:
         print(f"The web UI is not built yet; build it with: {BUILD_COMMAND}")
-    install_uvicorn_redaction(())
+    install_uvicorn_redaction(secrets)
     if run is None:
         import uvicorn
 
@@ -164,10 +229,8 @@ def _serve(
     return 0
 
 
-def _check(app_engine: engine.Engine) -> int:
-    health = models.HealthResponse(
-        **app_engine.health().model_dump(), explainer=explain.TemplateExplainer.info
-    )
+def _check(app_engine: engine.Engine, info: models.ExplainerInfo) -> int:
+    health = models.HealthResponse(**app_engine.health().model_dump(), explainer=info)
     print(health.model_dump_json(indent=2))
     return 0
 
@@ -182,9 +245,9 @@ def main(
 ) -> int:
     """Exit codes: 0 ok, 2 usage, configuration or artifact error. Never prints a key.
 
-    environ, llm_client and embedding_client are used by artifact mode, which is not built yet.
+    environ and llm_client configure the agent client; embedding_client is for artifact mode, not built yet.
     """
-    del environ, llm_client, embedding_client
+    del embedding_client
     try:
         args = _build_parser().parse_args(argv)
     except SystemExit as exit_request:
@@ -195,6 +258,18 @@ def main(
     except (UsageError, engine.EngineLoadError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    agent = None
+    if args.explainer == "agent":
+        try:
+            agent = build_agent(
+                args,
+                engine=app_engine,
+                environ=os.environ if environ is None else environ,
+                llm_client=llm_client,
+            )
+        except (ConfigError, RuntimeError, ValueError, OSError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     if args.command == "check":
-        return _check(app_engine)
-    return _serve(args, app_engine, run)
+        return _check(app_engine, agent[0].info if agent else explain.TemplateExplainer.info)
+    return _serve(args, app_engine, run, agent)
