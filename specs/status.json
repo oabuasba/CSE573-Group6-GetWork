@@ -1752,6 +1752,228 @@
           "fix_rounds": 0
         }
       }
+    },
+    "naming-overlap-review": {
+      "spec": "specs/features/naming-overlap-review.html",
+      "phase": "done",
+      "planner_agent": "a0d4e81ad45588424",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "OR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish sent (independent CallStats test). Note: git diff of naming.py mixes earlier ad-hoc changes (max_tokens/reasoning, rejection logging); commit separately."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "OR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish sent (cap-boundary test). Added constants MAX_PAIR_REASONS, MIN_PLURAL_WORD_CHARS accepted."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2"
+          ],
+          "batch": "OR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish sent (full prompt-text assert; strip after 400-char cut)."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "OR-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: positional multi-arg calls (polish sent). SPEC (held): T-4/T-5 file lists omit naming.py (short_reason made public)."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "large": true,
+          "batch": "OR-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: split inside batch if diff >~250 lines Dev reported as one part (diff >250). SPEC (held): rounds_run undefined; judge call precedes clusters-left check (stubborn model = 2 judge + 6 rename calls); overlap.py ~480 lines vs 300 target. Reviewer pass (probe: 15 seeds x workers 2/3/8 identical). SPEC (held): define rounds_run; reorder judge call vs clusters-left check?; final rules check redundant; AC-14 wording on echoed rejected names. Non-blocking: overlap.py 521 lines; polish sent."
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-5"
+          ],
+          "batch": "OR-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish done; optional: status-precedence guard test added."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "OR-3",
+          "worktree": ".",
+          "fix_rounds": 1,
+          "notes": "Fail round 1 (member-list filter untested) -> fixed; re-review pass (mutation verified)."
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "batch": "OR-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        }
+      },
+      "notes": "User request 2026-11-10: after naming, detect overlapping/too-similar cluster names and send the clusters back to the model to rename with an explanation and a more distinct name. Evidence: v4 'Development Tools' vs 'Software Development Tools'. Planner dispatched; spec must be approved before build. v4 naming rerun (max_tokens 1024, reasoning none) gave 10/10 LLM names. | User approved build 2026-11-10: judge on by default, build gate warn-only, default 2 rounds. Follow-up naming-fit-review (weak fit) requested from planner; build after T-8. | All 8 tasks merged (1087 tests). Planner list (hold): rounds_run definition; judge call vs clusters-left order; naming.py in T-4/T-5 file lists; overlap.py ~520 lines; AC-14 wording on echoed rejected names.",
+      "batches": {
+        "OR-1": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": "a6aa022d8b35c8ecc",
+          "fix_rounds": 0
+        },
+        "OR-2": {
+          "tasks": [
+            "T-4",
+            "T-5"
+          ],
+          "developer_agent": "a6aa022d8b35c8ecc",
+          "fix_rounds": 0
+        },
+        "OR-3": {
+          "tasks": [
+            "T-6",
+            "T-7",
+            "T-8"
+          ],
+          "developer_agent": "a6aa022d8b35c8ecc",
+          "fix_rounds": 1
+        }
+      }
+    },
+    "naming-fit-review": {
+      "spec": "specs/features/naming-fit-review.html",
+      "phase": "awaiting-build",
+      "planner_agent": "a0d4e81ad45588424",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "pending",
+          "deps": [
+            "overlap T-8"
+          ],
+          "batch": "FR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "refactor: overlap.run_rename_pass public; may be no-op (signature passed to OR-2 dev)"
+        },
+        "T-2": {
+          "phase": "pending",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "FR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "pending",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "FR-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-4": {
+          "phase": "pending",
+          "deps": [
+            "T-3"
+          ],
+          "large": true,
+          "batch": "FR-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "large: split inside batch"
+        },
+        "T-5": {
+          "phase": "pending",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "FR-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "pending",
+          "deps": [
+            "T-5"
+          ],
+          "batch": "FR-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-7": {
+          "phase": "pending",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "FR-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        }
+      },
+      "notes": "User said yes 2026-11-10: plan weak-fit check after overlap review. Depends on naming-overlap-review T-8. Spec ready: 7 tasks, 17 ACs, T-4 large. Build after naming-overlap-review T-8. Planner suggests giving the overlap T-5 batch the run_rename_pass signature so fit T-1 becomes a no-op check (not sent; spec unapproved). | User approved 2026-11-10: build after naming-overlap-review T-8; mixed clusters -> mark weak_fit for a human (no outlier-move follow-up); run_rename_pass signature passed to OR-2 dev. Fit review on by default, 1 round, warn-only build.",
+      "batches": {
+        "FR-1": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "developer_agent": null,
+          "fix_rounds": 0
+        },
+        "FR-2": {
+          "tasks": [
+            "T-4",
+            "T-5"
+          ],
+          "developer_agent": null,
+          "fix_rounds": 0
+        },
+        "FR-3": {
+          "tasks": [
+            "T-6",
+            "T-7"
+          ],
+          "developer_agent": null,
+          "fix_rounds": 0
+        }
+      }
     }
   },
   "adhoc": {
@@ -1761,6 +1983,48 @@
       "worktree": ".",
       "developer_agent": null,
       "notes": "Nits applied; uncommitted in-place on dev. Flipped test_gitignore_ignores_trial_artifacts_only assertion (artifacts/ now ignored) - flag spec/test intent."
+    },
+    "pipeline-10-clusters": {
+      "phase": "merged",
+      "batch": "run_pipeline.sh defaults to kmeans-01 (k=10)",
+      "worktree": ".",
+      "developer_agent": "a6aa022d8b35c8ecc",
+      "notes": "Off-spec, user-requested 2026-11-10. In place on dev, uncommitted. Dev done (1021 tests), no independent review (small off-spec). taxonomy select has no eligibility check; kmeans-01 only rejected if skipped (k >= n skills). Uncommitted."
+    },
+    "pipeline-plot-step": {
+      "phase": "merged",
+      "batch": "run_pipeline.sh runs taxonomy plot each time",
+      "worktree": ".",
+      "developer_agent": "a6aa022d8b35c8ecc",
+      "notes": "Off-spec, user-requested 2026-11-10. In place on dev, uncommitted. Dev done (1022 tests), no independent review. Plot placed after build, before relabel; offline. Uncommitted."
+    },
+    "artifacts-trial-reorg": {
+      "phase": "merged",
+      "batch": "move old artifacts_trial dirs into v1; create v3, v4",
+      "worktree": ".",
+      "developer_agent": null,
+      "notes": "Off-spec, user-requested 2026-11-10. mv only, no deletions; v2 untouched. Default artifacts dir (artifacts_trial) no longer finds v1 without --artifacts-dir artifacts_trial/v1. Done: v1 holds the 7 old dirs (sizes and file counts verified), v3/v4 empty, v2 untouched; no hardcoded paths in moved metadata."
+    },
+    "naming-rejection-reasons": {
+      "phase": "merged",
+      "batch": "log per-attempt rejection reasons in taxonomy name progress",
+      "worktree": ".",
+      "developer_agent": "a6aa022d8b35c8ecc",
+      "notes": "Off-spec, user-requested 2026-11-10 after v3 run: 9/10 clusters fell back (replies rejected, attempts 3), cause unknown. Hypotheses: single-member rule, member-list rule, JSON/format failure. Uncommitted. Pending user: commit+push kmeans-01/plot step; name_v3 fixed categories yes/no. Dev done (1024 tests), no independent review. Uncommitted."
+    },
+    "pipeline-run-v4": {
+      "phase": "merged",
+      "batch": "orchestrator-run run_pipeline.sh into artifacts_trial/v4",
+      "worktree": ".",
+      "developer_agent": null,
+      "notes": "User edited orchestrator.md 2026-11-10 to allow Voyager calls via run_pipeline.sh with direct permission, and said 'try'. Log: scratchpad/pipeline_v4.log. Background shell beeol7x2u. Report performance when done. User asked 2026-11-10: copy console log into artifacts_trial/v4/pipeline_run.txt when the run ends (it is currently writing to scratchpad/pipeline_v4.log); rule added to orchestrator.md. RESULT: alias/apply/counts/embed/grid/select OK; taxonomy name exit 1: 9/10 clusters fell back, every rejection reason \"empty reply\" (model returned empty content; suspect reasoning model + max_tokens=256, hypothesis). Pipeline stopped before build/plot/relabel/doc-embed/retrieve. Log copied to artifacts_trial/v4/pipeline_run.txt. STANDING RULE (user 2026-11-10): permission to run scripts/run_pipeline.sh is per run; ask each time, never reuse an earlier go-ahead. Only via the script; no direct Voyager commands."
+    },
+    "naming-empty-reply-fix": {
+      "phase": "merged",
+      "batch": "naming max_tokens 1024 + reasoning_effort none, CLI options",
+      "worktree": ".",
+      "developer_agent": "a6aa022d8b35c8ecc",
+      "notes": "Off-spec, user-approved 2026-11-10 after v4 run (28/28 rejections 'empty reply'). Uncommitted. Dev done (1027 tests), no independent review. Defaults max_tokens=1024, reasoning_effort none; CLI --max-tokens/--reasoning-effort. Constants duplicated from structure/cli.py (may drift). Uncommitted."
     }
   }
 }
