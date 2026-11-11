@@ -1452,11 +1452,322 @@
     },
     "match-agent": {
       "spec": "specs/features/match-agent.html",
-      "phase": "awaiting-approval",
-      "planner_agent": "a8e7495744e8a281a",
+      "phase": "done",
+      "planner_agent": "a5242b49a97f886cb",
       "branch": "dev",
-      "tasks": {},
-      "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6). User decisions: keep LangGraph (proposal); host agent on Voyager (deviation from ADR-10 CreateAI, record in deviations.md); model failure shows natural-language error (not rules fallback); split T-9 and T-16 into 9a/9b.., 16a/16b... Revision sent to planner a8e7495744e8a281a; re-present for approval. Revised: 23 tasks, 32 ACs, no large flags (T-9a-d, T-16a-b, new T-1b). Failure = HTTP 502 assistant_failed envelope. ADR-21 Voyager hosting, P-19 deviation. Assumptions to confirm: A-6 wire form, T-14 touches web-app describeError."
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "AG-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-1b": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "AG-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Nit: redundant module assert in failure.py (follow-up sent)."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "AG-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass after planner fix (ExplainerInfo wrap serializer). Nits: comment on serializer, local imports in test (follow-up sent). Ruff not installed: no lint gate."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-1b",
+            "T-2"
+          ],
+          "batch": "AG-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Fixed per planner (b); 1114 passed. Reviewer dispatched. | Reviewer pass. Optional nits: chat.claims[1] cites f1 (irrelevant; cite f5 only); unique-id check."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "AG-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev deviations: V-1 message has no claim number; named_skills drops cluster-name keys; V-5 skipped when doc_ids empty. | Reviewer pass. Nit follow-ups sent (cluster filter to ungrounded_skills, V-6/V-7 empty doc_ids, kwargs, extra V-2 asserts)."
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "AG-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev deviation: canonical alias values before lower-cased keys (display name). | Reviewer pass."
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "AG-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. SPEC GAP (blocking T-9, sent to planner): doc_ref gives \"query\" only if id is None; corpus-id queries break V-4/V-5 scope. Nit: evidence_facts ignores direction. | Planner chose (a): QUERY_DOC unconditional; follow-up sent to dev."
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "AG-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Nits: positional multi-arg private helpers; local names keys/gap_keys; module-qualified imports."
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-2",
+            "T-4",
+            "T-7"
+          ],
+          "batch": "AG-3",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Nits: history cap ignores joining newlines; tool action no-args default {} unpinned; FACTS/RESULT LIST lines unescaped (skill newline injection) - planner asked for wording. | Planner: collapse whitespace on RESULT LIST/FACTS/TOOL NOTES lines; follow-up sent."
+        },
+        "T-9a": {
+          "phase": "merged",
+          "deps": [
+            "T-7",
+            "T-8"
+          ],
+          "batch": "AG-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-9b": {
+          "phase": "merged",
+          "deps": [
+            "T-9a",
+            "T-1b"
+          ],
+          "batch": "AG-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev deviations: Throttle(clock=,sleep=); non-fatal LLMError -> llm_unavailable; no redaction yet. 1172 passed. | Reviewer pass. Nits follow-up sent (PermanentLLMError case, kwargs, shared helpers conftest, >8 violations test)."
+        },
+        "T-9c": {
+          "phase": "merged",
+          "deps": [
+            "T-9b"
+          ],
+          "batch": "AG-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-9d": {
+          "phase": "merged",
+          "deps": [
+            "T-9c"
+          ],
+          "batch": "AG-4",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [
+            "T-9d"
+          ],
+          "batch": "AG-5",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev deviation: GraphRecursionError fails the same mutated Turn. 1218 passed. | Reviewer pass."
+        },
+        "T-11": {
+          "phase": "merged",
+          "deps": [
+            "T-10"
+          ],
+          "batch": "AG-5",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": ""
+        },
+        "T-12": {
+          "phase": "merged",
+          "deps": [
+            "T-11"
+          ],
+          "batch": "AG-5",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass."
+        },
+        "T-13": {
+          "phase": "merged",
+          "deps": [
+            "T-5",
+            "T-12"
+          ],
+          "batch": "AG-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev: artifact mode not built in webapp CLI (main w/o --demo exits 2); vocab path tested via build_agent. 1226 py + 113 web passed. | Reviewer pass. Nits follow-up sent: test names var, TYPE_CHECKING annotations, kwargs."
+        },
+        "T-14": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "AG-F1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Nit follow-up: rename request_ param."
+        },
+        "T-15": {
+          "phase": "merged",
+          "deps": [
+            "T-14"
+          ],
+          "batch": "AG-F1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Nit follow-up: OL assertion."
+        },
+        "T-16a": {
+          "phase": "merged",
+          "deps": [
+            "T-14"
+          ],
+          "batch": "AG-F1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev deviation: turnsRef alongside state. npm test 101 passed, build ok. | Reviewer pass. Nit follow-up: retry guard on status error; test double-send guard."
+        },
+        "T-16b": {
+          "phase": "merged",
+          "deps": [
+            "T-15",
+            "T-16a"
+          ],
+          "batch": "AG-F2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass."
+        },
+        "T-17": {
+          "phase": "merged",
+          "deps": [
+            "T-16b"
+          ],
+          "batch": "AG-F2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Dev: MatchCard unmounts chat on collapse/other card, so chat history resets (spec key kept). 113 web tests passed. | Reviewer pass."
+        },
+        "T-18": {
+          "phase": "merged",
+          "deps": [
+            "T-13",
+            "T-17"
+          ],
+          "batch": "AG-6",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass."
+        }
+      },
+      "notes": "User asked to plan. Eval features (eval-sampling-pooling, llm-judging, ranking-metrics, taxonomy-validity) ON HOLD until processing settles; do not plan them. Spec ready (18 tasks, 27 ACs). Large: T-9, T-16 (ask user). Depends on web-app tasks and skill-taxonomy T-1/T-2, so cannot start before those. Questions pending: keep LangGraph (A-2), agent model hosting (A-3), fallback-to-rules behavior (A-6). User decisions: keep LangGraph (proposal); host agent on Voyager (deviation from ADR-10 CreateAI, record in deviations.md); model failure shows natural-language error (not rules fallback); split T-9 and T-16 into 9a/9b.., 16a/16b... Revision sent to planner a8e7495744e8a281a; re-present for approval. Revised: 23 tasks, 32 ACs, no large flags (T-9a-d, T-16a-b, new T-1b). Failure = HTTP 502 assistant_failed envelope. ADR-21 Voyager hosting, P-19 deviation. Assumptions to confirm: A-6 wire form, T-14 touches web-app describeError. | USER APPROVED BUILD (2026-11-11). In place on dev, no commits. Standing rules (no Voyager/.env, fake client only). Batches AG-1..AG-6 backend; AG-F1,F2 frontend (after T-3). All deps (web-app W-T1..T6,T9 demo, T12-17) satisfied. | USER (2026-11-11): when match-agent is fully done, commit and push to dev (Conventional Commits, no Claude attribution). | SPEC ISSUES for planner end-of-feature list: V-1 message has no claim number (AC-7/I-3 wording); tokenizer [A-Za-z0-9#+.]+ cannot match hyphenated/slash skills (Front-end, scikit-learn, CI/CD) so they evade V-7/hallucination count, and max_tokens counts whitespace tokens vs regex tokens; demo_vocabulary uses lower-case DEMO_CLUSTERS keys as display spellings (use webapp/demo.py _SPELLINGS?); state where the cluster filter lives (named_skills vs ungrounded_skills); canonical-before-alias-key order in load_vocabulary. Ruff not installed (no lint gate). | demo_vocabulary lower-case cluster-only spellings pinned in test (spec-defined). | PLANNER LIST: T-8 FACTS/RESULT LIST escaping; query doc id vs QUERY_DOC (T-9 blocker, asked now). | PLANNER LIST: transient retries (call_with_retry max_attempts 5) can exceed max_llm_calls budget (probe: budget 2 -> 5 fake calls); decide whether to cap + add AC. Write Throttle(clock, sleep) into T-9b. | PLANNER LIST: T-10 GraphRecursionError \"fresh turn\" wording (same Turn kept); I-7/T-12 \"no message text logged\" vs existing generic 500 handler logging traceback with exception text; T-12 catch-all route insertion instruction stale (404 is an exception handler; add_api_route used).",
+      "batches": {
+        "AG-1": {
+          "tasks": [
+            "T-1",
+            "T-1b",
+            "T-2"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        },
+        "AG-2": {
+          "tasks": [
+            "T-3",
+            "T-4",
+            "T-5"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        },
+        "AG-3": {
+          "tasks": [
+            "T-6",
+            "T-7",
+            "T-8"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        },
+        "AG-F1": {
+          "tasks": [
+            "T-14",
+            "T-15",
+            "T-16a"
+          ],
+          "developer_agent": "a3c7590595b288893",
+          "fix_rounds": 0
+        },
+        "AG-F2": {
+          "tasks": [
+            "T-16b",
+            "T-17"
+          ],
+          "developer_agent": "a3c7590595b288893",
+          "fix_rounds": 0
+        },
+        "AG-4": {
+          "tasks": [
+            "T-9a",
+            "T-9b",
+            "T-9c",
+            "T-9d"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        },
+        "AG-5": {
+          "tasks": [
+            "T-10",
+            "T-11",
+            "T-12"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        },
+        "AG-6": {
+          "tasks": [
+            "T-13",
+            "T-18"
+          ],
+          "developer_agent": "a728a25201568a2b8",
+          "fix_rounds": 0
+        }
+      }
     },
     "alias-and-naming-v2": {
       "spec": "specs/features/alias-and-naming-v2.html",
@@ -2025,6 +2336,13 @@
       "worktree": ".",
       "developer_agent": "a6aa022d8b35c8ecc",
       "notes": "Off-spec, user-approved 2026-11-10 after v4 run (28/28 rejections 'empty reply'). Uncommitted. Dev done (1027 tests), no independent review. Defaults max_tokens=1024, reasoning_effort none; CLI --max-tokens/--reasoning-effort. Constants duplicated from structure/cli.py (may drift). Uncommitted."
+    },
+    "pipeline-run-v5": {
+      "phase": "merged",
+      "batch": "orchestrator-run run_pipeline.sh into artifacts_trial/v5 (one-time user permission 2026-11-10)",
+      "worktree": ".",
+      "developer_agent": null,
+      "notes": "Log: artifacts_trial/v5/pipeline_run.txt. Permission consumed by this run. Report clusters when done. Commits c5d1af1 pushed first. DONE exit 0: 10 clusters all LLM-named ok, overlap review found nothing. Weak fits remain (Software Development Tools, Desktop Applications, Cloud Infrastructure) -> naming-fit-review."
     }
   }
 }
