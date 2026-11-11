@@ -1686,6 +1686,72 @@
         }
       },
       "notes": "Off-spec, user-requested 2026-11-08: bash script running all steps after structuring up to the web client (alias-table .. retrieve run). Real runs are user-only; tests use --dry-run only."
+    },
+    "naming-parallel": {
+      "spec": "specs/features/naming-parallel.html",
+      "phase": "done",
+      "planner_agent": "a0d4e81ad45588424",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "NP-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Non-blocking: >4 params, assert for narrowing, FALLBACK_REASONS exact-type lookup (polish sent). SPEC: T-1 NotImplementedError for workers>=2 moot (T-2 built in same pass)."
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "large": true,
+          "batch": "NP-1",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass; split into two parts (diff >250). Non-blocking: shared-Throttle assertion weak in rate-limit test (polish sent)."
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "NP-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish sent (unused capsys, local import, one-line stdout assert)."
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "NP-2",
+          "worktree": ".",
+          "fix_rounds": 0,
+          "notes": "Reviewer pass. Polish sent (archive-before-name check)."
+        }
+      },
+      "notes": "User 2026-11-10: parallel cluster naming with post-hoc duplicate/member-list check (option 1) plus per-cluster progress logging. Follow-up to alias-and-naming-v2. Planner dispatched; spec must be approved before build. Last two commits (readme, gitignore) were local, unpushed at time of request. | User approved build 2026-11-10; accepted A-4 refinement; workers default 1 in CLI, NAME_WORKERS=4 in script. Two batches NP-1 (T-1,T-2), NP-2 (T-3,T-4) to respect batch size. | All 4 tasks merged (1020 tests). name_clusters now 7 params (spec signature). Spec nit for planner: T-1 NotImplementedError moot. Uncommitted.",
+      "batches": {
+        "NP-1": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "a6aa022d8b35c8ecc",
+          "fix_rounds": 0
+        },
+        "NP-2": {
+          "tasks": [
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "a6aa022d8b35c8ecc",
+          "fix_rounds": 0
+        }
+      }
     }
   },
   "adhoc": {

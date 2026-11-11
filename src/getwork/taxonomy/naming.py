@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import functools
+import json
 import re
+import threading
 import time
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from getwork.alias import normalize
 from getwork.llm.client import LLMClient, LLMRequest, PermanentLLMError
 from getwork.llm.retry import CallStats, RetriesExhausted, RetryConfig, Throttle
 from getwork.llm.validated import ValidationExhausted, complete_validated, parse_json_object
+from getwork.structure import pool
 from getwork.taxonomy import model
 
 NAME_PROMPT_VERSION: str = "name_v2"
@@ -40,6 +43,12 @@ _CLUSTER_PLACEHOLDER = re.compile(r"cluster\s*\d*", re.IGNORECASE)
 HEURISTIC_MEMBERS = 3
 HEURISTIC_SEPARATOR = " / "
 _WHITESPACE = re.compile(r"\s+")
+FALLBACK_REASONS: dict[type[Exception], str] = {
+    ValidationExhausted: "replies rejected",
+    RetriesExhausted: "retries exhausted",
+    PermanentLLMError: "request refused",
+}
+_CLUSTER_FAILURES = tuple(FALLBACK_REASONS)
 
 
 @functools.cache
@@ -124,6 +133,125 @@ def _request(cfg: NameConfig, shown: Sequence[str], used: Sequence[str]) -> LLMR
     )
 
 
+def named_message(done: int, total: int, cluster_id: int, name: str, attempts: int) -> str:
+    return f"named {done}/{total}: cluster {cluster_id} -> {json.dumps(name)} (attempts {attempts})"
+
+
+def fallback_message(done: int, total: int, cluster_id: int, reason: str, attempts: int) -> str:
+    return f"fallback {done}/{total}: cluster {cluster_id} ({reason}, attempts {attempts})"
+
+
+@dataclass(frozen=True)
+class _Outcome:
+    """One cluster's answer: a name, or the fixed fallback reason; stats cover only this cluster."""
+
+    name: str | None
+    reason: str
+    stats: CallStats
+
+
+@dataclass(frozen=True)
+class _Env:
+    """What every model call needs; the Throttle is the only shared mutable part."""
+
+    client: LLMClient
+    cfg: NameConfig
+    throttle: Throttle
+    sleep: Callable[[float], None]
+
+
+def _add_stats(first: CallStats, second: CallStats) -> CallStats:
+    return CallStats(
+        calls=first.calls + second.calls,
+        retries=first.retries + second.retries,
+        rate_limited=first.rate_limited + second.rate_limited,
+    )
+
+
+def _fallback_reason(exc: Exception) -> str:
+    return next(reason for kind, reason in FALLBACK_REASONS.items() if isinstance(exc, kind))
+
+
+def _name_one(env: _Env, shown: Sequence[str], used: Sequence[str]) -> _Outcome:
+    stats = CallStats()
+    try:
+        name = complete_validated(
+            env.client,
+            _request(env.cfg, shown, used),
+            lambda text: parse_name(text, shown, used),
+            cfg=env.cfg.retry,
+            throttle=env.throttle,
+            sleep=env.sleep,
+            stats=stats,
+            max_attempts=env.cfg.max_validation_attempts,
+        )
+    except _CLUSTER_FAILURES as exc:
+        return _Outcome(name=None, reason=_fallback_reason(exc), stats=stats)
+    return _Outcome(name=name, reason="", stats=stats)
+
+
+class _Tally:
+    """Collects final outcomes in id order: result, accepted names and progress lines."""
+
+    def __init__(self, total: int, log: Callable[[str], None] | None) -> None:
+        self.result = NameResult(names={}, failed=[])
+        self.accepted: list[str] = []
+        self._total = total
+        self._log = log
+
+    def finish(self, cluster_id: int, outcome: _Outcome) -> None:
+        self.result.stats = _add_stats(self.result.stats, outcome.stats)
+        done = len(self.result.names) + len(self.result.failed) + 1
+        attempts = outcome.stats.calls
+        if outcome.name is None:
+            self.result.failed.append(cluster_id)
+            line = fallback_message(done, self._total, cluster_id, outcome.reason, attempts)
+        else:
+            self.result.names[cluster_id] = outcome.name
+            self.accepted.append(outcome.name)
+            line = named_message(done, self._total, cluster_id, outcome.name, attempts)
+        if self._log is not None:
+            self._log(line)
+
+
+def _shown(
+    cfg: NameConfig, members: Mapping[int, Sequence[str]], cluster_id: int
+) -> tuple[str, ...]:
+    return tuple(members[cluster_id][: cfg.top_members])
+
+
+def _resolve(env: _Env, shown: Sequence[str], draft: _Outcome, tally: _Tally) -> _Outcome:
+    taken = {name.casefold() for name in tally.accepted}
+    if draft.name is None or draft.name.casefold() not in taken:
+        return draft
+    again = _name_one(env, shown, tuple(tally.accepted))
+    return replace(again, stats=_add_stats(draft.stats, again.stats))
+
+
+def _name_in_parallel(
+    env: _Env, members: Mapping[int, Sequence[str]], workers: int, tally: _Tally
+) -> None:
+    def draft_one(cluster_id: int) -> _Outcome:
+        return _name_one(env, _shown(env.cfg, members, cluster_id), ())
+
+    ids = sorted(members)
+    drafts: dict[int, _Outcome] = {}
+    next_index = 0
+    stop, abort = threading.Event(), threading.Event()
+    try:
+        for cluster_id, outcome in pool.run_pool(ids, draft_one, workers, stop, abort):
+            if isinstance(outcome, BaseException):
+                raise outcome
+            drafts[cluster_id] = outcome
+            while next_index < len(ids) and ids[next_index] in drafts:
+                current = ids[next_index]
+                shown = _shown(env.cfg, members, current)
+                tally.finish(current, _resolve(env, shown, drafts.pop(current), tally))
+                next_index += 1
+    finally:
+        abort.set()
+
+
 def name_clusters(
     client: LLMClient,
     cfg: NameConfig,
@@ -131,27 +259,21 @@ def name_clusters(
     *,
     secrets: Sequence[str] = (),
     sleep: Callable[[float], None] = time.sleep,
+    workers: int = 1,
+    log: Callable[[str], None] | None = None,
 ) -> NameResult:
+    """workers == 1 asks ids ascending with the used names; 2 or more drafts concurrently, then
+    re-asks repeated names in id order. log gets one line per cluster, in id order. FatalLLMError
+    propagates."""
     # secrets is accepted for a uniform step signature; results hold only cluster text.
-    result = NameResult(names={}, failed=[])
-    throttle = Throttle()
-    accepted: list[str] = []
+    if workers < 1:
+        raise ValueError(f"workers must be at least 1, got {workers}")
+    tally = _Tally(total=len(members), log=log)
+    env = _Env(client=client, cfg=cfg, throttle=Throttle(), sleep=sleep)
+    if workers >= 2:
+        _name_in_parallel(env, members, workers, tally)
+        return tally.result
     for cluster_id in sorted(members):
-        shown = tuple(members[cluster_id][: cfg.top_members])
-        used = tuple(accepted)
-        try:
-            name = complete_validated(
-                client,
-                _request(cfg, shown, used),
-                lambda text, shown=shown, used=used: parse_name(text, shown, used),
-                cfg=cfg.retry,
-                throttle=throttle,
-                sleep=sleep,
-                stats=result.stats,
-                max_attempts=cfg.max_validation_attempts,
-            )
-            result.names[cluster_id] = name
-            accepted.append(name)
-        except (ValidationExhausted, RetriesExhausted, PermanentLLMError):
-            result.failed.append(cluster_id)
-    return result
+        shown = _shown(cfg, members, cluster_id)
+        tally.finish(cluster_id, _name_one(env, shown, tuple(tally.accepted)))
+    return tally.result

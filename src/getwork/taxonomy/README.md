@@ -19,7 +19,7 @@ uv run taxonomy embed [embed options] [--chunk-size 256]
 uv run taxonomy grid [--max-noise 0.30] [--min-clusters 2] [--seed 0] [--grid-file PATH]
                      [--umap-components 5] [--umap-neighbors 15]
 uv run taxonomy select --config-id ID
-uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--force]
+uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--workers 1] [--force]
 uv run taxonomy build [--names PATH] [--allow-member-names]
 ```
 
@@ -69,6 +69,27 @@ after rerunning `counts` and `embed` without rerunning `grid`): exit 2, nothing 
 
 Exit codes: 0 ok, 1 `name` used heuristic fallbacks, 2 usage, config or input error, 3 fatal
 LLM or embedding error.
+
+## Parallel naming
+
+`taxonomy name --method llm --workers N` (default 1) asks the model about N clusters at once.
+With `--workers 1` clusters are asked in id order and every request lists the names already used.
+With 2 or more, each cluster is first asked without the used-names list (member-list replies are
+still retried with feedback); the answers are then checked in id order, and a name that repeats an
+earlier cluster's is re-asked once, in id order, with the used-names list. The lower id keeps a
+contested name, so the names are the same for every `--workers` of 2 or more, whatever the finish
+order, but can differ from `--workers 1`. One rate-limit (429) pause is shared by all workers.
+
+Each cluster prints one progress line on stderr when its name is final, in id order; stdout stays
+the single JSON summary line (`2>/dev/null` silences the progress):
+
+```
+named 7/71: cluster 12 -> "Unit Testing" (attempts 2)
+fallback 8/71: cluster 13 (replies rejected, attempts 3)
+```
+
+`--workers` is accepted and ignored for `--method heuristic`. `scripts/run_pipeline.sh` passes
+`NAME_WORKERS` (default 4).
 
 ## Review procedure
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from collections.abc import Mapping
+import sys
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from getwork import fileio, paths
@@ -17,6 +18,7 @@ from getwork.taxonomy.cli_common import SelectionState
 NAMES_FILE = "cluster_names.csv"
 TAXONOMY_FILE = "taxonomy.json"
 DEFAULT_TOP_MEMBERS = 25
+DEFAULT_NAME_WORKERS: int = 1
 EXAMPLE_MEMBERS = 5
 METHODS = ("heuristic", "llm")
 LLM_ROW = "llm"
@@ -28,6 +30,7 @@ def add_parsers(sub: argparse._SubParsersAction) -> None:
     parser = sub.add_parser("name", help="write cluster_names.csv for review")
     parser.add_argument("--method", choices=METHODS, default="heuristic")
     parser.add_argument("--top-members", type=cli_common.positive_int, default=DEFAULT_TOP_MEMBERS)
+    parser.add_argument("--workers", type=cli_common.positive_int, default=None)
     parser.add_argument("--force", action="store_true")
     llm_factory.add_llm_args(parser)
     parser = sub.add_parser("build", help="write taxonomy.json from the edited names")
@@ -41,6 +44,13 @@ def _members_by_cluster(state: SelectionState) -> dict[int, list[str]]:
         if label >= 0:
             members.setdefault(label, []).append(skill)
     return members
+
+
+def _stderr_log(secrets: Sequence[str]) -> Callable[[str], None]:
+    def log(message: str) -> None:
+        print(redact_secrets(message, secrets), file=sys.stderr)
+
+    return log
 
 
 def _llm_names(
@@ -57,7 +67,14 @@ def _llm_names(
         extra_body=extra_body,
     )
     try:
-        return naming.name_clusters(bundle.client, cfg, members, secrets=bundle.secrets)
+        return naming.name_clusters(
+            bundle.client,
+            cfg,
+            members,
+            secrets=bundle.secrets,
+            workers=args.workers or DEFAULT_NAME_WORKERS,
+            log=_stderr_log(bundle.secrets),
+        )
     except FatalLLMError as exc:
         raise cli_common.FatalError(redact_secrets(str(exc), bundle.secrets)) from exc
 

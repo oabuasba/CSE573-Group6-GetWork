@@ -196,3 +196,94 @@ def test_name_clusters_validates_only_shown_members() -> None:
     client = FakeLLMClient(script=['{"name": "Gamma"}'])
     result = naming.name_clusters(client, _cfg(top_members=2), members, sleep=_no_sleep)
     assert result.names == {0: "Gamma"} and "Gamma" not in client.calls[0].user
+
+
+def _first_member(request: LLMRequest) -> str:
+    return request.user.split("- ")[1].split("\n")[0]
+
+
+def test_name_clusters_stats_sum_per_cluster() -> None:
+    seen: dict[str, int] = {}
+
+    def handler(request: LLMRequest) -> str:
+        member = _first_member(request)
+        seen[member] = seen.get(member, 0) + 1
+        if member == "flaky" and seen[member] == 1:
+            raise TransientLLMError("503")
+        if member == "bad" and seen[member] == 1:
+            return "oops"
+        return '{"name": "Good ' + member + '"}'
+
+    client = FakeLLMClient(handler=handler)
+    members = {0: ["ok"], 1: ["flaky"], 2: ["bad"]}
+    result = naming.name_clusters(client, _cfg(), members, sleep=_no_sleep)
+    assert result.failed == [] and len(result.names) == 3
+    assert result.stats.calls == len(client.calls) == 5
+    assert (result.stats.retries, result.stats.rate_limited) == (1, 0)
+
+
+def test_progress_message_formats() -> None:
+    assert naming.named_message(7, 71, 12, "Unit Testing", 2) == (
+        'named 7/71: cluster 12 -> "Unit Testing" (attempts 2)'
+    )
+    assert naming.fallback_message(8, 71, 13, "replies rejected", 3) == (
+        "fallback 8/71: cluster 13 (replies rejected, attempts 3)"
+    )
+    line = naming.named_message(1, 2, 0, 'Say "hi" é', 1)
+    assert line == 'named 1/2: cluster 0 -> "Say \\"hi\\" \\u00e9" (attempts 1)'
+    assert "\n" not in line
+    assert naming.FALLBACK_REASONS == {
+        naming.ValidationExhausted: "replies rejected",
+        naming.RetriesExhausted: "retries exhausted",
+        PermanentLLMError: "request refused",
+    }
+
+
+def test_log_lines_sequential() -> None:
+    def handler(request: LLMRequest) -> str:
+        member = _first_member(request)
+        if member == "reject":
+            return '{"name": "Other"}'
+        if member == "down":
+            raise TransientLLMError("503")
+        if member == "refuse":
+            raise PermanentLLMError("no")
+        if member == "second" and "rejected" not in request.user:
+            return "oops"
+        return '{"name": "Good ' + member + '"}'
+
+    members = {0: ["second"], 1: ["reject"], 2: ["down"], 3: ["refuse"], 4: ["fine"]}
+    lines: list[str] = []
+    client = FakeLLMClient(handler=handler)
+    naming.name_clusters(client, _cfg(), members, sleep=_no_sleep, log=lines.append)
+    assert lines == [
+        'named 1/5: cluster 0 -> "Good second" (attempts 2)',
+        "fallback 2/5: cluster 1 (replies rejected, attempts 3)",
+        "fallback 3/5: cluster 2 (retries exhausted, attempts 2)",
+        "fallback 4/5: cluster 3 (request refused, attempts 1)",
+        'named 5/5: cluster 4 -> "Good fine" (attempts 1)',
+    ]
+    plain = naming.name_clusters(FakeLLMClient(handler=handler), _cfg(), members, sleep=_no_sleep)
+    assert plain.failed == [1, 2, 3]
+
+
+def test_log_lines_carry_no_raw_text() -> None:
+    marker = "RAWMARKER"
+
+    def handler(request: LLMRequest) -> str:
+        member = _first_member(request)
+        if member == "reject":
+            return '{"name": "Other", "note": "' + marker + '"}'
+        if member == "down":
+            raise TransientLLMError(marker)
+        if member == "refuse":
+            raise PermanentLLMError(marker)
+        return '{"name": "Good ' + member + '", "note": "' + marker + '"}'
+
+    members = {0: ["reject"], 1: ["down"], 2: ["refuse"], 3: ["fine"]}
+    lines: list[str] = []
+    naming.name_clusters(
+        FakeLLMClient(handler=handler), _cfg(), members, sleep=_no_sleep, log=lines.append
+    )
+    assert len(lines) == 4 and all(marker not in line for line in lines)
+    assert lines[3] == 'named 4/4: cluster 3 -> "Good fine" (attempts 1)'

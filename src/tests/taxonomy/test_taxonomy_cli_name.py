@@ -15,7 +15,7 @@ from getwork.embed.fake import FakeEmbeddingClient
 from getwork.llm import factory as llm_factory
 from getwork.llm.client import FatalLLMError, LLMRequest
 from getwork.llm.fake import FakeLLMClient
-from getwork.taxonomy import build, cli, model, naming, report
+from getwork.taxonomy import build, cli, cli_name, model, naming, report
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -447,3 +447,87 @@ def test_build_accepts_concept_and_single_member_names(tmp_path: Path) -> None:
     assert _run(root, "build") == 0
     tax = model.load_taxonomy(root / "taxonomy" / "taxonomy.json")
     assert set(tax.cluster_names()) == {"Frontend Work", members[1][0], "Cloud Hosting"}
+
+
+def _llm_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
+    return _run(root, "name", "--method", "llm", "--model", "m", *extra, llm_client=client)
+
+
+def _own_name_client(root: Path) -> FakeLLMClient:
+    wanted = {skills[0]: f"Concept {cid}" for cid, skills in _members(root).items()}
+    return FakeLLMClient(handler=_llm_handler(wanted))
+
+
+def test_name_workers_same_file_and_progress_on_stderr(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    files, outputs = [], []
+    for workers in ("2", "3"):
+        root = tmp_path / f"art{workers}"
+        _through_grid(root)
+        capsys.readouterr()
+        assert _llm_run(root, "--workers", workers, client=_own_name_client(root)) == 0
+        out = capsys.readouterr()
+        files.append((root / "taxonomy" / "cluster_names.csv").read_bytes())
+        outputs.append(out)
+    assert files[0] == files[1]
+    assert len(outputs[1].out.splitlines()) == 1
+    summary = json.loads(outputs[1].out)
+    assert set(summary) == {"names_file", "method", "n_clusters", "n_fallback", "n_duplicate",
+                            "n_member_list"}
+    lines = outputs[1].err.splitlines()
+    assert [line.split(" -> ")[0] for line in lines] == [
+        f"named {i + 1}/3: cluster {i}" for i in range(3)
+    ]
+    assert all(line.endswith(" (attempts 1)") and '"Concept ' in line for line in lines)
+
+
+def test_name_without_workers_sends_used_names(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    client = _own_name_client(root)
+    assert _llm_run(root, client=client) == 0
+    assert "USED NAMES" not in client.calls[0].user
+    assert all("USED NAMES" in call.user for call in client.calls[1:])
+
+
+def test_name_workers_invalid_exit_2(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    for bad in ("0", "x"):
+        client = _own_name_client(root)
+        assert _llm_run(root, "--workers", bad, client=client) == 2
+        assert client.calls == []
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_name_workers_ignored_for_heuristic(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    assert _run(root, "name", "--workers", "3") == 0
+    out = capsys.readouterr()
+    assert json.loads(out.out)["method"] == "heuristic" and "named" not in out.err
+
+
+def test_name_fatal_error_still_exit_3_with_workers(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+
+    def handler(request: LLMRequest) -> str:
+        raise FatalLLMError("denied")
+
+    capsys.readouterr()
+    assert _llm_run(root, "--workers", "2", client=FakeLLMClient(handler=handler)) == 3
+    assert "denied" in capsys.readouterr().err
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_stderr_log_redacts_secrets(capsys: pytest.CaptureFixture[str]) -> None:
+    cli_name._stderr_log(["sk-test-secret"])("named 1/1: cluster 0 -> sk-test-secret")
+    out = capsys.readouterr()
+    assert out.out == "" and out.err == "named 1/1: cluster 0 -> ***\n"

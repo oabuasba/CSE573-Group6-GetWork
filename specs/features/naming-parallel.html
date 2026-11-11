@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetWork — Feature: naming-parallel</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#goal">Goal</a>
+      <a href="#scope">Scope</a>
+      <a href="#design">Design</a>
+      <a href="#acceptance">Acceptance criteria</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#edge-cases">Edge cases &amp; risks</a>
+      <a href="#open-questions">Open questions</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>Parallel cluster naming with progress lines</h1>
+      <p class="subtitle">Run the per-cluster naming calls concurrently, fix duplicate names afterwards in cluster-id order, and print one stderr line per cluster.</p>
+      <div class="meta"><span><strong>Status:</strong> draft</span><span><strong>Updated:</strong> 2026-11-10</span><span><strong>Pipeline step:</strong> 4 (taxonomy name)</span><span><strong>Master:</strong> <a href="../architecture.html">architecture.html</a></span></div>
+      <span class="product-badge">naming-parallel</span>
+    </header>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p><code>taxonomy name --method llm</code> (built in <a href="alias-and-naming-v2.html">alias-and-naming-v2</a>, decision N-3) asks the model about one cluster at a time so that each request can list the names already used. With the full-corpus selection possibly at 71 clusters (hdbscan-01) that is 71 sequential calls with no sign of life. This feature adds <code>--workers N</code> so the calls run concurrently without the used-names list, then checks the results in cluster-id order and re-asks sequentially, with the used-names list and the existing retry feedback, only for the clusters whose draft repeats an earlier accepted name. The outcome does not depend on which call finishes first. It also prints one stderr line per cluster as it is accepted or falls back, and keeps the single JSON summary line on stdout. <code>workers=1</code> stays the current sequential behavior. Spec decisions are recorded in <a href="../architecture.html#ADR-24">ADR-24</a>.</p>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <h3>In scope</h3>
+      <ul>
+        <li><code>naming.name_clusters</code>: <code>workers</code> and <code>log</code> keyword parameters, the two-phase algorithm for <code>workers &gt;= 2</code>, per-cluster call statistics merged at the end, progress message builders.</li>
+        <li><code>taxonomy name --workers N</code> and the stderr progress lines (redacted); <code>scripts/run_pipeline.sh</code> passes <code>NAME_WORKERS</code> (default 4).</li>
+        <li>Taxonomy README text and a docs test.</li>
+      </ul>
+      <h3>Out of scope</h3>
+      <ul>
+        <li>Any change to the name rules (<code>check_concept_name</code>, <code>member_list_reason</code>), the prompt (<code>name_v2</code>), the names file columns, the build gate, or the stdout JSON summary keys.</li>
+        <li>Parallelism for other steps, and moving <code>structure/pool.py</code> to a neutral module (see assumption A-2).</li>
+        <li>A <code>--quiet</code> flag (assumption A-3). Real LLM or Voyager runs: user-run only; tests use <code>FakeLLMClient</code> (<a href="../architecture.html#CC-10">CC-10</a>). <code>docs/deviations.md</code> is untouched.</li>
+        <li>The done tasks T-1 to T-10 of alias-and-naming-v2 stay as built; this feature only adds tasks.</li>
+      </ul>
+    </section>
+
+    <section id="design">
+      <h2>Design</h2>
+      <p>Depends on <a href="../architecture.html#ADR-13">ADR-13</a> (client factory, retry, validated loop), <a href="../architecture.html#ADR-23">ADR-23</a> (concept-label names), <a href="../architecture.html#CC-10">CC-10</a>, <a href="../architecture.html#CC-14">CC-14</a>, and adds <a href="../architecture.html#ADR-24">ADR-24</a>. The structurer's existing worker pattern is reused as is: <code>getwork.structure.pool.run_pool(items, fn, workers, stop, abort)</code> runs <code>fn</code> over the items on daemon threads and yields <code>(item, result)</code> in arrival order, an exception from <code>fn</code> arrives as the result, and the consumer sets <code>abort</code> and abandons the generator on a fatal error (see <code>structure/runner.py</code>, <code>_consume</code>). One shared <code>Throttle</code> serves all workers so a 429 pauses everyone. The structurer prints progress to stderr through a <code>log</code> callable that the CLI wraps with <code>redact_secrets</code>; this feature does the same.</p>
+
+      <h3>Decisions</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Id</th><th>Decision</th><th>Rationale</th></tr></thead>
+          <tbody>
+            <tr><td>P-1</td><td><code>workers == 1</code> (the default) runs today's loop unchanged: ids ascending, each request carries <code>USED NAMES</code> (all names accepted so far), validation includes the duplicate rule. <code>workers &gt;= 2</code> runs the parallel algorithm P-2. <code>workers &lt; 1</code> raises <code>ValueError</code>.</td><td>Compatibility. The default stays 1 as the user suggested (the structurer's default is 4, or 2 for the local backend); the pipeline script passes 4.</td></tr>
+            <tr><td>P-2</td><td>Parallel algorithm. <strong>Draft phase</strong> (concurrent, one task per cluster): one <code>complete_validated</code> call per cluster with <code>used</code> empty, so the request text is exactly <code>build_name_message(shown, ())</code>. The validation is <code>parse_name(text, shown, ())</code>, which includes the member-list, generic, word-count and single-member rules, so a member-list reply is retried with the existing feedback inside the worker, concurrently. A draft ends as a name, or as a failure of type <code>ValidationExhausted</code>, <code>RetriesExhausted</code> or <code>PermanentLLMError</code>; <code>FatalLLMError</code> aborts the run (P-5). <strong>Resolve phase</strong> (the consuming thread, ids ascending, started as soon as the next id's draft has arrived): keep the list <code>accepted</code> of accepted names. A draft name whose casefold is not in <code>accepted</code> is accepted as is. A draft name that repeats an accepted one is discarded and the cluster is re-asked once through <code>complete_validated</code> with <code>used = tuple(accepted)</code> (same request and validation as <code>workers == 1</code>, full retry budget); accepted if it passes, else a fallback. A failed draft is a fallback (no second chance: repeating a transport failure or three rejected replies is not useful). The lower cluster id always keeps a contested name.</td><td>Draft requests do not depend on each other, so they can overlap; the only cross-cluster rule is uniqueness, and resolving it in id order makes the result independent of finish order. Resolve work (rare re-asks) runs while the workers keep drafting.</td></tr>
+            <tr><td>P-3</td><td>Refinement of the user's wording: member-list replies are retried with feedback inside the concurrent draft phase (the existing three attempts), not in the sequential phase, because the concept rules do not depend on other clusters. Only duplicates, which do depend on other clusters, are re-asked sequentially. A cluster whose draft was a member list on every attempt falls back, as today.</td><td>Same final behavior as "re-ask member lists sequentially" with fewer sequential calls. Alternative: make the draft phase single-attempt and re-ask every rejection sequentially; slower on a bad run, not taken.</td></tr>
+            <tr><td>P-4</td><td>Determinism. For a fixed model, for every <code>workers &gt;= 2</code> the names, the fallback list and the sequence of progress lines are the same whatever the number of workers and the order in which calls finish, because each draft depends only on its cluster's own replies and the resolve phase follows id order. <code>workers == 1</code> and <code>workers &gt;= 2</code> may differ, because the model sees the used-names list from the first request only when <code>workers == 1</code>; this is stated in the runbook.</td><td>The user asked for results independent of finish order; making <code>workers == 1</code> identical to <code>workers &gt;= 2</code> would change today's requests.</td></tr>
+            <tr><td>P-5</td><td>Errors. <code>FatalLLMError</code> from a worker or from a re-ask: set <code>abort</code>, stop consuming, re-raise it unchanged (the CLI redacts it and exits 3, as today). Any other unexpected exception from a worker is re-raised the same way. <code>RetriesExhausted</code> and <code>PermanentLLMError</code> fail one cluster only. The pool is always abandoned with <code>abort</code> set (<code>finally</code>), so no new cluster starts after an error.</td><td>Matches the structurer pool and <code>_consume</code>.</td></tr>
+            <tr><td>P-6</td><td>Call statistics: each cluster has its own <code>CallStats</code> (the counters are not thread-safe); <code>NameResult.stats</code> is their field-wise sum, in every mode. "Attempts" in progress lines means the model calls made for that cluster, drafts and re-asks together (<code>CallStats.calls</code>).</td><td>Same pattern as the structurer's per-record stats.</td></tr>
+            <tr><td>P-7</td><td>Progress. <code>name_clusters(..., log=callable)</code> calls <code>log</code> once per cluster, in id order, when its outcome is final: <code>named {done}/{total}: cluster {id} -&gt; "{name}" (attempts {n})</code> or <code>fallback {done}/{total}: cluster {id} ({reason}, attempts {n})</code> where <code>done</code> counts finished clusters including this one, <code>name</code> is <code>json.dumps(name)</code> of the accepted name, and <code>reason</code> comes from a fixed table (no exception text, no raw reply). The CLI sends the lines to stderr through <code>redact_secrets</code>; the stdout summary is unchanged. No lines for <code>--method heuristic</code> (instant, nothing to report).</td><td>The user's example format. Fixed reasons keep model text and error bodies out of logs.</td></tr>
+            <tr><td>P-8</td><td>No <code>--quiet</code>. None of the CLIs has one: the structurer logs to stderr unconditionally and <code>taxonomy embed</code> prints chunk progress to stderr unconditionally. Progress goes to stderr only, so <code>2&gt;/dev/null</code> silences it and stdout stays one JSON line.</td><td>Consistency over a new flag; the flag is cheap to add later.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Interfaces</h3>
+      <p>Signatures are final; tasks copy them verbatim. Functions use keyword-only parameters after the third.</p>
+<pre><code># src/getwork/taxonomy/naming.py   (modified)
+FALLBACK_REASONS: dict[type[Exception], str] = {
+    ValidationExhausted: "replies rejected",
+    RetriesExhausted: "retries exhausted",
+    PermanentLLMError: "request refused",
+}
+
+def named_message(done: int, total: int, cluster_id: int, name: str, attempts: int) -&gt; str:
+    """f'named {done}/{total}: cluster {cluster_id} -&gt; {json.dumps(name)} (attempts {attempts})'"""
+
+def fallback_message(done: int, total: int, cluster_id: int, reason: str, attempts: int) -&gt; str:
+    """f'fallback {done}/{total}: cluster {cluster_id} ({reason}, attempts {attempts})'"""
+
+def name_clusters(
+    client: LLMClient,
+    cfg: NameConfig,
+    members: Mapping[int, Sequence[str]],
+    *,
+    secrets: Sequence[str] = (),
+    sleep: Callable[[float], None] = time.sleep,
+    workers: int = 1,
+    log: Callable[[str], None] | None = None,
+) -&gt; NameResult:
+    """workers &lt; 1: ValueError. workers == 1: rule P-1 (today's loop). workers &gt;= 2: rules P-2 to P-5.
+    One shared Throttle. Per-cluster CallStats summed into NameResult.stats (P-6). NameResult.names has
+    the accepted names, NameResult.failed the fallback ids ascending. log (when given) is called once per
+    cluster in id order with named_message or fallback_message (P-7). FatalLLMError propagates."""
+
+# src/getwork/taxonomy/cli_name.py   (modified)
+DEFAULT_NAME_WORKERS: int = 1
+# name subparser gains: --workers (type cli_common.positive_int, default None; None means DEFAULT_NAME_WORKERS;
+# accepted and ignored for --method heuristic)
+def _stderr_log(secrets: Sequence[str]) -&gt; Callable[[str], None]:
+    """Returns a function that prints redact_secrets(message, secrets) to sys.stderr."""
+# _llm_names passes workers=args.workers or DEFAULT_NAME_WORKERS and log=_stderr_log(bundle.secrets).</code></pre>
+
+      <h3>Data flow</h3>
+      <p>Same inputs and outputs as before (selection state in, <code>cluster_names.csv</code> and one stdout JSON line out). New: stderr gets one line per cluster for <code>--method llm</code>. Draft requests are sent in id order across the workers; the resolve phase consumes drafts as they arrive and releases them in id order.</p>
+
+      <h3>Files</h3>
+<div class="tree"><span class="dir">src/getwork/taxonomy/</span>
+├── <span class="file">naming.py</span>                  <span class="comment"># modified: workers, log, per-cluster stats, messages</span>
+├── <span class="file">cli_name.py</span>                <span class="comment"># modified: --workers, stderr log</span>
+└── <span class="file">README.md</span>                  <span class="comment"># modified</span>
+<span class="dir">scripts/</span><span class="file">run_pipeline.sh</span>             <span class="comment"># modified: NAME_WORKERS</span>
+<span class="dir">src/tests/taxonomy/</span>
+├── <span class="file">test_taxonomy_naming.py</span>    <span class="comment"># modified (T-1)</span>
+├── <span class="file">test_taxonomy_naming_parallel.py</span>  <span class="comment"># new (T-2)</span>
+├── <span class="file">test_taxonomy_cli_name.py</span>  <span class="comment"># modified (T-3)</span>
+└── <span class="file">test_taxonomy_docs.py</span>      <span class="comment"># modified (T-4)</span>
+<span class="dir">src/tests/common/</span><span class="file">test_pipeline_script.py</span>  <span class="comment"># modified (T-4)</span></div>
+    </section>
+
+    <section id="acceptance">
+      <h2>Acceptance criteria</h2>
+      <p>All tests are offline (<code>pytestmark = pytest.mark.usefixtures("offline")</code>), use <code>FakeLLMClient</code> with a handler (thread-safe; a script would make the reply order depend on thread timing), and never read <code>.env</code> or touch real data. Delays in tests are at most a few milliseconds and are injected through the handler. Test paths are under <code>src/tests/</code>.</p>
+      <ol>
+        <li id="AC-1"><strong>AC-1</strong>: With the default (<code>workers=1</code>) every existing <code>name_clusters</code> test passes unchanged: ids ascending, request user text with the <code>USED NAMES</code> section, duplicate rejection with feedback, fallbacks, fatal and permanent error handling. <code>NameResult.stats</code> equals the number of client calls and the retries seen. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming.py</code> (existing tests, unchanged), <code>::test_name_clusters_stats_sum_per_cluster</code></li>
+        <li id="AC-2"><strong>AC-2</strong>: <code>named_message</code> and <code>fallback_message</code> return exactly the documented formats (for example <code>named 7/71: cluster 12 -&gt; "Unit Testing" (attempts 2)</code> and <code>fallback 8/71: cluster 13 (replies rejected, attempts 3)</code>); a name with a quote or non-ASCII character is JSON-escaped on one line; <code>FALLBACK_REASONS</code> has exactly the three documented entries. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming.py::test_progress_message_formats</code></li>
+        <li id="AC-3"><strong>AC-3</strong>: With <code>log</code> and <code>workers=1</code>, <code>name_clusters</code> calls it once per cluster in id order: <code>named</code> lines carry the accepted name and the number of model calls for that cluster (a cluster accepted on the second reply says <code>attempts 2</code>), <code>fallback</code> lines carry the reason of the failure (<code>replies rejected</code> after three bad replies, <code>retries exhausted</code> for transient errors on every attempt, <code>request refused</code> for a <code>PermanentLLMError</code>), <code>done</code> counts 1 to the total, and no line contains a raw reply or exception text. With <code>log=None</code> nothing is called. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming.py::test_log_lines_sequential</code>, <code>::test_log_lines_carry_no_raw_text</code></li>
+        <li id="AC-4"><strong>AC-4</strong>: <code>workers=0</code> raises <code>ValueError</code> and makes no client call. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_workers_must_be_positive</code></li>
+        <li id="AC-5"><strong>AC-5</strong>: With <code>workers=3</code> every first-pass request is exactly <code>build_name_message(shown, ())</code> (no <code>USED NAMES</code> section), one request per cluster when all replies are fine, and the result equals the expected names. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_draft_requests_have_no_used_names</code></li>
+        <li id="AC-6"><strong>AC-6</strong>: Determinism: a handler that answers each cluster with a name derived from its members and sleeps longer for lower ids (so higher ids finish first) gives identical <code>names</code>, <code>failed</code> and log lines for <code>workers=2</code>, <code>3</code> and <code>8</code>, and the log lines are in id order. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_result_and_log_independent_of_workers_and_finish_order</code></li>
+        <li id="AC-7"><strong>AC-7</strong>: Duplicate resolution: when the drafts of clusters 1 and 4 both come back as <code>Same Name</code> (and a third draft is <code>same name</code> in other case), the lowest id keeps it; each later duplicate is re-asked once with a request whose user text ends with a <code>USED NAMES</code> section listing the accepted names so far in id order, and accepted when the new reply differs; when the re-ask replies keep repeating a used name for three attempts (with the existing "already the name of another cluster" feedback in the retried requests) the cluster is in <code>failed</code> and its log line is <code>fallback ... (replies rejected, ...)</code>. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_duplicate_draft_is_reasked_with_used_names</code>, <code>::test_duplicate_reask_exhausted_falls_back</code></li>
+        <li id="AC-8"><strong>AC-8</strong>: Member-list drafts are retried inside the draft phase with the existing feedback (the retried request's user text starts with the first and contains "member skills" and still has no <code>USED NAMES</code> section) and accepted on a good second reply; three member-list replies make the cluster a fallback with no re-ask; a transient or permanent error on one cluster fails only that cluster and the others are named. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_member_list_draft_retried_in_worker</code>, <code>::test_one_cluster_failure_does_not_stop_others</code></li>
+        <li id="AC-9"><strong>AC-9</strong>: A <code>FatalLLMError</code> for one cluster (draft or re-ask) makes <code>name_clusters</code> raise it unchanged, call no further <code>log</code> line after the error, and leave no worker thread running new clusters (after the call returns, the number of client calls stays constant over a short wait); an unexpected <code>RuntimeError</code> raised by the client handler is re-raised the same way. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_fatal_error_propagates_and_stops_work</code>, <code>::test_unexpected_exception_propagates</code></li>
+        <li id="AC-10"><strong>AC-10</strong>: A shared <code>Throttle</code> serves all workers: with a handler that raises <code>RateLimitError</code> on the first call for every cluster and an injected <code>sleep</code> recording calls, each cluster is named, <code>stats.rate_limited</code> equals the number of 429 responses, and <code>stats.calls</code> equals the client call count. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py::test_rate_limit_handled_and_stats_summed</code></li>
+        <li id="AC-11"><strong>AC-11</strong>: <code>taxonomy name --method llm --workers 3</code> (fake client through <code>cli.main(..., llm_client=)</code>, the fixture of the existing CLI name tests) writes a names file equal to the one written by <code>--workers 2</code>, prints one JSON line on stdout with the unchanged keys, and prints <code>named i/3</code> lines on stderr, in id order, none containing a model reply other than the accepted name. Without <code>--workers</code> the behavior equals today's (used names in requests). <code>--workers 0</code> and <code>--workers x</code> return exit code 2 and write nothing; <code>--workers</code> with <code>--method heuristic</code> is accepted, changes nothing and prints no <code>named</code> lines; a <code>FatalLLMError</code> still returns 3. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_cli_name.py::test_name_workers_same_file_and_progress_on_stderr</code>, <code>::test_name_workers_invalid_exit_2</code>, <code>::test_name_workers_ignored_for_heuristic</code>, <code>::test_name_fatal_error_still_exit_3_with_workers</code></li>
+        <li id="AC-12"><strong>AC-12</strong>: <code>_stderr_log(secrets)</code> writes the message to stderr with every secret replaced (a message containing <code>sk-test-secret</code> prints without it). <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_cli_name.py::test_stderr_log_redacts_secrets</code></li>
+        <li id="AC-13"><strong>AC-13</strong>: <code>scripts/run_pipeline.sh</code> defines <code>NAME_WORKERS</code> with default <code>4</code> and passes <code>--workers "$NAME_WORKERS"</code> to <code>taxonomy name</code>; it still passes <code>--method "$NAME_METHOD"</code>, keeps the archive step, and <code>bash -n scripts/run_pipeline.sh</code> exits 0. The test only text-checks the script (no dry-run mode; running it would make real calls). <em>Test:</em> <code>src/tests/common/test_pipeline_script.py::test_run_pipeline_passes_name_workers</code></li>
+        <li id="AC-14"><strong>AC-14</strong>: <code>src/getwork/taxonomy/README.md</code> mentions <code>--workers</code>, <code>NAME_WORKERS</code>, the progress lines on stderr, that results are the same for every <code>--workers</code> of 2 or more but can differ from <code>--workers 1</code>, and that duplicates are re-asked in id order. <em>Test:</em> <code>src/tests/taxonomy/test_taxonomy_docs.py::test_readme_documents_parallel_naming</code></li>
+        <li id="AC-15"><strong>AC-15</strong>: The whole suite passes with no key, model or network and leaves nothing new under <code>data/</code>, <code>artifacts/</code>, <code>artifacts_trial/</code>. <em>Check (commands):</em> <code>env -u VOYAGER_API_KEY -u VOYAGER_BASE_URL -u VOYAGER_MODEL uv run --offline --frozen pytest -q</code> exits 0; <code>git status --porcelain data/ artifacts/ artifacts_trial/</code> prints nothing new.</li>
+      </ol>
+    </section>
+
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>Each task is at most about 200 changed lines including tests, touches at most about 4 files, and has one concern. Tasks that touch the same file are sequenced. Developers never read <code>.env</code>, never run a real LLM or Voyager step or the pipeline script, and start each new test file with <code>pytestmark = pytest.mark.usefixtures("offline")</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Summary</th><th>Depends on</th><th>ACs</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#T-1">T-1</a></td><td>Per-cluster stats, message builders and <code>log</code> in the sequential path</td><td>none</td><td>AC-1, AC-2, AC-3</td></tr>
+            <tr><td><a href="#T-2">T-2</a></td><td><code>workers</code>: parallel draft and ordered resolve (<span class="badge badge-warning">large</span>)</td><td>T-1</td><td>AC-4 to AC-10</td></tr>
+            <tr><td><a href="#T-3">T-3</a></td><td><code>taxonomy name --workers</code> and the redacted stderr log</td><td>T-2</td><td>AC-11, AC-12</td></tr>
+            <tr><td><a href="#T-4">T-4</a></td><td>Pipeline script, README, docs tests, final check</td><td>T-3</td><td>AC-13, AC-14, AC-15</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section id="T-1" class="card">
+        <div class="card-header"><span class="badge badge-info">T-1</span><h3>Per-cluster stats, message builders, log (sequential)</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/taxonomy/naming.py</code> (modify), <code>src/tests/taxonomy/test_taxonomy_naming.py</code> (modify).</p>
+        <p><strong>Depends on:</strong> none. <strong>Satisfies:</strong> AC-1, AC-2, AC-3. <strong>Cites:</strong> ADR-24, ADR-23, CC-10; decisions P-6, P-7.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code>FALLBACK_REASONS: dict[type[Exception], str] = {
+    ValidationExhausted: "replies rejected",
+    RetriesExhausted: "retries exhausted",
+    PermanentLLMError: "request refused",
+}
+
+def named_message(done: int, total: int, cluster_id: int, name: str, attempts: int) -&gt; str:
+    """f'named {done}/{total}: cluster {cluster_id} -&gt; {json.dumps(name)} (attempts {attempts})'"""
+
+def fallback_message(done: int, total: int, cluster_id: int, reason: str, attempts: int) -&gt; str:
+    """f'fallback {done}/{total}: cluster {cluster_id} ({reason}, attempts {attempts})'"""
+
+def name_clusters(
+    client: LLMClient,
+    cfg: NameConfig,
+    members: Mapping[int, Sequence[str]],
+    *,
+    secrets: Sequence[str] = (),
+    sleep: Callable[[float], None] = time.sleep,
+    workers: int = 1,
+    log: Callable[[str], None] | None = None,
+) -&gt; NameResult:
+    """workers &lt; 1: ValueError. workers == 1: rule P-1 (today's loop). workers &gt;= 2: rules P-2 to P-5.
+    One shared Throttle. Per-cluster CallStats summed into NameResult.stats (P-6). NameResult.names has
+    the accepted names, NameResult.failed the fallback ids ascending. log (when given) is called once per
+    cluster in id order with named_message or fallback_message (P-7). FatalLLMError propagates."""</code></pre>
+        <p><strong>Instructions:</strong> Add the signature with <code>workers</code> and <code>log</code> now; in this task only <code>workers == 1</code> works: raise <code>ValueError</code> for <code>workers &lt; 1</code> and <code>NotImplementedError("workers &gt;= 2")</code> for larger values (T-2 replaces that). Factor today's loop body into a private helper that names one cluster given <code>(cluster_id, shown, used)</code> and returns the accepted name or the failure class together with that cluster's own <code>CallStats</code> (pass it to <code>complete_validated(stats=...)</code>); T-2 reuses this helper for the resolve phase, so keep it free of shared mutable state except the <code>Throttle</code>. After each cluster call <code>log</code> (if not <code>None</code>) with the right message: <code>done</code> is the 1-based position in id order, <code>attempts</code> is that cluster's <code>stats.calls</code>, the fallback reason is <code>FALLBACK_REASONS[type(exc)]</code>. Sum the per-cluster stats (calls, retries, rate_limited) into <code>result.stats</code>. Do not put exception text or replies in any message. Tests: existing tests unchanged; add <code>test_name_clusters_stats_sum_per_cluster</code>, <code>test_progress_message_formats</code>, <code>test_log_lines_sequential</code>, <code>test_log_lines_carry_no_raw_text</code> (use handlers that return a reply containing a marker and assert the marker is absent from every line unless it is the accepted name).</p>
+      </section>
+
+      <section id="T-2" class="card">
+        <div class="card-header"><span class="badge badge-info">T-2</span><h3>Parallel draft phase and ordered resolve phase</h3> <span class="badge badge-warning">large</span></div>
+        <p><strong>Flag:</strong> <code>large</code>. About 90 lines of code and 130 of concurrency tests, near the 200-line limit, one concern, 2 files. If the diff passes about 250 lines, implement code and AC-4 to AC-8 first and report, leaving AC-9 and AC-10 tests for a follow-up part inside the same batch.</p>
+        <p><strong>Files:</strong> <code>src/getwork/taxonomy/naming.py</code> (modify), <code>src/tests/taxonomy/test_taxonomy_naming_parallel.py</code> (new).</p>
+        <p><strong>Depends on:</strong> T-1. <strong>Satisfies:</strong> AC-4 to AC-10. <strong>Cites:</strong> ADR-24, ADR-13, ADR-23, CC-10; decisions P-1 to P-6.</p>
+        <p><strong>Interfaces:</strong> <code>name_clusters</code> exactly as in T-1 (now with <code>workers &gt;= 2</code> implemented); the existing helper from T-1 is reused. Pool function used unchanged: <code>getwork.structure.pool.run_pool(items: Sequence[T], fn: Callable[[T], R], workers: int, stop: threading.Event, abort: threading.Event) -&gt; Iterator[tuple[T, R | BaseException]]</code>.</p>
+        <p><strong>Instructions:</strong> Implement P-2 to P-5 in a private function used when <code>workers &gt;= 2</code>:</p>
+        <ol>
+          <li>Draft task <code>fn(cluster_id)</code>: <code>shown = tuple(members[cluster_id][:cfg.top_members])</code>; one <code>complete_validated</code> call with <code>_request(cfg, shown, ())</code>, <code>parse = lambda text: parse_name(text, shown, ())</code>, the shared <code>Throttle</code>, <code>sleep</code>, a fresh per-cluster <code>CallStats</code>, <code>max_attempts=cfg.max_validation_attempts</code>. Catch <code>(ValidationExhausted, RetriesExhausted, PermanentLLMError)</code> and return a draft record (name or failure class, stats); let <code>FatalLLMError</code> and anything else escape (the pool delivers it as the result).</li>
+          <li>Consumer: <code>stop = threading.Event()</code>, <code>abort = threading.Event()</code>; iterate <code>run_pool(sorted ids, fn, workers, stop, abort)</code> inside <code>try/finally: abort.set()</code>. A result that is an exception: <code>abort.set()</code> and <code>raise</code> it. Otherwise store the draft by id, then while the next unresolved id (ascending) has a stored draft, resolve it (step 3) and advance.</li>
+          <li>Resolve cluster <code>c</code>: if the draft has a name and its casefold is not among the casefolds of <code>accepted</code>, accept it; if it has a name that repeats one, re-ask with the T-1 helper using <code>used = tuple(accepted)</code> (its stats are added to the draft's stats); if the draft failed, it is a fallback. Append accepted names to <code>accepted</code>, fill <code>result.names</code> / <code>result.failed</code>, add the cluster's stats into <code>result.stats</code>, and call <code>log</code> with the T-1 messages (<code>attempts</code> = the cluster's total <code>calls</code>). A <code>FatalLLMError</code> from a re-ask propagates (the <code>finally</code> aborts the pool).</li>
+        </ol>
+        <p>Import the pool as <code>from getwork.structure import pool</code> (assumption A-2). Tests (new file, use <code>FakeLLMClient(handler=...)</code> and a shared members fixture of 4 to 8 small clusters): <code>test_workers_must_be_positive</code>, <code>test_draft_requests_have_no_used_names</code>, <code>test_result_and_log_independent_of_workers_and_finish_order</code> (handler sleeps <code>0.002 * (n - id)</code> seconds; compare results and log lists for workers 2, 3, 8), <code>test_duplicate_draft_is_reasked_with_used_names</code>, <code>test_duplicate_reask_exhausted_falls_back</code>, <code>test_member_list_draft_retried_in_worker</code>, <code>test_one_cluster_failure_does_not_stop_others</code>, <code>test_fatal_error_propagates_and_stops_work</code>, <code>test_unexpected_exception_propagates</code>, <code>test_rate_limit_handled_and_stats_summed</code> (handler raises <code>RateLimitError</code> once per cluster, tracked under a lock; injected <code>sleep</code> is a no-op recorder). Keep handlers deterministic by looking at the request text (first member of the cluster, presence of <code>USED NAMES</code>, count of earlier calls per cluster under a lock), never at thread timing.</p>
+      </section>
+
+      <section id="T-3" class="card">
+        <div class="card-header"><span class="badge badge-info">T-3</span><h3>CLI: --workers and the stderr log</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/taxonomy/cli_name.py</code> (modify), <code>src/tests/taxonomy/test_taxonomy_cli_name.py</code> (modify).</p>
+        <p><strong>Depends on:</strong> T-2. <strong>Satisfies:</strong> AC-11, AC-12. <strong>Cites:</strong> ADR-24, ADR-13, CC-10; decisions P-1, P-7, P-8.</p>
+        <p><strong>Interfaces (verbatim from Design):</strong></p>
+<pre><code># src/getwork/taxonomy/cli_name.py   (modified)
+DEFAULT_NAME_WORKERS: int = 1
+# name subparser gains: --workers (type cli_common.positive_int, default None; None means DEFAULT_NAME_WORKERS;
+# accepted and ignored for --method heuristic)
+def _stderr_log(secrets: Sequence[str]) -&gt; Callable[[str], None]:
+    """Returns a function that prints redact_secrets(message, secrets) to sys.stderr."""
+# _llm_names passes workers=args.workers or DEFAULT_NAME_WORKERS and log=_stderr_log(bundle.secrets).</code></pre>
+        <p><strong>Instructions:</strong> Add the option to the <code>name</code> subparser next to <code>--top-members</code>; import <code>sys</code> and <code>Callable</code>/<code>Sequence</code> as needed. Keep the existing <code>FatalLLMError</code> to <code>cli_common.FatalError</code> conversion. Do not change the stdout summary keys, the exit codes, or the heuristic path. A positive-int failure from argparse already gives exit code 2 through <code>cli._parse</code>. Tests next to the existing name tests, reusing their helpers (<code>_through_grid</code>, <code>_run</code>, <code>_llm_handler</code>): compare the CSV bytes of a <code>--workers 2</code> and a <code>--workers 3</code> run (separate artifact roots built the same way), check stderr with <code>capsys.readouterr().err</code> (lines start with <code>named </code>, in id order, 3 of them) and stdout parses as a single JSON object, check invalid values, the heuristic case, and exit code 3 with a fatal handler.</p>
+      </section>
+
+      <section id="T-4" class="card">
+        <div class="card-header"><span class="badge badge-info">T-4</span><h3>Pipeline script, README, docs tests, final check</h3></div>
+        <p><strong>Files:</strong> <code>scripts/run_pipeline.sh</code> (modify), <code>src/getwork/taxonomy/README.md</code> (modify), <code>src/tests/taxonomy/test_taxonomy_docs.py</code> (modify), <code>src/tests/common/test_pipeline_script.py</code> (modify).</p>
+        <p><strong>Depends on:</strong> T-3. <strong>Satisfies:</strong> AC-13, AC-14, AC-15. <strong>Cites:</strong> ADR-24, CC-10.</p>
+        <p><strong>Instructions:</strong> <strong>Script:</strong> add <code>NAME_WORKERS="${NAME_WORKERS:-4}"</code> next to <code>NAME_METHOD</code>, document it in the header comment (concurrent naming calls; real LLM calls when <code>NAME_METHOD</code> is <code>llm</code>), and add <code>--workers "$NAME_WORKERS"</code> to the <code>taxonomy name</code> step; change nothing else; do not run the script; check <code>bash -n scripts/run_pipeline.sh</code>. <strong>README:</strong> document <code>taxonomy name --workers N</code> (default 1; 2 or more runs the calls concurrently without the used-names list, then re-asks duplicates in id order; same result for every value of 2 or more, possibly different from 1), the stderr progress lines with one example of each kind, that stdout is still one JSON line, and the rate-limit sharing; mention <code>NAME_WORKERS</code>. <strong>Tests:</strong> <code>test_run_pipeline_passes_name_workers</code> (text checks, as in the existing script test) and <code>test_readme_documents_parallel_naming</code>. <strong>Final check:</strong> run the AC-15 commands and report the output tail.</p>
+      </section>
+    </section>
+
+    <section id="edge-cases">
+      <h2>Edge cases &amp; risks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Case</th><th>Required behavior</th><th>Covered by</th></tr></thead>
+          <tbody>
+            <tr><td>Two clusters draft the same name, in different case</td><td>The lower id keeps it; the other is re-asked with the used list; casefold comparison.</td><td>AC-7</td></tr>
+            <tr><td>A re-asked cluster returns a name that equals a later cluster's draft</td><td>Fine: the later cluster is resolved after it, sees the accepted list, and is re-asked itself if needed.</td><td>AC-6, AC-7</td></tr>
+            <tr><td>Cluster whose draft failed (rejected replies, retries, permanent error)</td><td>Fallback at once (no second chance); its name is not in <code>accepted</code>.</td><td>AC-8</td></tr>
+            <tr><td>Rate limit (429) while many workers run</td><td>One shared <code>Throttle</code> pauses all workers; per-cluster stats are summed; no lost updates.</td><td>AC-10</td></tr>
+            <tr><td>Fatal API error (bad key, 401/403)</td><td>Abort: no new cluster starts, the error propagates unchanged, the CLI redacts it and exits 3, and no names file is written (the file is written after naming).</td><td>AC-9, AC-11</td></tr>
+            <tr><td>More workers than clusters, one cluster, no clusters</td><td>The pool starts <code>min(workers, n)</code> threads; zero clusters returns an empty result without a call (the pool returns at once).</td><td>AC-4, AC-5</td></tr>
+            <tr><td>Ctrl-C during naming</td><td><code>KeyboardInterrupt</code> propagates; the <code>finally</code> sets <code>abort</code>; daemon threads end with the process; no partial names file (written after naming).</td><td>none (documented)</td></tr>
+            <tr><td>Reply text in logs</td><td>Only the accepted name (validated, at most 40 characters, JSON-escaped) and fixed reason strings; the CLI redacts configured secrets.</td><td>AC-3, AC-12</td></tr>
+            <tr><td>Real-model runs are not byte-reproducible</td><td>As before; the names file is the artifact. Parallel mode may need extra re-asks compared with sequential mode because the first request has no used list.</td><td>n/a</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="open-questions">
+      <h2>Open questions</h2>
+      <div class="callout warn"><span class="callout-title">Assumptions</span>
+        <p><strong>A-1.</strong> Default <code>--workers</code> is 1 (as suggested) and <code>run_pipeline.sh</code> defaults <code>NAME_WORKERS</code> to 4. Alternative: default 4 in the CLI like the structurer (2 for the local backend); not taken to keep today's behavior for anyone calling the command directly.</p>
+        <p><strong>A-2.</strong> The pool is imported from <code>getwork.structure.pool</code> unchanged. Decision A-8 of alias-table prefers neutral modules for shared plumbing, but moving the pool would touch the finished structurer (imports, tests); a later refactor can move it to <code>getwork.llm</code>. Thread names stay <code>structure-worker-N</code>.</p>
+        <p><strong>A-3.</strong> No <code>--quiet</code> (no other CLI has one). Alternative: add it to <code>taxonomy name</code> only; a flag that exists in one command is less consistent than none.</p>
+        <p><strong>A-4.</strong> Member-list replies are retried inside the concurrent draft phase rather than re-asked sequentially (P-3); only duplicates are re-asked sequentially. Same final outcome as the user's wording with fewer sequential calls.</p>
+        <p><strong>A-5.</strong> "Result independent of worker count" is guaranteed among worker counts of 2 or more; <code>--workers 1</code> keeps today's used-names-in-every-request behavior and may name differently (P-4).</p>
+        <p><strong>A-6.</strong> "Attempts" in progress lines is the number of model calls made for the cluster, transient retries included.</p>
+        <p><strong>A-7.</strong> Progress lines for the heuristic method are not printed (instant).</p>
+      </div>
+    </section>
+
+    <footer class="footer">GetWork · Feature spec · naming-parallel · see architecture.html</footer>
+  </main>
+</div>
+</body>
+</html>

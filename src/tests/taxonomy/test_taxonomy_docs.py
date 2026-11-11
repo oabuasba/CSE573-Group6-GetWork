@@ -45,6 +45,13 @@ def test_readme_documents_concept_names() -> None:
         assert any(step in heading for heading in headings), step
 
 
+def test_readme_documents_parallel_naming() -> None:
+    text = (PACKAGE / "README.md").read_text(encoding="utf-8")
+    for needle in ["--workers", "NAME_WORKERS", "stderr", "2 or more", "differ from `--workers 1`",
+                   "re-asked", "id order"]:
+        assert needle in text, needle
+
+
 def _imported_modules(line: str) -> list[str]:
     plain = re.match(r"\s*import\s+(.+)", line)
     if plain:

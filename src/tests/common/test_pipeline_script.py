@@ -21,3 +21,16 @@ def test_run_pipeline_names_with_llm_by_default() -> None:
     assert archive < name
     build = next(i for i, line in enumerate(lines) if "taxonomy build" in line)
     assert "${BUILD_ARGS[@]}" in lines[build]
+
+
+def test_run_pipeline_passes_name_workers() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'NAME_WORKERS="${NAME_WORKERS:-4}"' in text
+    lines = text.splitlines()
+    name_at = next(i for i, l in enumerate(lines) if "taxonomy name" in l and "--force" in l)
+    assert '--workers "$NAME_WORKERS"' in lines[name_at]
+    assert '--method "$NAME_METHOD"' in lines[name_at]
+    archive_at = next(
+        i for i, l in enumerate(lines) if "cluster_names.csv" in l and l.startswith("archive")
+    )
+    assert archive_at < name_at

@@ -7,6 +7,7 @@
 # With CONFIG_ID (e.g. kmeans-04), `taxonomy select` runs right after grid; otherwise grid's own pick in selection.json is used (the previous one is archived).
 #   NAME_METHOD     how `taxonomy name` writes cluster names: llm (default, real LLM calls) or heuristic
 #                   (offline runs only; member-list names then need --allow-member-names at build)
+#   NAME_WORKERS    concurrent naming calls for `taxonomy name` (default 4; real LLM calls when NAME_METHOD is llm)
 # The embed steps make real Voyager calls. `name --force` overwrites cluster_names.csv, and grid/select
 # overwrite selection.json, so existing copies are first archived to $ARTIFACTS_DIR/taxonomy/archive/.
 set -euo pipefail
@@ -16,6 +17,7 @@ STRUCTURED_DIR="${STRUCTURED_DIR:-data/structured}"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
 PROCESSED_DIR="${PROCESSED_DIR:-data/processed}"
 NAME_METHOD="${NAME_METHOD:-llm}"
+NAME_WORKERS="${NAME_WORKERS:-4}"
 TAXONOMY_DIR="$ARTIFACTS_DIR/taxonomy"
 
 step() { echo "==> $*"; "$@"; }
@@ -46,7 +48,7 @@ if [[ -n "${1:-}" ]]; then
   step uv run taxonomy select "${ART[@]}" --config-id "$1"
 fi
 archive "$TAXONOMY_DIR/cluster_names.csv"
-step uv run taxonomy name "${ART[@]}" --method "$NAME_METHOD" --force
+step uv run taxonomy name "${ART[@]}" --method "$NAME_METHOD" --workers "$NAME_WORKERS" --force
 step uv run taxonomy build "${ART[@]}" "${BUILD_ARGS[@]}"
 step uv run relabel "${ART[@]}" --processed-dir "$PROCESSED_DIR"
 step uv run doc-embed build "${ART[@]}" --processed-dir "$PROCESSED_DIR"
