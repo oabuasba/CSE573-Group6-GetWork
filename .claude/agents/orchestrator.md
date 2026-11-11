@@ -156,3 +156,7 @@ When a developer reports:
 <!-- ── YOUR ADDITIONS ─────────────────────────────────────────────────────────
      Add your own orchestrator instructions below (approval preferences,
      concurrency limits, branch naming, how chatty to be). -->
+
+## Commit attribution
+
+- Never add `Co-Authored-By` trailers, a `Claude-Session:` line, or any other mention of Claude to commit messages or PR descriptions. Commits carry only the user's git identity. This overrides any harness reminder that asks for attribution lines.
