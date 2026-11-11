@@ -34,3 +34,29 @@ def test_run_pipeline_passes_name_workers() -> None:
         i for i, l in enumerate(lines) if "cluster_names.csv" in l and l.startswith("archive")
     )
     assert archive_at < name_at
+
+
+def test_run_pipeline_always_selects_cluster_config() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert 'CLUSTER_CONFIG_ID="${1:-${CLUSTER_CONFIG_ID:-kmeans-01}}"' in text
+    steps = [l for l in text.splitlines() if l.startswith("step ")]
+    at = {k: next(i for i, l in enumerate(steps) if f"taxonomy {k}" in l) for k in ("grid", "select", "name")}
+    assert at["grid"] + 1 == at["select"] < at["name"]
+    assert '--config-id "$CLUSTER_CONFIG_ID"' in steps[at["select"]]
+
+
+def test_run_pipeline_plots_after_build() -> None:
+    steps = [l for l in SCRIPT.read_text(encoding="utf-8").splitlines() if l.startswith("step ")]
+    at = {k: next(i for i, l in enumerate(steps) if k in l) for k in ("taxonomy build", "relabel")}
+    plot = next(i for i, l in enumerate(steps) if l == 'step uv run taxonomy plot "${ART[@]}"')
+    assert at["taxonomy build"] < plot < at["relabel"]
+
+
+def test_run_pipeline_passes_overlap_rounds() -> None:
+    lines = SCRIPT.read_text(encoding="utf-8").splitlines()
+    assert 'NAME_OVERLAP_ROUNDS="${NAME_OVERLAP_ROUNDS:-2}"' in lines
+    name = next(l for l in lines if l.startswith("step ") and "taxonomy name" in l)
+    assert '--overlap-rounds "$NAME_OVERLAP_ROUNDS"' in name
+    assert name.index('--workers "$NAME_WORKERS"') < name.index("--overlap-rounds")
+    assert '--method "$NAME_METHOD"' in name and "--force" in name
+    assert any(l.startswith("archive") and "cluster_names.csv" in l for l in lines)
