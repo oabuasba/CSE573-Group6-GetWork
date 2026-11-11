@@ -170,6 +170,14 @@ STRUCTURED_DIR=data/structured_trial ARTIFACTS_DIR=artifacts_trial bash scripts/
 
 After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir "$ARTIFACTS_DIR"` (without the flag it reads `artifacts_trial/`). Per-stage options are in the READMEs: [`alias`](src/getwork/alias/README.md), [`taxonomy`](src/getwork/taxonomy/README.md), [`relabel`](src/getwork/relabel/README.md), [`docembed`](src/getwork/docembed/README.md), [`retrieval`](src/getwork/retrieval/README.md).
 
+### Try a random resume
+
+`scripts/match_random.sh` picks a random resume id from `$ARTIFACTS_DIR/documents/resumes/resumes_documents.parquet` and runs `retrieve show` (direction `resume_to_posting`) for B1+, B2 and Full. It uses stored vectors, so it makes no API calls.
+
+```bash
+[ARTIFACTS_DIR=...] [K=5] bash scripts/match_random.sh [RESUME_ID]
+```
+
 ## Development workflow (multi-agent)
 
 Features are built by a plan, build, review pipeline of Claude Code agents defined in `.claude/agents/`. You talk only to the orchestrator.
