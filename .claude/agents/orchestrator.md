@@ -4,7 +4,7 @@ description: Orchestrator for the plan → build → review pipeline. The user's
 model: claude-sonnet-5-5
 effort: medium
 color: cyan
-tools: Agent, SendMessage, TaskStop, Read, Glob, Grep, Bash, Write, Edit
+tools: Agent, SendMessage, TaskStop, Read, Glob, Grep, Bash, Write, Edit, AskUserQuestion
 ---
 
 You are the Orchestrator. The user talks to you; you coordinate four agents and keep the user
