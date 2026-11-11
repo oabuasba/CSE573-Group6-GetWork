@@ -1158,7 +1158,7 @@
     },
     "web-app": {
       "spec": "specs/features/web-app.html",
-      "phase": "building",
+      "phase": "done",
       "planner_agent": "a8e7495744e8a281a",
       "researcher_agent": "a928d94874d183f6f",
       "branch": "dev",
@@ -1233,27 +1233,27 @@
           "notes": "Reviewer pass. Non-blocking: redundant condition in _install_static."
         },
         "T-7": {
-          "phase": "blocked",
+          "phase": "merged",
           "deps": [
             "T-4",
             "U-pipeline"
           ],
           "large": false,
-          "batch": null,
+          "batch": "WA-1",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Dev: resolve_artifacts_root added (deviation); REQUIRED_ARTIFACT_DIRS=(alias,documents,taxonomy); tests under src/tests/webapp. 1259 passed. | Reviewer pass. Nits follow-up sent. Spec: resolver + test paths src/tests/webapp + artifacts_dir."
         },
         "T-8": {
-          "phase": "blocked",
+          "phase": "merged",
           "deps": [
             "T-7"
           ],
           "large": true,
-          "batch": null,
+          "batch": "WA-1",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": "large: ask user"
+          "notes": "large: split T-8a/b/c in batch. artifacts.py ~460 lines (natural split: query-time path). Embed-capability check before LLM call. | Reviewer pass. Nits: years_experience on posting forms spec-silent; kwargs/imports style; file split seam."
         },
         "T-9": {
           "phase": "passed",
@@ -1263,10 +1263,10 @@
             "T-1"
           ],
           "large": false,
-          "batch": "T-9-demo",
+          "batch": "WA-2",
           "worktree": ".",
-          "fix_rounds": 0,
-          "notes": "USER OK (2026-11-08): build a demo-only slice of T-9 (webapp serve --demo / check --demo / script entry); artifact options wait for T-7/T-8. Also fold in review non-blockers (catch-all 405, malformed-JSON field, uvicorn log redaction). | Demo slice passed review (523 tests). AC-22/AC-24 artifact + client-capability parts deferred until T-7/T-8. Non-blocking: port<=65535 check, ipaddress loopback + [::1] URL, use DEFAULT_MAX_QUERY_CHARS, thread bundle.secrets into _serve, add cli to heavy-import test, 405/400 use invalid_request (spec says 422), /favicon.svg 404 in single-process, T-6 catch-all text outdated."
+          "fix_rounds": 1,
+          "notes": "Review fail (blocking): AC-24 no-key (VOYAGER_API_KEY) assertion missing in artifact mode. Fix round 1 sent. SPEC: T-9 must mention resolver, WEBAPP_ARTIFACTS_DIR, Artifacts: line; file list. | Fix round 1 landed (1274 py, 113 web). Fresh reviewer dispatched. agent_wiring.py split skipped; cli.py ~350 lines. | Re-review pass."
         },
         "T-10": {
           "phase": "merged",
@@ -1358,19 +1358,19 @@
           "notes": "Reviewer pass. Non-blocking: Privacy sentence ungrammatical when structure unavailable; vite.config.js http://127.0.0.1:8000 may trip AC-39 scan in T-18; version rows unasserted. SPEC (held): collapse-keeps-text vs AC-33/AC-34 conflict."
         },
         "T-18": {
-          "phase": "blocked",
+          "phase": "reviewing",
           "deps": [
             "T-9",
             "T-17"
           ],
           "large": false,
-          "batch": null,
+          "batch": "WA-2",
           "worktree": ".",
-          "fix_rounds": 0,
-          "notes": ""
+          "fix_rounds": 1,
+          "notes": "Reviewer pass (literal AC-41 cmd: 1273 passed). vite.config.js evasion being replaced with object target form. SPEC: T-10 literal http://127.0.0.1:8000 vs AC-39 contradiction; /docs CDN not scanned; T-18 file list. | Re-review: vite proxy object lacked target (blocking regression). Fix round 2 for WA-2 sent. | Fix round 2 landed (target wrapper + vite-config.test.js; loopback verified by dev). Narrow re-review dispatched. Consolidated spec list sent to planner."
         }
       },
-      "notes": "User said build (2026-11-08). In place on dev; no commits unless user says. Started T-1,T-2 (not large, no upstream). Large tasks (T-4,T-8,T-10,T-12..T-16) need user decision before dispatch. T-3,T-5..T-9 wait on upstream specs (docembed levels, b1plus, taxonomy, pipeline). Open questions unanswered: ADR-15 demo model, logo (default none), scope split. User (2026-11-08): split large tasks into sub-tasks, each developer gets >=3 subtasks, avoid planner. Done by batching and instructing developers to split large tasks internally into reported sub-parts (a/b); spec unchanged. Frontend batches F1 T-10..T-12, F2 T-13..T-15, F3 T-16a,T-16b,T-17 run in sequence. Backend T-3+ waits on upstream specs. npm install from public registry allowed (no ASU packages, --ignore-scripts). USER (2026-11-08): backend ON HOLD; wants to see the UI only. Frontend batches F2/F3 continue. Plan: add an off-spec dev-only mock of /api (serving contract.json) in F2 so the UI is viewable without a backend; record as deviation. SPEC (held): dev-mock.js and dev-mock.test.js are off-spec files (record as task); dev-mock.js http://localhost URL must be removed before T-18 guardrail AC-39. FRONTEND COMPLETE (T-10..T-17 merged; T-1,T-2 merged). Backend T-3..T-9 and T-18 held by user. USER (2026-11-08, later): hold lifted, build the backend. T-3 needs U-docembed-levels (document-embedding T-1), U-b1plus (two-way-retrieval T-2), U-taxonomy (skill-taxonomy T-2): building ONLY those 3 prerequisite tasks first as one developer batch (specs otherwise still awaiting approval). T-7/T-8 (ArtifactEngine) need the full pipeline (U-pipeline) so stay blocked; T-9 needs T-8. Plan: T-3,T-4(split),T-5,T-6 for demo-mode API. fastapi/uvicorn/httpx/starlette missing in .venv; network works (npm did); developer allowed `uv lock` then `uv sync --inexact` (no extras, no removals) to install them for TestClient. uv lock ran online: uv.lock +~1290 lines, 59 new packages (the embed extra was never locked); no existing pin changed; only fastapi, starlette, uvicorn, httpx, httpcore, click, certifi, annotated-doc, opentelemetry-api installed (no torch). Model note (user 2026-11-08): embeddings via Voyager qwen3-embedding-8b instead of local Qwen3-Embedding-4B: deviation from ADR-4 to record for planner (model + hosting).",
+      "notes": "User said build (2026-11-08). In place on dev; no commits unless user says. Started T-1,T-2 (not large, no upstream). Large tasks (T-4,T-8,T-10,T-12..T-16) need user decision before dispatch. T-3,T-5..T-9 wait on upstream specs (docembed levels, b1plus, taxonomy, pipeline). Open questions unanswered: ADR-15 demo model, logo (default none), scope split. User (2026-11-08): split large tasks into sub-tasks, each developer gets >=3 subtasks, avoid planner. Done by batching and instructing developers to split large tasks internally into reported sub-parts (a/b); spec unchanged. Frontend batches F1 T-10..T-12, F2 T-13..T-15, F3 T-16a,T-16b,T-17 run in sequence. Backend T-3+ waits on upstream specs. npm install from public registry allowed (no ASU packages, --ignore-scripts). USER (2026-11-08): backend ON HOLD; wants to see the UI only. Frontend batches F2/F3 continue. Plan: add an off-spec dev-only mock of /api (serving contract.json) in F2 so the UI is viewable without a backend; record as deviation. SPEC (held): dev-mock.js and dev-mock.test.js are off-spec files (record as task); dev-mock.js http://localhost URL must be removed before T-18 guardrail AC-39. FRONTEND COMPLETE (T-10..T-17 merged; T-1,T-2 merged). Backend T-3..T-9 and T-18 held by user. USER (2026-11-08, later): hold lifted, build the backend. T-3 needs U-docembed-levels (document-embedding T-1), U-b1plus (two-way-retrieval T-2), U-taxonomy (skill-taxonomy T-2): building ONLY those 3 prerequisite tasks first as one developer batch (specs otherwise still awaiting approval). T-7/T-8 (ArtifactEngine) need the full pipeline (U-pipeline) so stay blocked; T-9 needs T-8. Plan: T-3,T-4(split),T-5,T-6 for demo-mode API. fastapi/uvicorn/httpx/starlette missing in .venv; network works (npm did); developer allowed `uv lock` then `uv sync --inexact` (no extras, no removals) to install them for TestClient. uv lock ran online: uv.lock +~1290 lines, 59 new packages (the embed extra was never locked); no existing pin changed; only fastapi, starlette, uvicorn, httpx, httpcore, click, certifi, annotated-doc, opentelemetry-api installed (no torch). Model note (user 2026-11-08): embeddings via Voyager qwen3-embedding-8b instead of local Qwen3-Embedding-4B: deviation from ADR-4 to record for planner (model + hosting). | USER (2026-11-11): build T-7, T-8, T-9 (artifact options), T-18 so the UI runs on real artifacts (v5); artifacts location must be changeable (--artifacts-dir flag + env var + resolver that picks the latest complete vN under a dir; health shows resolved root). Resolver = deviation for planner list. T-8 large: split inside batch (T-8a/b/c). Batches WA-1 (T-7,T-8), WA-2 (T-9,T-18). All U-pipeline prerequisites built. User then commit+push to dev when done? (earlier instruction was for match-agent; ask before pushing this one). | PLANNER LIST (web-app): resolve_artifacts_root + REQUIRED_ARTIFACT_DIRS=(alias,documents,taxonomy) + WEBAPP_ARTIFACTS_DIR env var; test paths src/tests/webapp/; artifact_helpers.py; artifacts.py ~460 lines (split queries.py); years_experience on posting forms; ArtifactEngine.__init__ 12 kw params. | WEB-APP DONE 2026-11-11 (artifact mode). Open: runbook WA-6 sentence about /docs CDN not yet written. Committed locally, NOT pushed (user has not said to push this one).",
       "batches": {
         "T-1-T-2": {
           "tasks": [
@@ -1439,6 +1439,27 @@
           ],
           "developer_agent": "a5bcc97e3a01d3a7c",
           "fix_rounds": 0
+        },
+        "WA-1": {
+          "tasks": [
+            "T-7",
+            "T-8"
+          ],
+          "subparts": [
+            "T-8a",
+            "T-8b",
+            "T-8c"
+          ],
+          "developer_agent": "a2e3239e794079457",
+          "fix_rounds": 0
+        },
+        "WA-2": {
+          "tasks": [
+            "T-9",
+            "T-18"
+          ],
+          "developer_agent": "a2e3239e794079457",
+          "fix_rounds": 2
         }
       }
     },

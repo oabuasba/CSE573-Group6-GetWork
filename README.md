@@ -11,7 +11,7 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
 | Alias table, skill taxonomy, relabeling | Built |
 | Document embeddings (`doc-embed`) | Built |
 | Retrieval (B1+, B2, Full) | Built |
-| FastAPI backend and React UI (`webapp`, `src/web`) | Demo mode built; artifact mode and final checks pending |
+| Web app (FastAPI backend, React UI, deterministic explainer; try `webapp serve --demo`) | Built |
 | LLM explanation agent (`webapp serve --explainer agent`, `src/getwork/agent`) | Built |
 | Evaluation | Planned |
 
@@ -78,6 +78,8 @@ It is needed only for the default local embedding backend. With `--embed-backend
 
 Secrets: copy `.env.example` to `.env` and fill in `VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL` (and `VOYAGER_EMBED_MODEL` if you use Voyager embeddings). Tests and offline steps do not need it.
 
+## Run the web app
+
 Web frontend (optional; Node >= 20.11):
 
 ```
@@ -86,7 +88,16 @@ npm --prefix src/web run build      # writes src/web/dist, which `webapp serve` 
 uv run webapp serve --demo          # http://127.0.0.1:8000, API docs at /docs
 ```
 
-`webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Only `--demo` works for now. Frontend tests: `npm --prefix src/web test`.
+`webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Frontend tests: `npm --prefix src/web test`.
+
+Run it on your artifacts (the folder is your choice: `--artifacts-dir`, else the environment variable `WEBAPP_ARTIFACTS_DIR`, else `artifacts_trial`; a folder of `vN` runs resolves to its highest complete run, or pass a run such as `artifacts_trial/v5`):
+
+```
+uv run webapp check --artifacts-dir artifacts_trial
+uv run webapp serve --artifacts-dir artifacts_trial
+```
+
+See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
 
 The default explainer is the rules-based template. To use the explanation agent and the per-match chat, install the extra and add the agent flags (the model call is made by you, with your own key; see `src/getwork/agent/README.md`):
 

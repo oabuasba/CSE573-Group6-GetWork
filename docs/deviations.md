@@ -32,9 +32,9 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-12 | Embedding | Experience-level derivation | Clarification | draft | Yes |
 | P-13 | Relabeling | LLM-free default; add-only re-extraction | Departure | draft | Yes |
 | P-14 | Embedding | Optional Voyager embedding backend | Addition | draft | Conditional |
-| P-15 | Web app | Query-time hosting: user-run local process with lazy, optional models | Clarification | draft | Yes (one paragraph in 3.7) |
+| P-15 | Web app | Query-time hosting: user-run local process with lazy, optional models | Clarification | built | Yes (one paragraph in 3.7) |
 | P-16 | Structuring | Alias table: how it is built, and the display-spelling rule | Clarification | built | Yes (one or two sentences) |
-| P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | draft | Yes (scope sentence) |
+| P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | built | Yes (scope sentence) |
 | P-18 | Agent | Agent uses a JSON action protocol (not native tool calls), a claim verifier, plain-language errors on failure, stateless non-streamed chat | Clarification | built | Yes (one paragraph in 3.7) |
 | P-19 | Agent | Agent model is served by Voyager by default, not ASU CreateAI | Clarification | built | Yes (one clause in 3.7) |
 
@@ -213,14 +213,14 @@ Row count: 19.
 ## P-15 Query-time hosting of structuring and embedding
 
 - **Proposal says:** 3.7: submitted documents are structured by an LLM call, then relabeled and embedded.
-- **Now (draft, web-app, ADR-15; answers Q-1 pending approval):** the app is one user-run local process (`webapp serve`) that reads the user's own `.env` through the CLI only and builds the structuring client (`make_client`) and the embedding client (`make_embedding_client`) lazily. Query kinds degrade: a corpus document needs neither model, a form needs only the embedding model (nothing for B1+), free text needs both. New documents are labeled lookup-only (unseen skills go to Other), not with the LLM relabeler. Nothing from a query is stored or logged.
+- **Now (built, web-app, ADR-15; answers Q-1):** the app is one user-run local process (`webapp serve`) that reads the user's own `.env` through the CLI only and builds the structuring client (`make_client`) and the embedding client (`make_embedding_client`) lazily. Query kinds degrade: a corpus document needs neither model, a form needs only the embedding model (nothing for B1+), free text needs both. New documents are labeled lookup-only (unseen skills go to Other), not with the LLM relabeler. Nothing from a query is stored or logged.
 - **Reason recorded:** CC-10 forbids agents holding the key and Voyager models may be retired; Sol is a batch cluster; the 12 GB card cannot hold a local LLM server and the embedding model together.
 - **Impact:** A live demo needs a configured team machine. The proposal's "relabeled" step at query time is lookup-only unless the LLM relabeler is wired in later.
-- **Status:** draft.
+- **Status:** built (web-app, 2026-11-11).
 - **Proposal text change:** One paragraph in 3.7 describing the local, optional, lazy model use and the lookup-only labeling of new documents.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft (Q-1 answered in ADR-15, awaiting user approval)
+- **Resolution:** built; Q-1 answered in ADR-15; the proposal paragraph in 3.7 is still to be written
 
 ## P-16 Alias table construction and display spelling
 
@@ -241,14 +241,14 @@ Row count: 19.
 ## P-17 Web app scope and presentation
 
 - **Proposal says:** Application row and 3.7: "FastAPI backend, React frontend allows users to submit a resume or job", view top-k, chat with the agent, and label pairs blind (presentation slide: "React app: submit a resume or posting, view top-k, chat, and label pairs blind").
-- **Now (draft, web-app, ADR-16 to ADR-18):** FastAPI and React as stated. The explanation shown with each match is deterministic evidence (shared, related by cluster, missing skills) plus a rule-based `TemplateExplainer` behind an `Explainer` protocol; the LangGraph agent (`match-agent`) plugs into that seam later, and chat follow-ups go with it. Blind labeling becomes its own feature (`labeling-ui`) after `eval-sampling-pooling`. Added: a demo mode on built-in data, a corpus-document query kind, and a UI theme built from the public ASU brand-guide values (text wordmark, no ASU marks, no ASU repository code).
+- **Now (built, web-app, ADR-16 to ADR-18, ADR-28):** FastAPI and React as stated. The explanation shown with each match is deterministic evidence (shared, related by cluster, missing skills) plus a rule-based `TemplateExplainer` behind an `Explainer` protocol; the LangGraph agent (`match-agent`) plugs into that seam later, and chat follow-ups go with it. Blind labeling becomes its own feature (`labeling-ui`) after `eval-sampling-pooling`. Added: a demo mode on built-in data, a corpus-document query kind, and a UI theme built from the public ASU brand-guide values (text wordmark, no ASU marks, no ASU repository code).
 - **Reason recorded:** the agent and the labeling inputs do not exist yet; a faithful, testable explanation can ship now and doubles as a baseline for the agent's hallucination rate.
 - **Impact:** Methods text for the application; the report must not claim the shipped UI explanations come from the agent.
-- **Status:** draft.
+- **Status:** built (web-app, 2026-11-11). Addition: the artifacts location is changeable (`--artifacts-dir`, `WEBAPP_ARTIFACTS_DIR`) and may be a folder of `vN` runs (ADR-28).
 - **Proposal text change:** One scope sentence in 3.7.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft
+- **Resolution:** built; the scope sentence in the proposal is still to be written
 
 ## P-18 Agent implementation: protocol, verification, failure behavior
 
