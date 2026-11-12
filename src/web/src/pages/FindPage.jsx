@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { describeError, NETWORK_ERROR_CODE, postMatch } from "../api.js";
-import ChatPanel from "../components/ChatPanel.jsx";
+import ChatOnDemand from "../components/ChatOnDemand.jsx";
 import ExplainPanel from "../components/ExplainPanel.jsx";
 import GroupedSkills from "../components/GroupedSkills.jsx";
 import MatchCard from "../components/MatchCard.jsx";
@@ -97,8 +97,7 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, 
                 <GroupedSkills skills={match.document.skills} />
                 <ExplainPanel direction={direction} query={query} matchId={match.id} fetchImpl={fetchImpl} />
                 {chatEnabled && (
-                  <ChatPanel
-                    key={match.id}
+                  <ChatOnDemand
                     direction={direction}
                     query={query}
                     focusId={match.id}

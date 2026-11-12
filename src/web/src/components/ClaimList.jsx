@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
-function Claim({ claim, factsById, index }) {
+function Claim({ claim, factsById, index, idPrefix }) {
   const [open, setOpen] = useState(false);
-  const panelId = `claim-evidence-${index}-${claim.facts.join("-")}`;
+  const panelId = `${idPrefix}-claim-evidence-${index}-${claim.facts.join("-")}`;
   const cited = claim.facts.map((id) => factsById.get(id)).filter(Boolean);
   return (
     <li>
@@ -33,11 +33,12 @@ function Claim({ claim, factsById, index }) {
 }
 
 export default function ClaimList({ claims, facts }) {
+  const idPrefix = useId();
   const factsById = new Map(facts.map((fact) => [fact.id, fact]));
   return (
     <ol>
       {claims.map((claim, i) => (
-        <Claim key={i} claim={claim} factsById={factsById} index={i} />
+        <Claim key={i} claim={claim} factsById={factsById} index={i} idPrefix={idPrefix} />
       ))}
     </ol>
   );

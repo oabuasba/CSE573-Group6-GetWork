@@ -184,16 +184,22 @@ async function openCard(user, health_, fetchImpl, index = 0) {
   return view;
 }
 
+const openChat = (user) => user.click(screen.getByRole("button", { name: "Chat about this suggestion" }));
+
 test("chat appears only for the agent explainer", async () => {
   const user = userEvent.setup();
   const template = await openCard(user, health, routedFetch());
   await screen.findByText(contract.explain.summary);
   expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Chat about this suggestion" })).not.toBeInTheDocument();
   template.unmount();
 
   const fetchImpl = agentFetch();
   await openCard(user, agentHealth, fetchImpl);
-  expect(await screen.findByRole("heading", { name: "Ask about this match" })).toBeInTheDocument();
+  await screen.findByText(agent.explain_agent.claims[0].text);
+  expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
+  await openChat(user);
+  expect(screen.getByRole("heading", { name: "Ask about this match" })).toBeInTheDocument();
   await user.type(screen.getByLabelText("Your question"), "Why?");
   await user.click(screen.getByRole("button", { name: "Send" }));
   await screen.findByText(agent.chat.claims[0].text);
@@ -210,11 +216,13 @@ test("chat appears only for the agent explainer", async () => {
 test("chat moves with the expanded card", async () => {
   const user = userEvent.setup();
   await openCard(user, agentHealth, agentFetch());
+  await user.click(await screen.findByRole("button", { name: "Chat about this suggestion" }));
   await user.type(await screen.findByLabelText("Your question"), "Why?");
   await user.click(screen.getByRole("button", { name: "Send" }));
   await screen.findByText(agent.chat.claims[0].text);
   await user.click(screen.getAllByRole("button", { name: "Why this match?" })[1]);
-  expect(await screen.findAllByRole("heading", { name: "Ask about this match" })).toHaveLength(1);
+  expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
+  await openChat(user);
   expect(screen.getByRole("log")).toBeEmptyDOMElement();
   expect(screen.queryByText("Why?")).not.toBeInTheDocument();
 });
@@ -233,8 +241,28 @@ test("evidence stays when the assistant fails", async () => {
 test("one cta button with chat open", async () => {
   const user = userEvent.setup();
   const { container } = await openCard(user, agentHealth, agentFetch());
+  await user.click(await screen.findByRole("button", { name: "Chat about this suggestion" }));
   await screen.findByRole("heading", { name: "Ask about this match" });
   expect(ctaCount(container)).toBe(1);
+});
+
+test("chat is hidden by default and toggles on demand", async () => {
+  const user = userEvent.setup();
+  await openCard(user, agentHealth, agentFetch());
+  const button = await screen.findByRole("button", { name: "Chat about this suggestion" });
+  expect(button).toHaveClass("btn-secondary");
+  expect(button).not.toHaveClass("btn-cta");
+  expect(button).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByLabelText("Your question")).not.toBeInTheDocument();
+  await user.click(button);
+  expect(await screen.findByLabelText("Your question")).toBeInTheDocument();
+  const hide = screen.getByRole("button", { name: "Hide chat" });
+  expect(hide).toHaveAttribute("aria-expanded", "true");
+  expect(document.getElementById(hide.getAttribute("aria-controls"))).toContainElement(
+    screen.getByLabelText("Your question"),
+  );
+  await user.click(hide);
+  expect(screen.queryByLabelText("Your question")).not.toBeInTheDocument();
 });
 
 async function showResults(user) {

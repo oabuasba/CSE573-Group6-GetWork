@@ -29,6 +29,9 @@ def test_chat_and_agent_sections_validate() -> None:
         Claim.model_validate(claim)
     for fact in explanation.facts:
         Fact.model_validate(fact)
+    texts = [claim["text"] for claim in explanation.claims]
+    assert explanation.summary == texts[0]
+    assert explanation.bullets == texts[1:]
     chat = ChatResponse.model_validate(data["chat"])
     assert [f.id for f in chat.facts] == ["f1", "f2", "f3", "f4", "f5", "f6"]
     assert {"comparison", "rank_score"} <= {f.kind for f in chat.facts}

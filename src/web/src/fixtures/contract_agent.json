@@ -1,12 +1,8 @@
 {
  "explain_agent": {
-  "summary": "2 shared skills, 1 related group, 1 gap.",
+  "summary": "The resume and the posting both list JavaScript and CSS.",
   "bullets": [
-   "Shared skills: JavaScript, CSS.",
-   "Related through Front-end: the resume lists Vue, the posting asks for React.",
-   "The posting asks for skills the resume does not show: Kubernetes.",
-   "Experience level is the same (Associate).",
-   "Shared title words: frontend."
+   "The resume lists Vue where the posting asks for React, which is related."
   ],
   "evidence": {
    "shared": [

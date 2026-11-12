@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { describeError, postExplain } from "../api.js";
 import ClaimList from "./ClaimList.jsx";
 import Notice from "./Notice.jsx";
@@ -7,6 +7,29 @@ function explainerLine(explainer) {
   return explainer.kind === "template"
     ? "Explained by rules, no language model"
     : `Explained by ${explainer.model}`;
+}
+
+function AgentSummary({ claims, facts }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  if (claims.length === 1) return <ClaimList claims={claims} facts={facts} />;
+  return (
+    <>
+      {!open && <p className="measure">{claims[0].text}</p>}
+      <button
+        type="button"
+        className="btn btn-secondary"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+      >
+        {open ? "Show less" : `Show all ${claims.length} points`}
+      </button>
+      <div id={panelId} hidden={!open}>
+        {open && <ClaimList claims={claims} facts={facts} />}
+      </div>
+    </>
+  );
 }
 
 export default function ExplainPanel({ direction, query, matchId, fetchImpl }) {
@@ -44,7 +67,7 @@ export default function ExplainPanel({ direction, query, matchId, fetchImpl }) {
   return (
     <div>
       {claims?.length ? (
-        <ClaimList claims={claims} facts={facts ?? []} />
+        <AgentSummary claims={claims} facts={facts ?? []} />
       ) : (
         <>
           <p className="measure">{summary}</p>
