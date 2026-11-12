@@ -102,3 +102,26 @@ def test_build_taxonomy_from_labels_length_mismatch() -> None:
         build.build_taxonomy_from_labels(
             ["a", "b", "c"], np.array([0, 1]), {0: "A", 1: "B"}, alias_table_version="v", meta={}
         )
+
+
+def test_read_statuses(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path / "s.csv",
+        ["0,A,1,ok", "5,B,1, weak_fit ", "7,C,1,"],
+        header="cluster_id,name,size,status",
+    )
+    assert build.read_statuses(path) == {0: "ok", 5: "weak_fit", 7: ""}
+    plain = _write(tmp_path / "plain.csv", ["0,A,1", "1,B,1"])
+    assert build.read_statuses(plain) == {0: "", 1: ""}
+    short = tmp_path / "short.csv"
+    short.write_text("cluster_id,name,status\n0,A\n", encoding="utf-8")
+    assert build.read_statuses(short) == {0: ""}
+    with pytest.raises(FileNotFoundError, match="nope.csv.*taxonomy name"):
+        build.read_statuses(tmp_path / "nope.csv")
+    with pytest.raises(ValueError, match="line 2: cluster_id is not an integer"):
+        build.read_statuses(_write(tmp_path / "bad.csv", ["x,A,1"]))
+    with pytest.raises(ValueError, match="cluster_id and name"):
+        build.read_statuses(_write(tmp_path / "h.csv", ["a,b"], header="id,label"))
+    bom = tmp_path / "bom.csv"
+    bom.write_text("﻿cluster_id,name,status\n0,A,weak_fit\n", encoding="utf-8")
+    assert build.read_statuses(bom) == {0: "weak_fit"}

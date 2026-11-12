@@ -10,6 +10,7 @@
 #   NAME_METHOD     how `taxonomy name` writes cluster names: llm (default, real LLM calls) or heuristic
 #                   (offline runs only; member-list names then need --allow-member-names at build)
 #   NAME_OVERLAP_ROUNDS  overlap review rounds after naming (default 2; 0 disables it; each round can make real LLM calls when NAME_METHOD is llm)
+#   NAME_FIT_ROUNDS  fit review rounds after naming, before the overlap review (default 1; 0 disables it; it makes real LLM calls when NAME_METHOD is llm)
 #   NAME_WORKERS    concurrent naming calls for `taxonomy name` (default 4; real LLM calls when NAME_METHOD is llm)
 # `taxonomy plot` (after build) writes the cluster pictures to $ARTIFACTS_DIR/taxonomy/plots/ (offline, no model calls).
 # The embed steps make real Voyager calls. `name --force` overwrites cluster_names.csv, and grid/select
@@ -23,6 +24,7 @@ PROCESSED_DIR="${PROCESSED_DIR:-data/processed}"
 NAME_METHOD="${NAME_METHOD:-llm}"
 NAME_WORKERS="${NAME_WORKERS:-4}"
 NAME_OVERLAP_ROUNDS="${NAME_OVERLAP_ROUNDS:-2}"
+NAME_FIT_ROUNDS="${NAME_FIT_ROUNDS:-1}"
 CLUSTER_CONFIG_ID="${1:-${CLUSTER_CONFIG_ID:-kmeans-01}}"
 TAXONOMY_DIR="$ARTIFACTS_DIR/taxonomy"
 
@@ -52,7 +54,7 @@ archive "$TAXONOMY_DIR/selection.json"
 step uv run taxonomy grid "${ART[@]}"
 step uv run taxonomy select "${ART[@]}" --config-id "$CLUSTER_CONFIG_ID"
 archive "$TAXONOMY_DIR/cluster_names.csv"
-step uv run taxonomy name "${ART[@]}" --method "$NAME_METHOD" --workers "$NAME_WORKERS" --overlap-rounds "$NAME_OVERLAP_ROUNDS" --force
+step uv run taxonomy name "${ART[@]}" --method "$NAME_METHOD" --workers "$NAME_WORKERS" --overlap-rounds "$NAME_OVERLAP_ROUNDS" --fit-rounds "$NAME_FIT_ROUNDS" --force
 step uv run taxonomy build "${ART[@]}" "${BUILD_ARGS[@]}"
 step uv run taxonomy plot "${ART[@]}"
 step uv run relabel "${ART[@]}" --processed-dir "$PROCESSED_DIR"

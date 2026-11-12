@@ -95,6 +95,14 @@ def read_names(path: Path) -> dict[int, str]:
     return names
 
 
+def read_statuses(path: Path) -> dict[int, str]:
+    """Status text per cluster id; "" when the file has no status column or the cell is empty."""
+    return {
+        _parse_id(row["cluster_id"], line): (row.get("status") or "").strip()
+        for line, row in enumerate(_read_rows(path), start=2)
+    }
+
+
 def build_taxonomy_from_labels(
     skills: Sequence[str],
     labels: np.ndarray,

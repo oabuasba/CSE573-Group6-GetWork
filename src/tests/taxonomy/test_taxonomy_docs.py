@@ -64,6 +64,17 @@ def test_readme_documents_overlap_review() -> None:
     assert any("AV-6" in heading for heading in headings)
 
 
+def test_readme_documents_fit_review() -> None:
+    text = (PACKAGE / "README.md").read_text(encoding="utf-8")
+    needles = ["--fit-rounds", "NAME_FIT_ROUNDS", "`weak_fit`", "name_v2+refit_v1", "fit_v1",
+               "refit_v1", "fit review round", "weak fit:", "fit review done", "before the overlap",
+               "only warns", "cannot change membership", "AV-7", "n_fit_renamed", "n_weak_fit"]
+    for needle in needles:
+        assert needle in text, needle
+    headings = [line for line in text.splitlines() if line.startswith("#")]
+    assert any("AV-7" in heading for heading in headings)
+
+
 def _imported_modules(line: str) -> list[str]:
     plain = re.match(r"\s*import\s+(.+)", line)
     if plain:

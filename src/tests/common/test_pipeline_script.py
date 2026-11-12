@@ -60,3 +60,14 @@ def test_run_pipeline_passes_overlap_rounds() -> None:
     assert name.index('--workers "$NAME_WORKERS"') < name.index("--overlap-rounds")
     assert '--method "$NAME_METHOD"' in name and "--force" in name
     assert any(l.startswith("archive") and "cluster_names.csv" in l for l in lines)
+
+
+def test_run_pipeline_passes_fit_rounds() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert 'NAME_FIT_ROUNDS="${NAME_FIT_ROUNDS:-1}"' in lines
+    header = [line for line in lines if line.startswith("#")]
+    assert any("NAME_FIT_ROUNDS" in line and "0 disables" in line for line in header)
+    name = next(line for line in lines if line.startswith("step ") and "taxonomy name" in line)
+    assert '--fit-rounds "$NAME_FIT_ROUNDS"' in name
+    assert name.index("--overlap-rounds") < name.index("--fit-rounds")

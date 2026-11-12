@@ -21,7 +21,7 @@ uv run taxonomy grid [--max-noise 0.30] [--min-clusters 2] [--seed 0] [--grid-fi
 uv run taxonomy select --config-id ID
 uv run taxonomy name [--method heuristic|llm] [--top-members 25] [--workers 1] [--max-tokens 1024]
                      [--reasoning-effort none|low|medium|high|omit]
-                     [--overlap-rounds 2] [--no-overlap-judge] [--force]
+                     [--fit-rounds 1] [--overlap-rounds 2] [--no-overlap-judge] [--force]
 uv run taxonomy build [--names PATH] [--allow-member-names]
 ```
 
@@ -107,6 +107,44 @@ budget or default effort can spend it all thinking and return an empty reply (`n
 `--workers` is accepted and ignored for `--method heuristic`. `scripts/run_pipeline.sh` passes
 `NAME_WORKERS` (default 4).
 
+## Fit review of names
+
+A name can be unique and still wrong for its members ("Desktop Applications" for Windows, Microsoft
+Office, Active Directory, Excel, SharePoint; "Cloud Infrastructure" for a cluster that contains
+MongoDB and JMS). After naming and before the overlap review, `taxonomy name --method llm` asks one
+judge call (prompt `fit_v1`) which of the model-made names do not describe their members; it sees
+every name with ten members and lists only the weak ones, each with a one-sentence reason (at most
+half of the clusters). Each weak cluster is asked once for a better name (prompt `refit_v1`) with
+its members, the judge's reason and the names of all other clusters. The new name must pass the
+concept rules, differ from every current name and not overlap another name. `--fit-rounds N`
+(default 1, `0` turns the review off) sets the rounds; with more than one round all names are
+judged again, so a bad rename can be caught. A cluster that cannot be renamed after three tries
+keeps its name, is not asked again, and gets status `weak_fit` (status order: `member_list`,
+`duplicate`, `weak_fit`, `overlap`, `ok`). A cluster renamed by the fit review has `prompt_version`
+`name_v2+refit_v1`, or `name_v2+refit_v1+rename_v1` when the overlap review renames it as well.
+The JSON summary gains `n_fit_renamed` and `n_weak_fit` after `n_overlap`; the exit code stays 0
+when only `weak_fit` remains. A failed judge call stops the fit review with one stderr line and the
+run goes on. The overlap review then sees the fit review's names. Rename cannot change membership:
+a cluster whose members have no common theme (for example Eclipse, Waterfall, ANT, Cassandra, TOAD)
+may stay `weak_fit` for a human to fix. Review lines on stderr (the judge's reason is never
+printed):
+
+```
+fit review round 1/1: 2 of 10 name(s) judged weak
+weak fit: cluster 1 "Desktop Applications"
+weak fit: cluster 3 "Development Tools"
+renamed 1/2: cluster 1 "Desktop Applications" -> "Windows and Office Administration" (attempts 1)
+kept 2/2: cluster 3 "Development Tools" (replies rejected, attempts 3)
+fit review done: 1 cluster(s) still weak: 3
+```
+
+`taxonomy build` only warns: for each row whose `status` is `weak_fit` it prints `warning: cluster 3
+name 'Development Tools' may not fit its members (status weak_fit); ...` to stderr and adds
+`n_weak_fit` to its JSON summary; the build is never refused. Build makes no model call, so to
+clear a warning after fixing a name set its status to `ok` in `cluster_names.csv` (a file without
+a `status` column gives no warnings). `--fit-rounds` is accepted and ignored for
+`--method heuristic`. `scripts/run_pipeline.sh` passes `NAME_FIT_ROUNDS` (default 1).
+
 ## Overlap review of names
 
 A name can be unique and still too close to another ("Development Tools" and "Software Development
@@ -122,9 +160,10 @@ passes the concept rules and does not overlap another name. With `--workers` 2 o
 concurrently and are checked in id order, so the result is the same for every value of 2 or more.
 
 A cluster that cannot be made distinct after three tries keeps its name, is not asked again, and
-gets status `overlap` in `cluster_names.csv` (status order: `member_list`, `duplicate`, `overlap`,
-`ok`). A renamed row has `prompt_version` `name_v2+rename_v1`. The JSON summary gains `n_renamed`
-and `n_overlap`; the exit code stays 0 when only overlap remains. Review lines on stderr:
+gets status `overlap` in `cluster_names.csv` (status order: `member_list`, `duplicate`,
+`weak_fit`, `overlap`, `ok`). A renamed row has `prompt_version` `name_v2+rename_v1`. The JSON
+summary gains `n_renamed` and `n_overlap`; the exit code stays 0 when only overlap remains.
+Review lines on stderr:
 
 ```
 overlap group 1/1: clusters 3, 5 (rules)
@@ -252,3 +291,11 @@ Run the naming step with `--method llm` (or `bash scripts/run_pipeline.sh`; `NAM
 sets the rounds). Read the stderr lines `overlap group`, `renamed`, `kept` and
 `overlap review done`, then open `cluster_names.csv`. Pass: no row has status `overlap`, or a short
 list that you fix by hand before `taxonomy build`; renamed rows show `name_v2+rename_v1`.
+
+### AV-7: read the fit review (uses your keys)
+
+Run the naming step with `--method llm` (or `bash scripts/run_pipeline.sh`; `NAME_FIT_ROUNDS` sets
+the rounds). Read the stderr lines `fit review round`, `weak fit`, `renamed`, `kept` and
+`fit review done`, then open `cluster_names.csv`. Pass: the clusters you would call misnamed were
+listed and renamed (rows show `name_v2+refit_v1`), and any row with status `weak_fit` is a cluster
+you agree has mixed members; fix those by hand and set the status to `ok` before `taxonomy build`.

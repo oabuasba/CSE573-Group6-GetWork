@@ -15,7 +15,7 @@ from getwork.embed.fake import FakeEmbeddingClient
 from getwork.llm import factory as llm_factory
 from getwork.llm.client import FatalLLMError, LLMRequest
 from getwork.llm.fake import FakeLLMClient
-from getwork.taxonomy import build, cli, cli_name, model, naming, overlap, report
+from getwork.taxonomy import build, cli, cli_name, fit, model, naming, overlap, report
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -136,7 +136,7 @@ def test_name_llm_columns_fallback_and_duplicates(
     client = FakeLLMClient(handler=_llm_handler(wanted))
     capsys.readouterr()
     code = _run(root, "name", "--method", "llm", "--model", "m-1", "--backend", "local",
-                llm_client=client)
+                "--fit-rounds", "0", llm_client=client)
     assert code == 1
     printed = json.loads(capsys.readouterr().out)
     assert (printed["n_fallback"], printed["n_duplicate"], printed["n_clusters"]) == (2, 0, 3)
@@ -166,6 +166,7 @@ def test_name_llm_member_list_falls_back(
     client = FakeLLMClient(handler=_llm_handler(wanted))
     capsys.readouterr()
     assert _run(root, "name", "--method", "llm", "--model", "m", "--overlap-rounds", "0",
+                "--fit-rounds", "0",
                 llm_client=client) == 1
     printed = json.loads(capsys.readouterr().out)
     assert (printed["n_fallback"], printed["n_member_list"]) == (1, 1)
@@ -185,7 +186,7 @@ def test_name_llm_all_succeed_exit_0(
     wanted = {members[i][0]: f"Group {i}" for i in range(3)}
     capsys.readouterr()
     code = _run(root, "name", "--method", "llm", "--model", "m",
-                "--overlap-rounds", "0", "--top-members", "2",
+                "--overlap-rounds", "0", "--fit-rounds", "0", "--top-members", "2",
                 llm_client=FakeLLMClient(handler=_llm_handler(wanted)))
     assert code == 0
     assert {r["status"] for r in _names_rows(root)} == {"ok"}
@@ -353,7 +354,8 @@ def test_name_llm_top_members_and_extra_body_reach_the_request(tmp_path: Path) -
     wanted = {members[i][0]: f"Group {i}" for i in range(3)}
     client = FakeLLMClient(handler=_llm_handler(wanted))
     code = _run(root, "name", "--method", "llm", "--model", "m", "--top-members", "2",
-                "--overlap-rounds", "0", "--extra-body", '{"thinking": false}', llm_client=client)
+                "--overlap-rounds", "0", "--fit-rounds", "0", "--extra-body", '{"thinking": false}',
+                llm_client=client)
     assert code == 0 and len(client.calls) == 3
     for call in client.calls:
         assert call.user.split("\n\nUSED NAMES:")[0].count("\n- ") == 2
@@ -452,7 +454,8 @@ def test_build_accepts_concept_and_single_member_names(tmp_path: Path) -> None:
 
 
 def _llm_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
-    defaults = ["--overlap-rounds", "0"]  # later options win; review tests pass their own
+    # later options win; review tests pass their own
+    defaults = ["--overlap-rounds", "0", "--fit-rounds", "0"]
     return _run(root, "name", "--method", "llm", "--model", "m", *defaults, *extra,
                 llm_client=client)
 
@@ -478,7 +481,8 @@ def test_name_workers_same_file_and_progress_on_stderr(
     assert len(outputs[1].out.splitlines()) == 1
     summary = json.loads(outputs[1].out)
     assert set(summary) == {"names_file", "method", "n_clusters", "n_fallback", "n_duplicate",
-                            "n_member_list", "n_renamed", "n_overlap"}
+                            "n_member_list", "n_renamed", "n_overlap",
+                            "n_fit_renamed", "n_weak_fit"}
     lines = outputs[1].err.splitlines()
     assert [line.split(" -> ")[0] for line in lines] == [
         f"named {i + 1}/3: cluster {i}" for i in range(3)
@@ -610,7 +614,9 @@ def _review_client(
 
 
 def _review_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
-    return _run(root, "name", "--method", "llm", "--model", "m", *extra, llm_client=client)
+    defaults = ["--fit-rounds", "0"]  # fit-review tests pass their own
+    return _run(root, "name", "--method", "llm", "--model", "m", *defaults, *extra,
+                llm_client=client)
 
 
 def _kinds(client: FakeLLMClient) -> dict[str, int]:
@@ -745,6 +751,250 @@ def test_review_skips_fallback_clusters(tmp_path: Path) -> None:
     assert _kinds(client)["judge"] == 0 and _kinds(client)["rename"] == 0
     assert [r["method"] for r in _names_rows(root)] == ["llm", "heuristic_fallback",
                                                          "heuristic_fallback"]
+
+
+def _call_kind(request: LLMRequest) -> str:
+    if request.user.startswith("NAMES TO CHECK:"):
+        return "fit"
+    if request.user.startswith("CLUSTERS:"):
+        return "overlap_judge"
+    if "OVERLAPS WITH:" in request.user:
+        return "overlap_rename"
+    return "refit" if "WHY:" in request.user else "name"
+
+
+def _fit_client(
+    root: Path,
+    *,
+    weak: list[int],
+    refits: dict[int, str],
+    groups: str = '{"groups": []}',
+    fatal: bool = False,
+) -> FakeLLMClient:
+    firsts = {skills[0]: cid for cid, skills in _members(root).items()}
+    renames = {0: "Interface Engineering", 1: "Data Storage", 2: "Cloud Hosting"}
+
+    def handler(request: LLMRequest) -> str:
+        kind = _call_kind(request)
+        if kind == "fit":
+            return json.dumps({"weak": [{"cluster": i, "reason": "mismatch"} for i in weak]})
+        if kind == "overlap_judge":
+            return groups
+        if kind == "name":
+            return json.dumps({"name": NAMED[firsts[request.user.splitlines()[1][2:]]]})
+        if fatal and kind == "refit":
+            raise FatalLLMError("denied")
+        first = request.user.split("MEMBERS:\n- ")[1].split("\n")[0]
+        table = refits if kind == "refit" else renames
+        return json.dumps({"name": table[firsts[first]]})
+
+    return FakeLLMClient(handler=handler)
+
+
+def _fit_run(root: Path, *extra: str, client: FakeLLMClient) -> int:
+    return _run(root, "name", "--method", "llm", "--model", "m", *extra, llm_client=client)
+
+
+def test_name_fit_review_renames_and_orders_before_overlap(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    only, both = tmp_path / "only", tmp_path / "both"
+    for root in (only, both):
+        _through_grid(root)
+    capsys.readouterr()
+    client = _fit_client(only, weak=[2], refits={2: "Hosting Services"})
+    assert _fit_run(only, "--overlap-rounds", "0", client=client) == 0
+    rows = _names_rows(only)
+    assert [r["name"] for r in rows] == [*NAMED[:2], "Hosting Services"]
+    assert [r["prompt_version"] for r in rows] == ["name_v2", "name_v2", "name_v2+refit_v1"]
+    assert [_call_kind(c) for c in client.calls] == ["name"] * 3 + ["fit", "refit"]
+    capsys.readouterr()
+
+    groups = '{"groups": [{"clusters": [1, 2], "reason": "same area"}]}'
+    client = _fit_client(both, weak=[2], refits={2: "Hosting Services"}, groups=groups)
+    assert _fit_run(both, "--overlap-rounds", "1", client=client) == 0
+    out = capsys.readouterr()
+    kinds = [_call_kind(c) for c in client.calls]
+    assert kinds[:5] == ["name"] * 3 + ["fit", "refit"] and kinds[5] == "overlap_judge"
+    assert set(kinds[6:]) == {"overlap_rename"}
+    judge_user = client.calls[5].user
+    assert "Hosting Services" in judge_user and "Cloud Platforms" not in judge_user
+    rows = _names_rows(both)
+    assert [r["prompt_version"] for r in rows] == [
+        "name_v2+rename_v1", "name_v2+rename_v1", "name_v2+refit_v1+rename_v1"]
+    assert [r["status"] for r in rows] == ["ok"] * 3
+    lines = out.err.splitlines()
+    first_overlap = next(i for i, x in enumerate(lines) if x.startswith("overlap review round"))
+    assert any(x.startswith("fit review round 1/1: 1 of 3") for x in lines[:first_overlap])
+    assert 'weak fit: cluster 2 "Cloud Platforms"' in lines[:first_overlap]
+    assert "fit review done: no weak names left" in lines[:first_overlap]
+
+
+def test_name_fit_unresolved_marks_weak_fit(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    client = _fit_client(root, weak=[2], refits={2: NAMED[2]})
+    assert _fit_run(root, client=client) == 0
+    out = capsys.readouterr()
+    rows = _names_rows(root)
+    assert rows[2]["name"] == "Cloud Platforms" and rows[2]["status"] == "weak_fit"
+    assert rows[2]["prompt_version"] == "name_v2"
+    assert [r["name"] for r in rows[:2]] == ["Interface Engineering", "Data Storage"]
+    assert "fit review done: 1 cluster(s) still weak: 2" in out.err
+    assert json.loads(out.out)["n_weak_fit"] == 1
+
+
+def test_name_status_precedence_with_weak_fit() -> None:
+    members = {0: ["a1", "a2"], 1: ["b1", "b2"], 2: ["c1", "c2"], 3: ["Git", "Jira"],
+               4: ["d1", "d2"]}
+    names = {0: "Same Name", 1: "same name", 2: "Other Area", 3: "Git; Jira", 4: "Fourth Area"}
+    llm = naming.NameResult(names=dict(names), failed=[])
+    stats = naming.CallStats()
+    fitted = fit.FitResult(names=dict(names), renamed={}, unresolved=[0, 1, 2, 3], rounds_run=1,
+                           judge_failures=0, stats=stats)
+    review = overlap.ReviewResult(names=dict(names), renamed={}, unresolved=[2, 4], rounds_run=1,
+                                  judge_failures=0, stats=stats)
+    bundle = llm_factory.ClientBundle(client=FakeLLMClient(script=[]), backend="voyager",
+                                      model="m", secrets=[])
+    rows = cli_name._name_rows(members=members, llm=llm, bundle=bundle, fit_result=fitted,
+                               review=review)
+    assert [row[5] for row in rows] == [
+        "duplicate", "duplicate", "weak_fit", "member_list", "overlap"]
+
+
+def test_name_fit_summary_keys(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    client = _fit_client(root, weak=[2], refits={2: "Hosting Services"})
+    assert _fit_run(root, "--overlap-rounds", "0", client=client) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert list(summary) == ["names_file", "method", "n_clusters", "n_fallback", "n_duplicate",
+                             "n_member_list", "n_renamed", "n_overlap", "n_fit_renamed",
+                             "n_weak_fit"]
+    assert (summary["n_fit_renamed"], summary["n_weak_fit"], summary["n_renamed"]) == (1, 0, 0)
+
+
+def test_fit_rounds_zero_disables(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    client = _fit_client(root, weak=[2], refits={2: "Hosting Services"})
+    capsys.readouterr()
+    assert _fit_run(root, "--fit-rounds", "0", client=client) == 0
+    kinds = {_call_kind(c) for c in client.calls}
+    assert "fit" not in kinds and "refit" not in kinds and "overlap_judge" in kinds
+    assert "fit review" not in capsys.readouterr().err
+    assert _names_rows(root)[2]["name"] == "Cloud Platforms"
+
+
+def test_fit_rounds_invalid_exit_2(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    for bad in ("-1", "x"):
+        client = _fit_client(root, weak=[], refits={})
+        assert _fit_run(root, "--fit-rounds", bad, client=client) == 2
+        assert client.calls == []
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_fit_flag_ignored_for_heuristic(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plain, flagged = tmp_path / "plain", tmp_path / "flagged"
+    for root, extra in ((plain, ()), (flagged, ("--fit-rounds", "1"))):
+        _through_grid(root)
+        capsys.readouterr()
+        assert _run(root, "name", *extra) == 0
+    assert "fit review" not in capsys.readouterr().err
+    names = "taxonomy/cluster_names.csv"
+    assert (plain / names).read_bytes() == (flagged / names).read_bytes()
+
+
+def test_name_fit_same_file_for_workers(tmp_path: Path) -> None:
+    files = []
+    for workers in ("2", "3"):
+        root = tmp_path / f"art{workers}"
+        _through_grid(root)
+        client = _fit_client(root, weak=[0, 2], refits={0: "Interface Design", 2: "Hosting"})
+        assert _fit_run(root, "--workers", workers, client=client) == 0
+        files.append((root / "taxonomy" / "cluster_names.csv").read_bytes())
+    assert files[0] == files[1]
+
+
+def test_name_fit_fatal_exit_3(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    capsys.readouterr()
+    client = _fit_client(root, weak=[2], refits={}, fatal=True)
+    assert _fit_run(root, client=client) == 3
+    assert "denied" in capsys.readouterr().err
+    assert not (root / "taxonomy" / "cluster_names.csv").exists()
+
+
+def test_fit_makes_no_call_without_model_named_clusters(tmp_path: Path) -> None:
+    root = tmp_path / "art"
+    _through_grid(root)
+    client = FakeLLMClient(handler=lambda request: json.dumps({"name": "Other"}))
+    assert _fit_run(root, client=client) == 1
+    assert {_call_kind(c) for c in client.calls} == {"name"}
+
+
+def _set_statuses(root: Path, statuses: dict[int, str]) -> None:
+    path = root / "taxonomy" / "cluster_names.csv"
+    rows = _names_rows(root)
+    for row in rows:
+        row["status"] = statuses.get(int(row["cluster_id"]), row["status"])
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=build.NAMES_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_build_warns_but_builds_on_weak_fit(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def no_client(*args: object, **kwargs: object) -> None:
+        raise AssertionError("build must not create a model client")
+
+    monkeypatch.setattr(llm_factory, "make_client", no_client)
+    root = tmp_path / "art"
+    _name_all(root)
+    _write_names(root, {0: "Frontend Work", 1: "Database Storage", 2: "Cloud Platforms"})
+    capsys.readouterr()
+    assert _run(root, "build") == 0
+    clean = capsys.readouterr()
+    assert json.loads(clean.out)["n_weak_fit"] == 0 and "warning" not in clean.err
+    plain = model.load_taxonomy(root / "taxonomy" / "taxonomy.json").cluster_names()
+
+    _set_statuses(root, {2: "weak_fit", 0: "weak_fit"})
+    assert _run(root, "build") == 0
+    out = capsys.readouterr()
+    warnings = [line for line in out.err.splitlines() if line.startswith("warning: cluster ")]
+    assert len(warnings) == 2
+    assert "cluster 0 name 'Frontend Work'" in warnings[0]
+    assert "cluster 2 name 'Cloud Platforms'" in warnings[1]
+    assert "weak_fit" in warnings[0] and "set the status to ok" in warnings[0]
+    assert json.loads(out.out)["n_weak_fit"] == 2
+    assert model.load_taxonomy(root / "taxonomy" / "taxonomy.json").cluster_names() == plain
+
+
+def test_build_without_status_column_has_no_weak_fit(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    _name_all(root)
+    path = root / "taxonomy" / "cluster_names.csv"
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["cluster_id", "name"])
+        writer.writerows([[0, "Frontend Work"], [1, "Database Storage"], [2, "Cloud Platforms"]])
+    capsys.readouterr()
+    assert _run(root, "build") == 0
+    out = capsys.readouterr()
+    assert json.loads(out.out)["n_weak_fit"] == 0 and "warning" not in out.err
 
 
 def test_nonnegative_int() -> None:
