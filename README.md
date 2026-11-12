@@ -150,6 +150,7 @@ Environment variables (all optional):
 | `NAME_METHOD` | `llm` | `taxonomy name --method` (`heuristic` is offline-only and adds `--allow-member-names` to `taxonomy build`) |
 | `NAME_WORKERS` | `4` | `taxonomy name --workers` |
 | `NAME_OVERLAP_ROUNDS` | `2` | `taxonomy name --overlap-rounds` (`0` disables) |
+| `NAME_FIT_ROUNDS` | `1` | `taxonomy name --fit-rounds` (`0` disables) |
 
 - `CONFIG_ID` (optional first argument, for example `kmeans-04`) or the environment variable `CLUSTER_CONFIG_ID`: the configuration that `taxonomy select --config-id` picks right after `taxonomy grid`. The default is `kmeans-01` (k=10, so exactly 10 clusters and no noise); the argument wins over the variable. `grid`'s own pick in `selection.json` is always overridden (the previous file is archived, see below). Pick other ids from `$ARTIFACTS_DIR/taxonomy/grid_results.csv`.
 - The script changes into the repo root itself, so it can be run from anywhere, but relative `STRUCTURED_DIR`, `ARTIFACTS_DIR` and `PROCESSED_DIR` resolve against the repo root, not your current directory (use absolute paths to avoid surprises). The embed steps need `.env` (you provide it; not in git) with `VOYAGER_API_KEY` and `VOYAGER_BASE_URL`. With the default `NAME_METHOD=llm`, step 7 also needs `VOYAGER_MODEL` (or `LLM_BACKEND=local` with `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL`), because the script cannot pass `--model`; without it the run fails at step 7 after the billed `taxonomy embed`. `NAME_METHOD=heuristic` needs no LLM variables. `VOYAGER_EMBED_MODEL` is commented out in `.env.example` and is not needed here, because the script passes `--embed-backend voyager --embed-model qwen3-embedding-8b`.
@@ -164,7 +165,7 @@ Environment variables (all optional):
 | 4 | `taxonomy embed` (Voyager call) | `skills/skill_vectors.npy` |
 | 5 | `taxonomy grid` | `taxonomy/grid_results.csv`, `taxonomy/selection.json` |
 | 6 | `taxonomy select` (always; default `kmeans-01`) | `taxonomy/selection.json` |
-| 7 | `taxonomy name --method $NAME_METHOD --workers $NAME_WORKERS --overlap-rounds $NAME_OVERLAP_ROUNDS --force` (default `llm`, real LLM calls) | `taxonomy/cluster_names.csv` |
+| 7 | `taxonomy name --method $NAME_METHOD --workers $NAME_WORKERS --overlap-rounds $NAME_OVERLAP_ROUNDS --fit-rounds $NAME_FIT_ROUNDS --force` (default `llm`, real LLM calls) | `taxonomy/cluster_names.csv` |
 | 8 | `taxonomy build` | `taxonomy/taxonomy.json` |
 | 9 | `taxonomy plot` (offline) | `taxonomy/plots/` (`index.html`, `cluster_map.png`, `cluster_sizes.png`, ...) |
 | 10 | `relabel` (lookup-only mode) | `relabeled/<source>/` |

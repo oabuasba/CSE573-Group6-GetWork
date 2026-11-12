@@ -152,7 +152,7 @@ Only the raw inputs are git-ignored; you place them yourself. The outputs of pre
    taxonomy counts           [offline]    -> skills/skill_counts.parquet
    taxonomy embed            [Voyager|GPU]-> skills/skill_vectors.npy
    taxonomy grid, select     [offline]    -> taxonomy/grid_results.csv, selection.json
-   taxonomy name             [LLM]        -> taxonomy/cluster_names.csv  (+ overlap review)
+   taxonomy name             [LLM]        -> taxonomy/cluster_names.csv  (+ fit and overlap reviews)
    taxonomy build, plot      [offline]    -> taxonomy/taxonomy.json, plots/
    relabel                   [offline]    -> relabeled/<source>/
    doc-embed build           [offline]    -> documents/<source>/*_documents.*
@@ -251,7 +251,7 @@ about a minute.
 ### 6.7 Cluster naming [`taxonomy name` itself defaults to `--method heuristic`; `run_pipeline.sh` defaults to `llm`]
 
 ```
-uv run taxonomy name --artifacts-dir ROOT --method llm --workers 4 --overlap-rounds 2 --force   # [Voyager or local LLM]
+uv run taxonomy name --artifacts-dir ROOT --method llm --workers 4 --fit-rounds 1 --overlap-rounds 2 --force   # [Voyager or local LLM]
 uv run taxonomy name --artifacts-dir ROOT --method heuristic --force                             # [offline] member-list names
 uv run taxonomy build --artifacts-dir ROOT                        # add --allow-member-names after heuristic naming
 uv run taxonomy plot  --artifacts-dir ROOT                        # [offline] ROOT/taxonomy/plots/index.html
@@ -262,6 +262,11 @@ force it. Edit names by hand in that file, then run `build`, which writes `taxon
 [`src/getwork/taxonomy/README.md`](../src/getwork/taxonomy/README.md)):
 
 - **Parallel naming**: `--workers N` (default 1; the script uses 4). Results are the same for any N >= 2 but can differ from 1.
+- **Fit review**: `--fit-rounds N` (default 1, `0` turns it off) runs first. One LLM judge call lists the model-made names that do not
+  describe their members; each is asked once for a better name with the judge's reason (prompt `refit_v1`). Renamed rows have
+  `prompt_version` `name_v2+refit_v1`; a cluster that cannot be fixed keeps its name with status `weak_fit` (not fatal). The summary
+  adds `n_fit_renamed` and `n_weak_fit` after `n_overlap`. `taxonomy build` only warns for each `weak_fit` row (and prints `n_weak_fit`);
+  set the status to `ok` after fixing a name. Renaming cannot fix a cluster with mixed members.
 - **Overlap review**: `--overlap-rounds N` (default 2, `0` turns it off) re-asks clusters whose names are too close, by word rules plus
   one LLM judge call; `--no-overlap-judge` uses the rules only. Clusters that stay overlapping get status `overlap` (not fatal).
 - Naming sends `max_tokens` 1024 (`--max-tokens`) with reasoning effort `none` for Voyager (`--reasoning-effort`); a reasoning model
@@ -306,7 +311,7 @@ B1+, B2 and Full, no API calls): `[ARTIFACTS_DIR=...] [K=5] bash scripts/match_r
 
 ```
 [STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] [CLUSTER_CONFIG_ID=...] \
-[NAME_METHOD=llm|heuristic] [NAME_WORKERS=4] [NAME_OVERLAP_ROUNDS=2] bash scripts/run_pipeline.sh [CONFIG_ID]
+[NAME_METHOD=llm|heuristic] [NAME_WORKERS=4] [NAME_OVERLAP_ROUNDS=2] [NAME_FIT_ROUNDS=1] bash scripts/run_pipeline.sh [CONFIG_ID]
 ```
 
 It runs 13 commands in order and stops at the first failure (`set -euo pipefail`); each is echoed as `==> <command>`. It does not run
@@ -321,6 +326,7 @@ preprocessing, the structurer, or the web app. It changes to the repo root, so u
 | `NAME_METHOD` | `llm` | `heuristic` is for offline runs and adds `--allow-member-names` to `taxonomy build` |
 | `NAME_WORKERS` | `4` | passed as `taxonomy name --workers` |
 | `NAME_OVERLAP_ROUNDS` | `2` | passed as `--overlap-rounds` (`0` disables) |
+| `NAME_FIT_ROUNDS` | `1` | passed as `--fit-rounds` (`0` disables) |
 
 Steps: `alias-table build`, `apply`, `taxonomy counts`, `embed`, `grid`, `select`, `name ... --force`, `build`, `plot`, `relabel`,
 `doc-embed build`, `doc-embed embed`, `retrieve run`. Embedding steps always pass `--embed-backend voyager --embed-model
@@ -328,7 +334,7 @@ qwen3-embedding-8b`, so the embed steps need `VOYAGER_API_KEY` and `VOYAGER_BASE
 `NAME_METHOD=llm`, step 7 (`taxonomy name`) also needs an LLM configuration, because the script cannot pass `--model`: either `VOYAGER_MODEL`, or
 `LLM_BACKEND=local` with `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL`. Without one, the run fails at step 7 with `missing required setting(s)`
 *after* the billed `taxonomy embed` already ran. `NAME_METHOD=heuristic` needs no LLM variables. **Billed Voyager calls happen at
-`taxonomy embed`, `doc-embed embed` and, with `NAME_METHOD=llm` on the voyager backend, `taxonomy name` including overlap review (with
+`taxonomy embed`, `doc-embed embed` and, with `NAME_METHOD=llm` on the voyager backend, `taxonomy name` including the fit and overlap reviews (the fit review adds one judge call per round plus one to three per weak cluster after naming; with
 `LLM_BACKEND=local` the naming calls go to your local server). Run the script yourself.** Before overwriting, an existing `selection.json` and `cluster_names.csv` are copied to
 `$ARTIFACTS_DIR/taxonomy/archive/<name>_<UTC timestamp>.<ext>`.
 

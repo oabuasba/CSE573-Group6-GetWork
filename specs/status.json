@@ -2202,42 +2202,42 @@
     },
     "naming-fit-review": {
       "spec": "specs/features/naming-fit-review.html",
-      "phase": "awaiting-build",
+      "phase": "done",
       "planner_agent": "a0d4e81ad45588424",
       "branch": "dev",
       "tasks": {
         "T-1": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "overlap T-8"
           ],
           "batch": "FR-1",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": "refactor: overlap.run_rename_pass public; may be no-op (signature passed to OR-2 dev)"
+          "notes": "Dev: overlap.py unchanged (already public); tests only. 1301 passed. | Reviewer pass. Nit follow-up: snapshot test weak."
         },
         "T-2": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-1"
           ],
           "batch": "FR-1",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Dev: private _request copy in fit.py; cap int(n*0.5) floored at 1. | Reviewer pass (prompt byte-identical, hash not self-fulfilling)."
         },
         "T-3": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-2"
           ],
           "batch": "FR-1",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Reviewer pass. Nit follow-ups sent."
         },
         "T-4": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-3"
           ],
@@ -2245,40 +2245,40 @@
           "batch": "FR-2",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": "large: split inside batch"
+          "notes": "Reviewer pass (sub-parts a/b/c). Nits follow-up sent (boolean, log assert)."
         },
         "T-5": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-4"
           ],
           "batch": "FR-2",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Reviewer pass; existing test edits preserve intent. Nits: extract _apply_review_statuses, kwargs, long lines. SPEC: rounds_run on judge failure counts successful rounds only; F-5 has_work == todo-empty wording."
         },
         "T-6": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-5"
           ],
           "batch": "FR-3",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Reviewer pass. Nit: no-client assertion added."
         },
         "T-7": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-6"
           ],
           "batch": "FR-3",
           "worktree": ".",
           "fix_rounds": 0,
-          "notes": ""
+          "notes": "Reviewer pass. Doc nits (cost note, heuristic sentence, wrap) sent."
         }
       },
-      "notes": "User said yes 2026-11-10: plan weak-fit check after overlap review. Depends on naming-overlap-review T-8. Spec ready: 7 tasks, 17 ACs, T-4 large. Build after naming-overlap-review T-8. Planner suggests giving the overlap T-5 batch the run_rename_pass signature so fit T-1 becomes a no-op check (not sent; spec unapproved). | User approved 2026-11-10: build after naming-overlap-review T-8; mixed clusters -> mark weak_fit for a human (no outlier-move follow-up); run_rename_pass signature passed to OR-2 dev. Fit review on by default, 1 round, warn-only build.",
+      "notes": "User said yes 2026-11-10: plan weak-fit check after overlap review. Depends on naming-overlap-review T-8. Spec ready: 7 tasks, 17 ACs, T-4 large. Build after naming-overlap-review T-8. Planner suggests giving the overlap T-5 batch the run_rename_pass signature so fit T-1 becomes a no-op check (not sent; spec unapproved). | User approved 2026-11-10: build after naming-overlap-review T-8; mixed clusters -> mark weak_fit for a human (no outlier-move follow-up); run_rename_pass signature passed to OR-2 dev. Fit review on by default, 1 round, warn-only build. | USER (2026-11-11): build naming-fit-review. In place on dev; sequential chain FR-1 (T-1..T-3), FR-2 (T-4 large: split inside batch T-4a/b/c, T-5), FR-3 (T-6,T-7). Standing rules (no Voyager/.env, fake clients). Ask user before pushing (no push instruction given for this feature). | BUILT 2026-11-11, all reviewed. Consolidated spec list sent to planner. NOT committed/pushed yet: ask user.",
       "batches": {
         "FR-1": {
           "tasks": [
@@ -2286,7 +2286,7 @@
             "T-2",
             "T-3"
           ],
-          "developer_agent": null,
+          "developer_agent": "a9a30f6c7e775a894",
           "fix_rounds": 0
         },
         "FR-2": {
@@ -2294,7 +2294,7 @@
             "T-4",
             "T-5"
           ],
-          "developer_agent": null,
+          "developer_agent": "a9a30f6c7e775a894",
           "fix_rounds": 0
         },
         "FR-3": {
@@ -2302,7 +2302,7 @@
             "T-6",
             "T-7"
           ],
-          "developer_agent": null,
+          "developer_agent": "a9a30f6c7e775a894",
           "fix_rounds": 0
         }
       }
