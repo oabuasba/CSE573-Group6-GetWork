@@ -100,3 +100,11 @@ test("input rules and roles", async () => {
   expect(sendButton()).not.toHaveClass("btn-cta");
   expect(container.querySelectorAll(".btn-cta")).toHaveLength(0);
 });
+
+test("shows the note when part of the answer was left out", async () => {
+  const note = "Part of the answer was left out because it could not be checked against these two documents.";
+  const { user } = setup(vi.fn().mockResolvedValue(reply({ ...agent.chat, note })));
+  await user.type(input(), "Why?");
+  await user.click(sendButton());
+  expect(await screen.findByText(note)).toBeInTheDocument();
+});

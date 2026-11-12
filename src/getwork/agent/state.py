@@ -66,5 +66,6 @@ class Turn:
     answer: Action | None = None  # the answer decide parsed
     route: str = "decide"  # "decide" | "run_tool" | "verify" | "finish" | "fail" | "end"
     failure_reason: FailureReason | None = None  # set by a node before it routes to "fail"
+    dropped_claims: int = 0  # claims the verifier removed from the final answer
     failure_detail: str | None = None  # redacted cause of the failure, for the log only
     result: AgentResult | None = None

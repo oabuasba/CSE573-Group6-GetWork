@@ -12,6 +12,11 @@ TOKEN_RE = re.compile(r"[A-Za-z0-9#+.]+")
 NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
 FORBIDDEN_TEXT = ("http://", "https://", "```")
 MIN_SINGLE_TOKEN_CHARS = 3
+CLAIM_PREFIX_RE = re.compile(r"claim (\d+):")
+# Vocabulary entries that are also plain English words and almost never a skill on their own (never add a word that
+# can be a standalone resume skill, such as cloud or security). Written in lower case in prose they are not skill mentions;
+# a declared skill is still checked against the documents, and a capitalised or multi-word form is still detected.
+COMMON_WORD_KEYS = frozenset("lists list test code tools support service services email".split())
 
 
 @dataclass(frozen=True)
@@ -46,16 +51,18 @@ def _match_at(*, tokens: Sequence[str], start: int, vocab: Vocabulary) -> tuple[
     return None
 
 
-def _is_ignored_match(*, key: str, size: int, vocab: Vocabulary) -> bool:
+def _is_ignored_match(*, key: str, size: int, written: str, vocab: Vocabulary) -> bool:
     too_short = size == 1 and len(key) < MIN_SINGLE_TOKEN_CHARS
-    return key in vocab.clusters or too_short
+    plain_word = size == 1 and key in COMMON_WORD_KEYS and written.islower()
+    return key in vocab.clusters or too_short or plain_word
 
 
 def skill_mentions(text: str, vocab: Vocabulary) -> list[str]:
     """Display spellings of vocabulary skills named in text, in order of first appearance, one per key.
     Tokens are runs of [A-Za-z0-9#+.] with trailing dots stripped. At each position the longest match of up to
     vocab.max_tokens tokens (compared with normalize_key) wins and the scan continues after it. A match whose
-    key is in vocab.clusters is skipped. A single-token match shorter than 3 characters is ignored."""
+    key is in vocab.clusters is skipped. A single-token match shorter than 3 characters is ignored, and so is a
+    lower-case single token in COMMON_WORD_KEYS (a plain English word such as "lists")."""
     tokens = _tokens(text)
     found: dict[str, str] = {}
     position = 0
@@ -65,7 +72,7 @@ def skill_mentions(text: str, vocab: Vocabulary) -> list[str]:
             position += 1
             continue
         key, size = match
-        if not _is_ignored_match(key=key, size=size, vocab=vocab):
+        if not _is_ignored_match(key=key, size=size, written=tokens[position], vocab=vocab):
             found.setdefault(key, vocab.skills[key])
         position += size
     return list(found.values())
@@ -177,6 +184,17 @@ def verify_claims(
         ]
         messages.extend(f"claim {number}: {message}" for message in found)
     return messages
+
+
+def verified_claims(claims: Sequence[Claim], violations: Sequence[str]) -> list[Claim]:
+    """The claims no violation points at. A violation without a claim number (the claim count rule) leaves none."""
+    faulty: set[int] = set()
+    for message in violations:
+        found = CLAIM_PREFIX_RE.match(message)
+        if found is None:
+            return []
+        faulty.add(int(found.group(1)))
+    return [claim for number, claim in enumerate(claims, start=1) if number not in faulty]
 
 
 def named_skills(claims: Sequence[Claim], vocab: Vocabulary) -> list[str]:

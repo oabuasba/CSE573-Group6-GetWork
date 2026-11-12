@@ -21,6 +21,7 @@ function Turn({ turn }) {
       ) : (
         <ClaimList claims={turn.claims} facts={turn.facts} />
       )}
+      {turn.note && <p className="measure chat-note">{turn.note}</p>}
     </div>
   );
 }

@@ -21,7 +21,7 @@ def test_direct_answer() -> None:
     assert [c.text for c in result.claims] == ["Both list CSS."]
     assert result.usage.llm_calls == 1 and result.usage.verify_retries == 0
     assert [f.id for f in result.facts] == ["f1", "f2", "f3", "f4"]
-    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v1")
+    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v2")
     assert json.dumps(result.as_record())
 
 

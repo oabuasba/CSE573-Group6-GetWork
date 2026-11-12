@@ -18,7 +18,7 @@ SECRET_MESSAGE = "ZEBRA-QUESTION-7"
 class StubService:
     """Chat service and explainer in one: raises what it is told to."""
 
-    info = models.ExplainerInfo(kind="agent", model="stub", backend="voyager", prompt_version="agent_v1")
+    info = models.ExplainerInfo(kind="agent", model="stub", backend="voyager", prompt_version="agent_v2")
 
     def __init__(self, error: Exception) -> None:
         self.error = error

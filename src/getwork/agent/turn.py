@@ -1,5 +1,6 @@
 """Node logic of one agent turn as plain methods; graph.py only wires them (no LangGraph import)."""
 
+import dataclasses
 import time
 from collections.abc import Callable, Sequence
 from typing import Literal
@@ -122,8 +123,18 @@ class AgentRunner:
             turn.answer = None
             turn.route = "decide"
         else:
-            self._route_to_fail(turn=turn, reason="unverified", detail="; ".join(violations))
+            self._keep_verified_or_fail(turn=turn, claims=answer.claims, violations=violations)
         return turn
+
+    def _keep_verified_or_fail(self, *, turn: Turn, claims: list[Claim], violations: list[str]) -> None:
+        """Retries are spent: show only the claims that verified, or fail when none did."""
+        kept = grounding.verified_claims(claims, violations)
+        if not kept:
+            self._route_to_fail(turn=turn, reason="unverified", detail="; ".join(violations))
+            return
+        turn.answer = dataclasses.replace(turn.answer, claims=kept)  # type: ignore[type-var]
+        turn.dropped_claims = len(claims) - len(kept)
+        turn.route = "finish"
 
     def finish(self, turn: Turn) -> Turn:
         answer = turn.answer
@@ -212,6 +223,7 @@ class AgentRunner:
             failure_reason=reason,
             off_topic=off_topic,
             failure_detail=detail,
+            dropped_claims=turn.dropped_claims,
         )
 
 

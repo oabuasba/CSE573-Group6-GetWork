@@ -29,7 +29,7 @@ def test_explain_agent_answer() -> None:
     assert explanation.evidence == build_evidence("resume_to_posting", RESUME, POSTING)
     assert explanation.explainer.kind == "agent"
     assert (explanation.explainer.model, explanation.explainer.backend) == ("demo-model", "voyager")
-    assert explanation.explainer.prompt_version == "agent_v1"
+    assert explanation.explainer.prompt_version == "agent_v2"
     for claim in explanation.claims:
         models.Claim.model_validate(claim)
     assert [f["id"] for f in explanation.facts] == ["f1", "f2", "f3", "f4"]

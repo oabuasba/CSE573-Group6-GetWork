@@ -54,7 +54,7 @@ def test_graph_matches_plain_driver(name: str) -> None:
 def test_run_agent_result_identity() -> None:
     runner, _ = make_runner([answer()])
     result = graph.run_agent(graph.build_graph(runner), runner, ctx=make_ctx(), question="Q", history=[])
-    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v1")
+    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v2")
     assert result.status == "ok" and json.dumps(result.as_record())
 
 

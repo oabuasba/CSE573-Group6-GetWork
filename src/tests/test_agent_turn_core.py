@@ -11,7 +11,7 @@ pytestmark = pytest.mark.usefixtures("offline")
 def assert_failed(result: models.AgentResult, reason: str, calls: int) -> None:
     assert result.status == "failed" and result.failure_reason == reason
     assert result.claims == [] and result.usage.llm_calls == calls
-    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v1")
+    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v2")
 
 
 def test_failure_reasons() -> None:

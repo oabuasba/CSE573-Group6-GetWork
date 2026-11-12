@@ -79,7 +79,7 @@ def test_models_round_trip() -> None:
         suggested_questions=["Why?"],
         trace=[trace],
         usage=make_usage(),
-        explainer={"kind": "agent", "model": "m", "backend": "voyager", "prompt_version": "agent_v1"},
+        explainer={"kind": "agent", "model": "m", "backend": "voyager", "prompt_version": "agent_v2"},
     )
     for model in (fact, trace, make_claim(), make_usage(), response):
         dumped = model.model_dump()
@@ -97,13 +97,13 @@ def test_as_record_keys_and_json() -> None:
         usage=make_usage(),
         model="m",
         backend="voyager",
-        prompt_version="agent_v1",
+        prompt_version="agent_v2",
         failure_reason="timeout",
     )
     record = result.as_record()
     assert set(record) == {
         "status", "failure_reason", "off_topic", "claims", "facts", "trace",
-        "usage", "model", "backend", "prompt_version",
+        "usage", "model", "backend", "prompt_version", "dropped_claims",
     }  # fmt: skip
     assert json.loads(json.dumps(record)) == record
     assert set(record["claims"][0]) == {"text", "doc_ids", "skills", "facts"}

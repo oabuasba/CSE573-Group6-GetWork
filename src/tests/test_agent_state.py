@@ -10,7 +10,7 @@ pytestmark = pytest.mark.usefixtures("offline")
 
 def test_agent_config_validation() -> None:
     cfg = state.AgentConfig(model="m", backend="voyager")
-    assert (cfg.prompt_version, cfg.temperature) == ("agent_v1", 0.0)
+    assert (cfg.prompt_version, cfg.temperature) == ("agent_v2", 0.0)
     assert (cfg.max_tokens, cfg.reasoning_effort) == (1024, "none")
     assert (cfg.max_tool_steps, cfg.max_llm_calls, cfg.max_verify_retries, cfg.timeout_s) == (4, 6, 2, 60.0)
     assert cfg.extra_body is None and cfg.retry == RetryConfig()

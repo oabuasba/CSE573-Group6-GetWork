@@ -34,6 +34,7 @@ export function useChat({ direction, query, focusId, matches, system, fetchImpl 
             facts: data.facts,
             suggested_questions: data.suggested_questions,
             off_topic: data.off_topic,
+            ...(data.note ? { note: data.note } : {}),
           };
           turnsRef.current = [...turnsRef.current, turn];
           setTurns(turnsRef.current);

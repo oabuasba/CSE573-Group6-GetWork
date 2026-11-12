@@ -2380,17 +2380,96 @@
           ],
           "batch": "AD",
           "notes": "User saw POST /api/chat 502 twice with no reason. Add redacted failure detail logging, console logging config, map PermanentLLMError to model_rejected 502 (was unhandled 500). Real cause still unknown (user-run). Reviewed pass. Non-blocking: redact before slicing reply excerpt (secret straddling char 200), _URL case-insensitive, other auth header forms, lines >120, cli.py ~417 lines. Planner must update match-agent MA-6/failure table (Permanent->model_rejected, error.reason, detail= log suffix)."
+        },
+        "AD-4": {
+          "phase": "merged",
+          "deps": [
+            "AD-3"
+          ],
+          "batch": "AD",
+          "notes": "Real run: \"what could i do to improve my resume?\" -> 502 unverified (vocab false positive \"lists\"; advice names vocab skills not in cited docs). Fix: generic-word guard, drop ungrounded claims and keep grounded remainder + note, prompt for advice from gap_skills. Planner list: match-agent grounding ACs / graceful degradation. Reviewed pass (round 2). Non-blocking: grounding.py:17 comment 123 chars; test_agent_prompt REQUIRED_PHRASES lacks v2 rules; chat-note has no CSS (carry note through new chat page, T-7/T-8); contract fixture lacks note case. Planner: match-agent PROMPT_VERSION agent_v2, graceful-degradation ACs."
         }
       },
       "notes": "User request 2026-11-11: make chat about results a default feature; project goal = conversational agent explaining matches. Planner list: web-app T-9 / match-agent T-13 text (explainer default, auto mode, health reason). Commit locally when reviewed; ask before pushing."
     },
     "ui-polish-3": {
-      "spec": "specs/features/web-app.html",
-      "phase": "planning",
+      "spec": "specs/features/ui-polish-3.html",
+      "phase": "building",
       "planner_agent": "a5242b49a97f886cb",
       "branch": "dev",
-      "tasks": {},
-      "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner."
+      "tasks": {
+        "T-1": {
+          "phase": "pending",
+          "deps": [],
+          "batch": null,
+          "notes": ""
+        },
+        "T-2": {
+          "phase": "pending",
+          "deps": [
+            "T-1"
+          ],
+          "batch": null,
+          "notes": ""
+        },
+        "T-3": {
+          "phase": "pending",
+          "deps": [],
+          "batch": null,
+          "notes": "large"
+        },
+        "T-4": {
+          "phase": "pending",
+          "deps": [
+            "T-2",
+            "T-3"
+          ],
+          "batch": null,
+          "notes": ""
+        },
+        "T-5": {
+          "phase": "pending",
+          "deps": [],
+          "batch": null,
+          "notes": ""
+        },
+        "T-6": {
+          "phase": "pending",
+          "deps": [],
+          "batch": null,
+          "notes": ""
+        },
+        "T-7": {
+          "phase": "pending",
+          "deps": [
+            "T-6"
+          ],
+          "batch": null,
+          "notes": "large"
+        },
+        "T-8": {
+          "phase": "pending",
+          "deps": [
+            "T-1",
+            "T-3",
+            "T-4",
+            "T-5",
+            "T-7"
+          ],
+          "batch": null,
+          "notes": "large"
+        },
+        "T-9": {
+          "phase": "pending",
+          "deps": [
+            "T-4",
+            "T-8"
+          ],
+          "batch": null,
+          "notes": ""
+        }
+      },
+      "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner. Approved by user 2026-11-11; start building after AD-4 developer finishes (in place on dev, batches: T-1/T-2/T-3 ; T-5/T-6/T-7 ; then T-4/T-8 ; then T-9). Chat page/thread must render ChatResponse.note (fixed omitted-claims note) and style it."
     }
   },
   "adhoc": {

@@ -45,7 +45,7 @@
    "kind": "agent",
    "model": "demo-model",
    "backend": "voyager",
-   "prompt_version": "agent_v1"
+   "prompt_version": "agent_v2"
   },
   "claims": [
    {
@@ -288,7 +288,7 @@
    "kind": "agent",
    "model": "demo-model",
    "backend": "voyager",
-   "prompt_version": "agent_v1"
+   "prompt_version": "agent_v2"
   }
  },
  "chat_error": {

@@ -7,6 +7,7 @@ from getwork.agent import facts as fact_builders
 from getwork.agent import graph as agent_graph
 from getwork.agent.failure import AgentFailure
 from getwork.agent.models import (
+    OMITTED_NOTE,
     QUERY_DOC,
     AgentResult,
     ChatMatchRef,
@@ -135,6 +136,7 @@ class ChatService:
             facts=result.facts,
             suggested_questions=suggest(request.direction, request.matches, request.focus_id, evidence),
             off_topic=result.off_topic,
+            note=OMITTED_NOTE if result.dropped_claims else None,
             trace=result.trace,
             usage=result.usage,
             explainer=self.info,

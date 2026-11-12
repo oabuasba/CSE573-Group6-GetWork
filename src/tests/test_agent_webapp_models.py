@@ -24,8 +24,8 @@ def test_old_explanation_payload_still_valid() -> None:
 
 
 def test_explainer_info_extra_fields() -> None:
-    info = models.ExplainerInfo(kind="agent", model="m", backend="voyager", prompt_version="agent_v1")
-    assert (info.backend, info.prompt_version) == ("voyager", "agent_v1")
+    info = models.ExplainerInfo(kind="agent", model="m", backend="voyager", prompt_version="agent_v2")
+    assert (info.backend, info.prompt_version) == ("voyager", "agent_v2")
     again = models.ExplainerInfo.model_validate(info.model_dump())
     assert again == info
 
@@ -66,12 +66,12 @@ def test_langgraph_importable() -> None:
 def test_explainer_info_omits_unset_fields() -> None:
     assert models.ExplainerInfo(kind="agent", model="m").model_dump() == {"kind": "agent", "model": "m"}
     assert models.ExplainerInfo(kind="template").model_dump() == {"kind": "template", "model": None}
-    full = models.ExplainerInfo(kind="agent", model="m", backend="voyager", prompt_version="agent_v1")
+    full = models.ExplainerInfo(kind="agent", model="m", backend="voyager", prompt_version="agent_v2")
     assert full.model_dump() == {
         "kind": "agent",
         "model": "m",
         "backend": "voyager",
-        "prompt_version": "agent_v1",
+        "prompt_version": "agent_v2",
     }
     health = TestClient(api.create_app(demo.DemoEngine(), explain.TemplateExplainer())).get("/api/health").json()
     assert health["explainer"] == {"kind": "template", "model": None}

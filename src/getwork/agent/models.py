@@ -25,7 +25,10 @@ FailureReason = Literal[
     "unverified",
 ]
 QUERY_DOC: str = "query"
-PROMPT_VERSION: str = "agent_v1"
+PROMPT_VERSION: str = "agent_v2"
+OMITTED_NOTE: str = (
+    "Part of the answer was left out because it could not be checked against these two documents."
+)
 MAX_MESSAGE_CHARS: int = 1000
 MAX_HISTORY: int = 20
 MAX_HISTORY_CHARS: int = 2000
@@ -110,6 +113,7 @@ class ChatResponse(BaseModel):  # only for a verified answer or an off-topic rep
     trace: list[ToolTrace]
     usage: Usage
     explainer: ExplainerInfo  # kind "agent"
+    note: str | None = None  # OMITTED_NOTE when unverifiable claims were dropped from the reply
 
 
 @dataclass(frozen=True)
@@ -125,10 +129,11 @@ class AgentResult:
     failure_reason: FailureReason | None = None  # set exactly when status == "failed"
     off_topic: bool = False
     failure_detail: str | None = None  # redacted cause for the log; deliberately not in as_record
+    dropped_claims: int = 0  # claims removed by the verifier from an otherwise ok answer
 
     def as_record(self) -> dict:
         """JSON-serializable dict with exactly the keys: status, failure_reason, off_topic, claims, facts, trace,
-        usage, model, backend, prompt_version (claims, facts, trace, usage via model_dump)."""
+        usage, model, backend, prompt_version, dropped_claims (claims, facts, trace, usage via model_dump)."""
         return {
             "status": self.status,
             "failure_reason": self.failure_reason,
@@ -140,4 +145,5 @@ class AgentResult:
             "model": self.model,
             "backend": self.backend,
             "prompt_version": self.prompt_version,
+            "dropped_claims": self.dropped_claims,
         }

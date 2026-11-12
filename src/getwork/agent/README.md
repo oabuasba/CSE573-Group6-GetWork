@@ -8,7 +8,7 @@ cannot be verified, the user sees a short plain-language chat error and no answe
 explainer is never used as a replacement for a failed chat answer. See `specs/features/match-agent.html`.
 
 Code: `models.py` (claims, facts, results), `facts.py`, `tools.py`, `grounding.py` (the verifier),
-`prompt.py` and `prompts/agent_v1.md`, `turn.py` (node logic), `graph.py` (LangGraph wiring),
+`prompt.py` and `prompts/agent_v2.md` (`agent_v1.md` is kept for history), `turn.py` (node logic), `graph.py` (LangGraph wiring),
 `explainer.py` (explainer and chat service), `api.py` (`POST /api/chat`, the failure handler).
 
 Tests never call a model: they use `FakeLLMClient` with scripted replies and the demo engine.
@@ -56,6 +56,16 @@ Stop the model service, or start with a wrong model name, then send a chat messa
 Pass: the chat shows the plain message and hint ("The assistant could not be reached right now." or the
 matching pair); the match explanation is unaffected. Restart with `--explainer template` to remove the chat button.
 
+### Partly verified answers
+
+When the answer still fails verification after the retries, the claims that did verify are kept and the failing ones are
+dropped; the response then carries `note` ("Part of the answer was left out because it could not be checked against these
+two documents.") and the chat shows it under the claims. Only when no claim survives does the turn fail with `unverified`.
+Nothing unverified is ever shown. `AgentResult.as_record()` has `dropped_claims` for evaluation. Skills that are also plain
+English words ("lists", "code", "tools", "support", "service", "email", and a few more; never a word that can be a skill by itself, such as cloud or security) written in lower case in prose do not count as skill mentions (a declared
+skill is still checked, and capitalised or multi-word forms are still detected). Improvement questions are answered from the
+match's `gap_skills` fact (prompt `agent_v2`).
+
 ### Reading a failure in the console
 
 Every failed chat turn logs exactly one line on stderr (logger `getwork.agent`, WARNING), and the 502 body carries
@@ -69,7 +79,7 @@ Every failed chat turn logs exactly one line on stderr (logger `getwork.agent`, 
 status), `model_rejected` (the service refused the request: 400/413/422 such as an unsupported `reasoning_effort` or
 `--extra-body`, or 401/403/404/410 for a bad key, wrong base URL or wrong model; detail has the class, status and the
 service's message), `invalid_reply` (the model's answer was not the expected JSON; detail has the parse error and the first
-200 characters of the reply), `unverified` (a claim named skills outside the two documents; detail lists the violations),
+200 characters of the reply), `unverified` (no claim survived verification; detail lists the violations),
 `timeout`, `budget_exhausted` (no detail). The detail is redacted: the API key, bearer tokens, key-like tokens and whole
 URLs are removed, and it is truncated. The prompt and your message are never logged.
 

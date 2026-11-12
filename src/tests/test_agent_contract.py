@@ -23,7 +23,7 @@ def test_chat_and_agent_sections_validate() -> None:
     assert explanation.explainer.kind == "agent"
     assert explanation.explainer.model == "demo-model"
     assert explanation.explainer.backend == "voyager"
-    assert explanation.explainer.prompt_version == "agent_v1"
+    assert explanation.explainer.prompt_version == "agent_v2"
     assert len(explanation.claims) == 2 and len(explanation.facts) == 5
     for claim in explanation.claims:
         Claim.model_validate(claim)

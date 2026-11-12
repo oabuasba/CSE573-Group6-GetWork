@@ -48,7 +48,7 @@ def test_serve_agent_demo() -> None:
     assert code == 0 and len(run.calls) == 1
     assert health_of(run) == {
         "enabled": True, "model": "demo-model", "backend": "voyager",
-        "prompt_version": "agent_v1", "reason": None,
+        "prompt_version": "agent_v2", "reason": None,
     }  # fmt: skip
     assert TestClient(run.calls[0]).get("/api/health").json()["explainer"]["kind"] == "template"
     response = TestClient(run.calls[0]).post("/api/chat", json=chat_json())
