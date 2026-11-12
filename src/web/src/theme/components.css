@@ -150,6 +150,24 @@ a.skip-link:focus {
   border-bottom-color: var(--nav-current-rule);
 }
 
+/* App shell: the footer is a normal flow item after a growing main */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-main {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+.app-main-chat {
+  display: flex;
+  flex-direction: column;
+}
+
 /* Footer */
 .site-footer {
   background: var(--footer-bg);
@@ -212,6 +230,20 @@ a.skip-link:focus {
   flex-direction: column;
   gap: var(--space-1);
   margin-bottom: var(--space-3);
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.control-row .field {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .field label {

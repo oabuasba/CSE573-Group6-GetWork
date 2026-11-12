@@ -2399,56 +2399,56 @@
       "branch": "dev",
       "tasks": {
         "T-1": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [],
-          "batch": null,
-          "notes": ""
+          "batch": "T-1-T-3",
+          "notes": " Carry to T-8: #/chat/x crash path in App/FindPage until ChatPage wired; ROUTE_TITLES.chat; App test for #/chat/x."
         },
         "T-2": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-1"
           ],
-          "batch": null,
+          "batch": "T-1-T-3",
           "notes": ""
         },
         "T-3": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [],
-          "batch": null,
+          "batch": "T-1-T-3",
           "notes": "large"
         },
         "T-4": {
-          "phase": "pending",
+          "phase": "building",
           "deps": [
             "T-2",
             "T-3"
           ],
-          "batch": null,
+          "batch": "T-4-T-8",
           "notes": ""
         },
         "T-5": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [],
-          "batch": null,
+          "batch": "T-5-T-7",
           "notes": ""
         },
         "T-6": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [],
-          "batch": null,
+          "batch": "T-5-T-7",
           "notes": ""
         },
         "T-7": {
-          "phase": "pending",
+          "phase": "merged",
           "deps": [
             "T-6"
           ],
-          "batch": null,
-          "notes": "large"
+          "batch": "T-5-T-7",
+          "notes": "large Non-blocking: Start over placement outside form (T-8 decides); IME keyCode 229; note on off-topic turns not shown; stable onTurns callback in T-8; unique suggestion keys."
         },
         "T-8": {
-          "phase": "pending",
+          "phase": "building",
           "deps": [
             "T-1",
             "T-3",
@@ -2456,7 +2456,7 @@
             "T-5",
             "T-7"
           ],
-          "batch": null,
+          "batch": "T-4-T-8",
           "notes": "large"
         },
         "T-9": {
@@ -2469,7 +2469,38 @@
           "notes": ""
         }
       },
-      "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner. Approved by user 2026-11-11; start building after AD-4 developer finishes (in place on dev, batches: T-1/T-2/T-3 ; T-5/T-6/T-7 ; then T-4/T-8 ; then T-9). Chat page/thread must render ChatResponse.note (fixed omitted-claims note) and style it."
+      "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner. Approved by user 2026-11-11; start building after AD-4 developer finishes (in place on dev, batches: T-1/T-2/T-3 ; T-5/T-6/T-7 ; then T-4/T-8 ; then T-9). Chat page/thread must render ChatResponse.note (fixed omitted-claims note) and style it.",
+      "batches": {
+        "T-1-T-3": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "worktree": null,
+          "developer_agent": "a09603763270ccb73",
+          "fix_rounds": 0
+        },
+        "T-5-T-7": {
+          "tasks": [
+            "T-5",
+            "T-6",
+            "T-7"
+          ],
+          "worktree": null,
+          "developer_agent": "abd5f9f6e5c6e6f4e",
+          "fix_rounds": 0
+        },
+        "T-4-T-8": {
+          "tasks": [
+            "T-4",
+            "T-8"
+          ],
+          "worktree": null,
+          "developer_agent": null,
+          "fix_rounds": 0
+        }
+      }
     }
   },
   "adhoc": {

@@ -2,11 +2,20 @@ import { useCallback, useRef, useState } from "react";
 import { postChat } from "./api.js";
 import { toHistory } from "./chatHistory.js";
 
-export function useChat({ direction, query, focusId, matches, system, fetchImpl }) {
-  const [turns, setTurns] = useState([]);
+export function useChat({
+  direction,
+  query,
+  focusId,
+  matches,
+  system,
+  fetchImpl,
+  initialTurns = [],
+  onTurns,
+}) {
+  const [turns, setTurns] = useState(initialTurns);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
-  const turnsRef = useRef([]);
+  const turnsRef = useRef(initialTurns);
   const lastMessage = useRef(null);
   const historySnapshot = useRef([]);
   const busy = useRef(false);
@@ -40,6 +49,7 @@ export function useChat({ direction, query, focusId, matches, system, fetchImpl 
           setTurns(turnsRef.current);
           busy.current = false;
           setStatus("idle");
+          onTurns?.(turnsRef.current);
         },
         (err) => {
           busy.current = false;
@@ -48,7 +58,7 @@ export function useChat({ direction, query, focusId, matches, system, fetchImpl 
         },
       );
     },
-    [direction, query, focusId, matches, system, fetchImpl],
+    [direction, query, focusId, matches, system, fetchImpl, onTurns],
   );
 
   const send = useCallback(
@@ -68,5 +78,16 @@ export function useChat({ direction, query, focusId, matches, system, fetchImpl 
     post(lastMessage.current);
   }, [post, status]);
 
-  return { turns, status, error, send, retry };
+  const reset = useCallback(() => {
+    if (busy.current) return;
+    turnsRef.current = [];
+    lastMessage.current = null;
+    historySnapshot.current = [];
+    setTurns([]);
+    setStatus("idle");
+    setError(null);
+    onTurns?.([]);
+  }, [onTurns]);
+
+  return { turns, status, error, send, retry, reset };
 }

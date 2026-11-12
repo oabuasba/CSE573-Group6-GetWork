@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import QueryForm from "./QueryForm.jsx";
@@ -53,7 +53,7 @@ test("builds requests for each method", async () => {
   });
 
   await choose(user, "Pick an example");
-  await user.click(await screen.findByRole("radio", { name: /Data Analyst/ }));
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example/ }), "r-2");
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
   expect(fetchImpl.mock.calls[0][0]).toBe("/api/examples?side=resume&limit=6");
   expect(onSubmit).toHaveBeenLastCalledWith({
@@ -87,7 +87,7 @@ test("validates before submitting", async () => {
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
   expect(screen.getByRole("alert")).toHaveTextContent(/title or at least one skill/);
   await choose(user, "Pick an example");
-  await screen.findAllByRole("radio");
+  await screen.findByRole("combobox", { name: /Example/ });
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
   expect(screen.getByRole("alert")).toHaveTextContent("Choose an example first.");
   expect(onSubmit).not.toHaveBeenCalled();
@@ -123,13 +123,13 @@ test("labels and privacy line", async () => {
   expect(document.querySelector(".required-dot")).toHaveAttribute("aria-hidden", "true");
   expect(screen.getByLabelText("Load a .txt or .md file")).toBeInTheDocument();
   for (const control of document.querySelectorAll("input, select, textarea")) {
-    if (control.type !== "radio") expect(control.labels.length).toBeGreaterThan(0);
+    expect(control.labels.length).toBeGreaterThan(0);
   }
   await choose(user, "Fill in a form");
   expect(screen.getByText("Add a title, skills, or both")).toBeInTheDocument();
   expect(document.querySelector(".required-dot")).toBeNull();
   await choose(user, "Pick an example");
-  expect(await screen.findByRole("group", { name: /Example resume/ })).toBeInTheDocument();
+  expect(await screen.findByRole("combobox", { name: /Example resume/ })).toBeInTheDocument();
   expect(document.querySelector(".required-dot")).not.toBeNull();
 });
 
@@ -151,7 +151,7 @@ test("loads examples once when no fetchImpl prop is given", async () => {
   const user = userEvent.setup();
   render(<QueryForm direction={RESUME} health={liveHealth} onSubmit={() => {}} />);
   await user.click(screen.getByRole("button", { name: "Pick an example" }));
-  await screen.findAllByRole("radio");
+  await screen.findByRole("combobox", { name: /Example/ });
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
@@ -171,4 +171,89 @@ test("privacy line sits directly under the textarea", () => {
   const area = screen.getByLabelText(/Resume text/);
   const line = screen.getByText(/Text you paste is sent to/);
   expect(area.parentElement.nextElementSibling).toBe(line);
+});
+
+test("example picker is a labeled select", async () => {
+  const { user } = setup();
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(select).toHaveAccessibleName(/required/);
+  expect(screen.queryAllByRole("radio")).toHaveLength(0);
+  const options = within(select).getAllByRole("option");
+  expect(options[0]).toHaveTextContent("Choose an example");
+  expect(options[0]).toHaveValue("");
+  expect(options).toHaveLength(contract.examples.items.length + 1);
+  const item = contract.examples.items[0];
+  expect(options[1]).toHaveTextContent(`${item.title || "Untitled"}, ${item.level}, ${item.skills.length} skills`);
+  expect(options[1]).toHaveValue(item.id);
+});
+
+test("example picker is labeled for the posting side", async () => {
+  const { user } = setup({ direction: POSTING });
+  await choose(user, "Pick an example");
+  expect(await screen.findByRole("combobox", { name: /Example posting/ })).toBeInTheDocument();
+});
+
+test("choosing an example sends a corpus query", async () => {
+  const { onSubmit, user } = setup();
+  await choose(user, "Pick an example");
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example resume/ }), "r-2");
+  await user.selectOptions(screen.getByLabelText("Number of results"), "5");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  expect(onSubmit).toHaveBeenCalledWith({ direction: RESUME, k: 5, system: "Full", query: { kind: "corpus", id: "r-2" } });
+});
+
+test("example loading, error and empty choice", async () => {
+  const user = userEvent.setup();
+  const onSubmit = vi.fn();
+  const pending = vi.fn(() => new Promise(() => {}));
+  const view = render(<QueryForm direction={RESUME} health={liveHealth} onSubmit={onSubmit} fetchImpl={pending} />);
+  await choose(user, "Pick an example");
+  expect(screen.getByRole("status")).toHaveTextContent("Loading examples…");
+  expect(screen.queryByRole("combobox", { name: /Example/ })).not.toBeInTheDocument();
+  view.unmount();
+
+  const failing = vi.fn().mockRejectedValue(new TypeError("down"));
+  const second = render(<QueryForm direction={RESUME} health={liveHealth} onSubmit={onSubmit} fetchImpl={failing} />);
+  await choose(user, "Pick an example");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Cannot reach the GetWork server");
+  second.unmount();
+
+  render(<QueryForm direction={RESUME} health={liveHealth} onSubmit={onSubmit} fetchImpl={examplesFetch()} />);
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  await user.selectOptions(select, "r-2");
+  await user.selectOptions(select, "");
+  expect(select).toHaveValue("");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Choose an example first.");
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
+test("the three controls share one row", async () => {
+  const { user } = setup();
+  await choose(user, "Pick an example");
+  await screen.findByRole("combobox", { name: /Example resume/ });
+  const rows = document.querySelectorAll("div.control-row");
+  expect(rows).toHaveLength(1);
+  const cells = [...rows[0].children];
+  expect(cells).toHaveLength(3);
+  for (const cell of cells) {
+    expect(cell).toHaveClass("field");
+    expect(cell.querySelectorAll("select")).toHaveLength(1);
+    expect(cell.querySelector("select").labels).toHaveLength(1);
+    expect(cell.querySelector("select")).not.toHaveAttribute("class");
+  }
+  expect(within(cells[0]).getByRole("combobox")).toHaveAccessibleName(/Example resume/);
+  expect(cells[1]).toHaveTextContent("Number of results");
+  expect(cells[2]).toHaveTextContent("Ranking method");
+});
+
+test("the row holds two controls without the example method", async () => {
+  const { user } = setup();
+  for (const name of ["Paste text", "Fill in a form"]) {
+    await choose(user, name);
+    const cells = [...document.querySelector("div.control-row").children];
+    expect(cells.map((c) => c.querySelector("label").textContent)).toEqual(["Number of results", "Ranking method"]);
+  }
 });

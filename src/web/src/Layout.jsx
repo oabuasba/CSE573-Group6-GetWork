@@ -11,8 +11,9 @@ export const DISCLAIMER =
   "GetWork is a CSE 573 course project at Arizona State University (Group 6). It is not an official ASU website.";
 
 export default function Layout({ route, health, children }) {
+  const mainClass = route === "chat" ? "container app-main app-main-chat" : "container app-main";
   return (
-    <>
+    <div className="app-shell">
       <a className="skip-link" href="#main">
         Skip to main content
       </a>
@@ -38,7 +39,7 @@ export default function Layout({ route, health, children }) {
           Results come from a small built-in sample, not the full data set.
         </Notice>
       )}
-      <main id="main" tabIndex={-1} className="container">
+      <main id="main" tabIndex={-1} className={mainClass}>
         {children}
       </main>
       <footer className="site-footer">
@@ -49,6 +50,6 @@ export default function Layout({ route, health, children }) {
           </p>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

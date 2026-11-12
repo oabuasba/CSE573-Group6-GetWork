@@ -62,23 +62,33 @@ function ExamplePicker({ side, fetchImpl, chosen, onChoose }) {
     };
   }, [side, fetchImpl]);
 
-  if (state.error) return <Notice kind="error" role="alert">{describeError(state.error).title}</Notice>;
-  if (!state.items) return <p role="status">Loading examples…</p>;
+  if (state.error) {
+    return (
+      <div className="field">
+        <Notice kind="error" role="alert">{describeError(state.error).title}</Notice>
+      </div>
+    );
+  }
+  if (!state.items) {
+    return (
+      <div className="field">
+        <p role="status">Loading examples…</p>
+      </div>
+    );
+  }
   return (
-    <fieldset>
-      <legend>
-        Example {side}
-        <Required />
-      </legend>
-      {state.items.map((item) => (
-        <div key={item.id}>
-          <label>
-            <input type="radio" name="example" checked={chosen === item.id} onChange={() => onChoose(item.id)} />{" "}
-            {item.title || "Untitled"}, {item.level}, {item.skills.length} skills
-          </label>
-        </div>
-      ))}
-    </fieldset>
+    <Field label={`Example ${side}`} required>
+      {(id) => (
+        <select id={id} value={chosen ?? ""} onChange={(event) => onChoose(event.target.value || null)}>
+          <option value="">Choose an example</option>
+          {state.items.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.title || "Untitled"}, {item.level}, {item.skills.length} skills
+            </option>
+          ))}
+        </select>
+      )}
+    </Field>
   );
 }
 
@@ -235,29 +245,30 @@ export default function QueryForm({ direction, health, busy, onSubmit, fetchImpl
       {methodId === "form" && (
         <FormPanel isResume={isResume} levels={levels} fields={fields} set={set} errorId={errorId} />
       )}
-      {methodId === "example" && (
-        <ExamplePicker
-          side={side} fetchImpl={fetchImpl} chosen={fields.example}
-          onChoose={(example) => update({ example })}
-        />
-      )}
-
-      <Field label="Number of results">
-        {(id) => (
-          <select id={id} value={k} onChange={(event) => setK(Number(event.target.value))}>
-            {K_CHOICES.map((choice) => <option key={choice} value={choice}>{choice}</option>)}
-          </select>
+      <div className="control-row">
+        {methodId === "example" && (
+          <ExamplePicker
+            side={side} fetchImpl={fetchImpl} chosen={fields.example}
+            onChoose={(example) => update({ example })}
+          />
         )}
-      </Field>
-      <Field label="Ranking method">
-        {(id) => (
-          <select id={id} value={system} onChange={(event) => setSystem(event.target.value)}>
-            {Object.entries(SYSTEM_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        )}
-      </Field>
+        <Field label="Number of results">
+          {(id) => (
+            <select id={id} value={k} onChange={(event) => setK(Number(event.target.value))}>
+              {K_CHOICES.map((choice) => <option key={choice} value={choice}>{choice}</option>)}
+            </select>
+          )}
+        </Field>
+        <Field label="Ranking method">
+          {(id) => (
+            <select id={id} value={system} onChange={(event) => setSystem(event.target.value)}>
+              {Object.entries(SYSTEM_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+      </div>
 
       {error && <Notice kind="error" role="alert" id={ERROR_ID}>{error}</Notice>}
       <button type="submit" className="btn btn-cta" disabled={busy}>

@@ -94,3 +94,53 @@ test("a second send while thinking is ignored", async () => {
   act(() => result.current.retry());
   expect(fetchImpl).toHaveBeenCalledTimes(1);
 });
+
+const earlier = [
+  { role: "user", content: "Why?" },
+  { ...agent.chat, role: "assistant" },
+];
+
+test("initial turns and history", async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(reply(agent.chat));
+  const { result } = renderHook(() => useChat({ ...props(fetchImpl), initialTurns: earlier }));
+  expect(result.current.turns).toEqual(earlier);
+  act(() => result.current.send("And then?"));
+  await waitFor(() => expect(result.current.status).toBe("idle"));
+  expect(bodyOf(fetchImpl, 0).history).toEqual([
+    { role: "user", content: "Why?" },
+    { role: "assistant", content: agent.chat.reply },
+  ]);
+});
+
+test("onTurns and reset", async () => {
+  const onTurns = vi.fn();
+  let resolve;
+  const fetchImpl = vi.fn(() => new Promise((r) => { resolve = r; }));
+  const { result } = renderHook(() => useChat({ ...props(fetchImpl), onTurns }));
+  act(() => result.current.send("Why?"));
+  expect(onTurns).not.toHaveBeenCalled();
+  act(() => result.current.reset());
+  expect(result.current.turns).toHaveLength(1);
+  expect(onTurns).not.toHaveBeenCalled();
+  await act(async () => resolve(reply(agent.chat)));
+  await waitFor(() => expect(result.current.status).toBe("idle"));
+  expect(onTurns).toHaveBeenCalledTimes(1);
+  expect(onTurns.mock.calls[0][0]).toHaveLength(2);
+  act(() => result.current.reset());
+  expect(result.current.turns).toEqual([]);
+  expect(result.current.error).toBeNull();
+  expect(onTurns).toHaveBeenLastCalledWith([]);
+});
+
+test("a failed request does not call onTurns, reset clears the error", async () => {
+  const onTurns = vi.fn();
+  const fetchImpl = vi.fn().mockResolvedValue(reply(agent.chat_error, 502));
+  const { result } = renderHook(() => useChat({ ...props(fetchImpl), onTurns }));
+  act(() => result.current.send("Why?"));
+  await waitFor(() => expect(result.current.status).toBe("error"));
+  expect(onTurns).not.toHaveBeenCalled();
+  act(() => result.current.reset());
+  expect(result.current.status).toBe("idle");
+  expect(result.current.error).toBeNull();
+  expect(result.current.turns).toEqual([]);
+});

@@ -132,7 +132,7 @@ test("one cta button per page", async () => {
   const { user, container } = setup(routedFetch(), "posting_to_resume");
   expect(ctaCount(container)).toBe(1);
   await user.click(screen.getByRole("button", { name: "Pick an example" }));
-  await screen.findAllByRole("radio");
+  await screen.findByRole("combobox", { name: /Example/ });
   expect(ctaCount(container)).toBe(1);
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Find candidates for your posting");
 });
@@ -142,11 +142,11 @@ test("chosen example does not survive a direction change", async () => {
   const user = userEvent.setup();
   const { rerender } = render(<FindPage direction="resume_to_posting" health={health} fetchImpl={fetchImpl} />);
   await user.click(screen.getByRole("button", { name: "Pick an example" }));
-  await user.click((await screen.findAllByRole("radio"))[0]);
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example/ }), "r-1");
   rerender(<FindPage direction="posting_to_resume" health={health} fetchImpl={fetchImpl} />);
   expect(screen.getByRole("button", { name: "Paste text" })).toHaveAttribute("aria-pressed", "true");
   await user.click(screen.getByRole("button", { name: "Pick an example" }));
-  for (const radio of await screen.findAllByRole("radio")) expect(radio).not.toBeChecked();
+  expect(await screen.findByRole("combobox", { name: /Example/ })).toHaveValue("");
 });
 
 test("real FindPage without injected props makes a small number of network calls", async () => {
@@ -155,7 +155,7 @@ test("real FindPage without injected props makes a small number of network calls
   const user = userEvent.setup();
   render(<FindPage direction="resume_to_posting" health={health} />);
   await user.click(screen.getByRole("button", { name: "Pick an example" }));
-  await user.click((await screen.findAllByRole("radio"))[0]);
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example/ }), contract.examples.items[0].id);
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
   await screen.findByRole("heading", { name: "Results" });
   await user.click(screen.getAllByRole("button", { name: "Why this match?" })[0]);

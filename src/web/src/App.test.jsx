@@ -2,7 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
-import { DISCLAIMER } from "./Layout.jsx";
+import Layout, { DISCLAIMER } from "./Layout.jsx";
 import contract from "./fixtures/contract.json";
 
 const okReply = (health) => ({ ok: true, status: 200, json: async () => health });
@@ -114,4 +114,39 @@ test("real App with no props keeps network calls small across routes", async () 
   }
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test("the shell keeps the footer last", async () => {
+  for (const hash of ["#/jobs", "#/about"]) {
+    window.location.hash = hash;
+    const { container, unmount } = render(
+      <App fetchImpl={vi.fn().mockResolvedValue(okReply(liveHealth))} />,
+    );
+    await screen.findByRole("heading", { level: 1 });
+    expect(container.children).toHaveLength(1);
+    const shell = container.firstElementChild;
+    expect(shell).toHaveClass("app-shell");
+    const kids = [...shell.children];
+    expect(kids[0]).toHaveClass("skip-link");
+    expect(kids[1].tagName).toBe("HEADER");
+    expect(kids[2].tagName).toBe("MAIN");
+    expect(kids[2]).toHaveClass("app-main");
+    expect(kids[2]).not.toHaveClass("app-main-chat");
+    expect(kids[3]).toHaveClass("site-footer");
+    expect(kids).toHaveLength(4);
+    unmount();
+  }
+});
+
+test("the shell adds the demo banner and the chat main class", () => {
+  const { container } = render(
+    <Layout route="chat" health={{ mode: "demo" }}>
+      <h1>x</h1>
+    </Layout>,
+  );
+  const kids = [...container.firstElementChild.children];
+  expect(kids.map((el) => el.tagName)).toEqual(["A", "HEADER", "DIV", "MAIN", "FOOTER"]);
+  expect(kids[3]).toHaveClass("app-main", "app-main-chat");
+  expect(kids[3]).toHaveAttribute("id", "main");
+  expect(kids[4]).toHaveClass("site-footer");
 });
