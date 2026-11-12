@@ -1,9 +1,10 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
 import Layout, { DISCLAIMER } from "./Layout.jsx";
 import contract from "./fixtures/contract.json";
+import agent from "./fixtures/contract_agent.json";
 
 const okReply = (health) => ({ ok: true, status: 200, json: async () => health });
 const liveHealth = { ...contract.health, mode: "live" };
@@ -117,7 +118,7 @@ test("real App with no props keeps network calls small across routes", async () 
 });
 
 test("the shell keeps the footer last", async () => {
-  for (const hash of ["#/jobs", "#/about"]) {
+  for (const hash of ["#/jobs", "#/about", "#/chat/x"]) {
     window.location.hash = hash;
     const { container, unmount } = render(
       <App fetchImpl={vi.fn().mockResolvedValue(okReply(liveHealth))} />,
@@ -131,7 +132,8 @@ test("the shell keeps the footer last", async () => {
     expect(kids[1].tagName).toBe("HEADER");
     expect(kids[2].tagName).toBe("MAIN");
     expect(kids[2]).toHaveClass("app-main");
-    expect(kids[2]).not.toHaveClass("app-main-chat");
+    if (hash === "#/chat/x") expect(kids[2]).toHaveClass("app-main-chat");
+    else expect(kids[2]).not.toHaveClass("app-main-chat");
     expect(kids[3]).toHaveClass("site-footer");
     expect(kids).toHaveLength(4);
     unmount();
@@ -149,4 +151,86 @@ test("the shell adds the demo banner and the chat main class", () => {
   expect(kids[3]).toHaveClass("app-main", "app-main-chat");
   expect(kids[3]).toHaveAttribute("id", "main");
   expect(kids[4]).toHaveClass("site-footer");
+});
+
+const chatHealth = { ...liveHealth, chat: { enabled: true, model: "demo-model" } };
+const first = contract.match.matches[0];
+const matchCalls = (fetchImpl) => fetchImpl.mock.calls.filter(([p]) => p === "/api/match");
+
+function chatFetch() {
+  return vi.fn(async (path) => {
+    if (path.startsWith("/api/health")) return okReply(chatHealth);
+    if (path.startsWith("/api/match")) return okReply(contract.match);
+    if (path.startsWith("/api/explain")) return okReply(contract.explain);
+    if (path.startsWith("/api/chat")) return okReply(agent.chat);
+    return okReply(contract.examples);
+  });
+}
+
+async function searchAndOpenChat(user, fetchImpl) {
+  render(<App fetchImpl={fetchImpl} />);
+  await user.click(await screen.findByRole("button", { name: "Fill in a form" }));
+  await user.type(screen.getByLabelText("Skills"), "Vue");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[0]);
+  await user.click(await screen.findByRole("link", { name: "Chat about this suggestion" }));
+}
+
+test("chat link opens the chat page", async () => {
+  const user = userEvent.setup();
+  await searchAndOpenChat(user, chatFetch());
+  expect(window.location.hash).toBe(`#/chat/${encodeURIComponent(first.id)}`);
+  expect(await screen.findByLabelText("Your question")).toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Chat about this suggestion");
+  const nav = screen.getByRole("navigation");
+  expect(within(nav).getAllByRole("link").filter((a) => a.hasAttribute("aria-current"))).toHaveLength(0);
+  expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+});
+
+test("back to results restores the card", async () => {
+  const user = userEvent.setup();
+  const fetchImpl = chatFetch();
+  await searchAndOpenChat(user, fetchImpl);
+  await user.click(await screen.findByRole("link", { name: "Back to results" }));
+  expect(window.location.hash).toBe("#/jobs");
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+  expect(screen.getAllByRole("button", { name: "Why this match?" })[0]).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: "Chat about this suggestion" })).toHaveFocus();
+  expect(matchCalls(fetchImpl)).toHaveLength(1);
+
+  await act(async () => {
+    window.location.hash = `#/chat/${encodeURIComponent(first.id)}`;
+  });
+  expect(await screen.findByLabelText("Your question")).toBeInTheDocument();
+});
+
+test("reload on the chat route uses the stored snapshot", async () => {
+  const user = userEvent.setup();
+  const fetchImpl = chatFetch();
+  await searchAndOpenChat(user, fetchImpl);
+  await user.type(await screen.findByLabelText("Your question"), "Why?");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  await screen.findByText(agent.chat.claims[0].text);
+  cleanup();
+
+  const reloaded = chatFetch();
+  render(<App fetchImpl={reloaded} />);
+  expect(await screen.findByLabelText("Your question")).toBeInTheDocument();
+  expect(screen.getByRole("log")).toHaveTextContent("You: Why?");
+  expect(matchCalls(reloaded)).toHaveLength(0);
+});
+
+test("chat route without a session", async () => {
+  window.location.hash = "#/chat";
+  render(<App fetchImpl={chatFetch()} />);
+  expect(await screen.findByText(/^Open a chat from a search result/)).toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+});
+
+test("the chat route shows its title while health is loading", () => {
+  window.location.hash = "#/chat/x";
+  render(<App fetchImpl={vi.fn(() => new Promise(() => {}))} />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Chat about this suggestion");
 });

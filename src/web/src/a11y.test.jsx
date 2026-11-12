@@ -101,14 +101,6 @@ async function openAgentCard(explainReply) {
   return { user, ...view };
 }
 
-test("no axe violations with chat open", async () => {
-  const { container, user } = await openAgentCard(reply(agent.explain_agent));
-  await screen.findByText(agent.explain_agent.claims[0].text);
-  await user.click(screen.getByRole("button", { name: "Chat about this suggestion" }));
-  await screen.findByRole("heading", { name: "Ask about this match" });
-  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
-});
-
 test("no axe violations with the summary only", async () => {
   const { container } = await openAgentCard(reply(agent.explain_agent));
   await screen.findByText(agent.explain_agent.claims[0].text);
@@ -122,12 +114,3 @@ test("no axe violations with all points expanded", async () => {
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
 
-test("no axe violations with an assistant error", async () => {
-  const { container, user } = await openAgentCard(reply(agent.chat_error, 502));
-  await user.click(await screen.findByRole("button", { name: "Chat about this suggestion" }));
-  await user.type(await screen.findByLabelText("Your question"), "Why?");
-  await user.click(screen.getByRole("button", { name: "Send" }));
-  expect(await screen.findAllByRole("alert")).toHaveLength(2);
-  expect(container.querySelectorAll(".btn-cta").length).toBeLessThanOrEqual(1);
-  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
-});

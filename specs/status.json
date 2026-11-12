@@ -2419,7 +2419,7 @@
           "notes": "large"
         },
         "T-4": {
-          "phase": "building",
+          "phase": "merged",
           "deps": [
             "T-2",
             "T-3"
@@ -2448,7 +2448,7 @@
           "notes": "large Non-blocking: Start over placement outside form (T-8 decides); IME keyCode 229; note on off-topic turns not shown; stable onTurns callback in T-8; unique suggestion keys."
         },
         "T-8": {
-          "phase": "building",
+          "phase": "merged",
           "deps": [
             "T-1",
             "T-3",
@@ -2457,10 +2457,10 @@
             "T-7"
           ],
           "batch": "T-4-T-8",
-          "notes": "large"
+          "notes": "large Reviewer non-blocking: disabled state Back-to-results should set returning flag when snapshot exists; add tests (Start over disabled while thinking, failed turn not stored, evidence chips); null guard m?.id in restoreSnapshot; a11y.test trailing blank line."
         },
         "T-9": {
-          "phase": "pending",
+          "phase": "building",
           "deps": [
             "T-4",
             "T-8"
@@ -2497,7 +2497,7 @@
             "T-8"
           ],
           "worktree": null,
-          "developer_agent": null,
+          "developer_agent": "a726a80b486e7b449",
           "fix_rounds": 0
         }
       }

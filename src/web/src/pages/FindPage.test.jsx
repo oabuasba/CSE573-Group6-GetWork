@@ -4,6 +4,8 @@ import { afterEach, expect, test, vi } from "vitest";
 import FindPage from "./FindPage.jsx";
 import contract from "../fixtures/contract.json";
 import agent from "../fixtures/contract_agent.json";
+import { CONVERSATION_PREFIX, loadConversation, saveConversation } from "../conversationStore.js";
+import { loadResults, saveResults } from "../resultsSession.js";
 
 const health = {
   ...contract.health,
@@ -184,47 +186,147 @@ async function openCard(user, health_, fetchImpl, index = 0) {
   return view;
 }
 
-const openChat = (user) => user.click(screen.getByRole("button", { name: "Chat about this suggestion" }));
+const chatLink = () => screen.queryByRole("link", { name: "Chat about this suggestion" });
+const snapshotOf = () => JSON.parse(window.sessionStorage.getItem("getwork.results.v1"));
 
-test("chat appears only when health.chat.enabled", async () => {
+test("chat link appears only when health.chat.enabled", async () => {
   const user = userEvent.setup();
   const template = await openCard(user, health, routedFetch());
   await screen.findByText(contract.explain.summary);
-  expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Chat about this suggestion" })).not.toBeInTheDocument();
+  expect(chatLink()).not.toBeInTheDocument();
   template.unmount();
 
-  const fetchImpl = agentFetch();
-  await openCard(user, agentHealth, fetchImpl);
-  await screen.findByText(agent.explain_agent.claims[0].text);
+  const noChat = { ...health, chat: { enabled: false, reason: "off" } };
+  const disabled = await openCard(user, noChat, routedFetch());
+  await screen.findByText(contract.explain.summary);
+  expect(chatLink()).not.toBeInTheDocument();
+  disabled.unmount();
+
+  await openCard(user, agentHealth, agentFetch());
+  const link = await screen.findByRole("link", { name: "Chat about this suggestion" });
+  expect(link).toHaveAttribute("href", `#/chat/${encodeURIComponent(contract.match.matches[0].id)}`);
+  expect(link).toHaveClass("btn", "btn-secondary");
+  expect(link).not.toHaveClass("btn-cta");
+  expect(screen.getAllByRole("link", { name: "Chat about this suggestion" })).toHaveLength(1);
   expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
-  await openChat(user);
-  expect(screen.getByRole("heading", { name: "Ask about this match" })).toBeInTheDocument();
-  await user.type(screen.getByLabelText("Your question"), "Why?");
-  await user.click(screen.getByRole("button", { name: "Send" }));
-  await screen.findByText(agent.chat.claims[0].text);
-  const call = fetchImpl.mock.calls.find(([p]) => p === "/api/chat");
-  const body = JSON.parse(call[1].body);
-  expect(body.focus_id).toBe(contract.match.matches[0].id);
-  expect(body.matches[0]).toEqual({
-    id: contract.match.matches[0].id,
-    rank: contract.match.matches[0].rank,
-    score: contract.match.matches[0].score,
-  });
+  expect(screen.queryByLabelText("Your question")).not.toBeInTheDocument();
+  expect(screen.queryByRole("log")).not.toBeInTheDocument();
+  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[0]);
+  expect(chatLink()).not.toBeInTheDocument();
 });
 
-test("chat moves with the expanded card", async () => {
+test("results snapshot follows the expanded card", async () => {
   const user = userEvent.setup();
-  await openCard(user, agentHealth, agentFetch());
-  await user.click(await screen.findByRole("button", { name: "Chat about this suggestion" }));
-  await user.type(await screen.findByLabelText("Your question"), "Why?");
-  await user.click(screen.getByRole("button", { name: "Send" }));
-  await screen.findByText(agent.chat.claims[0].text);
-  await user.click(screen.getAllByRole("button", { name: "Why this match?" })[1]);
-  expect(screen.queryByRole("heading", { name: "Ask about this match" })).not.toBeInTheDocument();
-  await openChat(user);
-  expect(screen.getByRole("log")).toBeEmptyDOMElement();
-  expect(screen.queryByText("Why?")).not.toBeInTheDocument();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  await fillAndSubmit(user);
+  await screen.findByRole("heading", { name: "Results" });
+  await waitFor(() => expect(snapshotOf()).toMatchObject({ direction: "resume_to_posting", expandedId: null }));
+  expect(snapshotOf().response).toEqual(contract.match);
+  const buttons = screen.getAllByRole("button", { name: "Why this match?" });
+  await user.click(buttons[1]);
+  await waitFor(() => expect(snapshotOf().expandedId).toBe(contract.match.matches[1].id));
+  await user.click(buttons[1]);
+  await waitFor(() => expect(snapshotOf().expandedId).toBeNull());
+});
+
+test("new search clears conversations", async () => {
+  const user = userEvent.setup();
+  const failing = vi.fn(async (path) => {
+    if (path.startsWith("/api/match")) throw new TypeError("down");
+    return reply(contract.examples);
+  });
+  saveConversation("j-1", [{ role: "user", content: "Hi" }]);
+  const fetchImpl = agentFetch();
+  const { unmount } = render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={fetchImpl} />);
+  await fillAndSubmit(user);
+  await screen.findByRole("heading", { name: "Results" });
+  expect(loadConversation("j-1")).toEqual([]);
+  unmount();
+
+  saveConversation("j-1", [{ role: "user", content: "Hi" }]);
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={failing} />);
+  await fillAndSubmit(user);
+  await screen.findByRole("alert");
+  expect(loadConversation("j-1")).toHaveLength(1);
+  expect(window.sessionStorage.getItem(`${CONVERSATION_PREFIX}j-1`)).not.toBeNull();
+  expect(loadResults()).not.toBeNull();
+});
+
+test("one cta button with the chat link", async () => {
+  const user = userEvent.setup();
+  const { container } = await openCard(user, agentHealth, agentFetch());
+  await screen.findByRole("link", { name: "Chat about this suggestion" });
+  expect(ctaCount(container)).toBe(1);
+});
+
+const seed = (extra = {}) =>
+  saveResults({ direction: "resume_to_posting", response: contract.match, expandedId: contract.match.matches[1].id, ...extra });
+const markReturning = () =>
+  window.sessionStorage.setItem(
+    "getwork.results.v1",
+    JSON.stringify({ ...snapshotOf(), returning: true }),
+  );
+
+test("returning restores results and focus", async () => {
+  seed();
+  markReturning();
+  const fetchImpl = agentFetch();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={fetchImpl} />);
+  expect(screen.getByRole("heading", { level: 2, name: "Results" })).toBeInTheDocument();
+  const buttons = screen.getAllByRole("button", { name: "Why this match?" });
+  expect(buttons[1]).toHaveAttribute("aria-expanded", "true");
+  expect(buttons[0]).toHaveAttribute("aria-expanded", "false");
+  expect(chatLink()).toHaveFocus();
+  expect(snapshotOf().returning).toBe(false);
+  await waitFor(() => expect(fetchImpl.mock.calls.filter(([p]) => p === "/api/explain")).toHaveLength(1));
+  expect(fetchImpl.mock.calls.some(([p]) => p === "/api/match")).toBe(false);
+});
+
+test("returning tolerates an unknown expanded id", () => {
+  seed({ expandedId: { odd: true } });
+  markReturning();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.getByRole("heading", { level: 2, name: "Results" })).toBeInTheDocument();
+  for (const b of screen.getAllByRole("button", { name: "Why this match?" })) {
+    expect(b).toHaveAttribute("aria-expanded", "false");
+  }
+});
+
+test("no restore without the flag or for the other direction", () => {
+  seed();
+  const first = render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+  first.unmount();
+
+  markReturning();
+  const other = render(<FindPage direction="posting_to_resume" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+  other.unmount();
+
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.getByRole("heading", { name: "Results" })).toBeInTheDocument();
+  expect(snapshotOf().returning).toBe(false);
+});
+
+test("a second visit after the flag was consumed starts empty", () => {
+  seed();
+  markReturning();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />).unmount();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+});
+
+test("new search after a restore", async () => {
+  seed();
+  markReturning();
+  const user = userEvent.setup();
+  const fetchImpl = agentFetch();
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={fetchImpl} />);
+  await fillAndSubmit(user);
+  await waitFor(() => expect(fetchImpl.mock.calls.filter(([p]) => p === "/api/match")).toHaveLength(1));
+  await screen.findByRole("heading", { name: "Results" });
+  await waitFor(() => expect(snapshotOf().expandedId).toBeNull());
+  expect(snapshotOf().returning).toBe(false);
 });
 
 test("evidence stays when the assistant fails", async () => {
@@ -236,33 +338,6 @@ test("evidence stays when the assistant fails", async () => {
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   const card = alert.closest("article");
   expect(card.querySelector(".chip")).not.toBeNull();
-});
-
-test("one cta button with chat open", async () => {
-  const user = userEvent.setup();
-  const { container } = await openCard(user, agentHealth, agentFetch());
-  await user.click(await screen.findByRole("button", { name: "Chat about this suggestion" }));
-  await screen.findByRole("heading", { name: "Ask about this match" });
-  expect(ctaCount(container)).toBe(1);
-});
-
-test("chat is hidden by default and toggles on demand", async () => {
-  const user = userEvent.setup();
-  await openCard(user, agentHealth, agentFetch());
-  const button = await screen.findByRole("button", { name: "Chat about this suggestion" });
-  expect(button).toHaveClass("btn-secondary");
-  expect(button).not.toHaveClass("btn-cta");
-  expect(button).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByLabelText("Your question")).not.toBeInTheDocument();
-  await user.click(button);
-  expect(await screen.findByLabelText("Your question")).toBeInTheDocument();
-  const hide = screen.getByRole("button", { name: "Hide chat" });
-  expect(hide).toHaveAttribute("aria-expanded", "true");
-  expect(document.getElementById(hide.getAttribute("aria-controls"))).toContainElement(
-    screen.getByLabelText("Your question"),
-  );
-  await user.click(hide);
-  expect(screen.queryByLabelText("Your question")).not.toBeInTheDocument();
 });
 
 async function showResults(user) {

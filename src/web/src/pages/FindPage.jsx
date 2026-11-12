@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { describeError, NETWORK_ERROR_CODE, postMatch } from "../api.js";
-import ChatOnDemand from "../components/ChatOnDemand.jsx";
 import ExplainPanel from "../components/ExplainPanel.jsx";
 import GroupedSkills from "../components/GroupedSkills.jsx";
 import MatchCard from "../components/MatchCard.jsx";
 import Notice from "../components/Notice.jsx";
 import QueryForm from "../components/QueryForm.jsx";
+import { clearAllConversations } from "../conversationStore.js";
+import { loadResults, saveResults, setReturning } from "../resultsSession.js";
+import { chatHref } from "../routes.js";
 
 const COPY = {
   resume_to_posting: {
@@ -70,7 +72,6 @@ function ErrorAlert({ error }) {
 
 function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, chatEnabled }) {
   const { matches, notes, query, system, direction } = response;
-  const chatMatches = matches.map((m) => ({ id: m.id, rank: m.rank, score: m.score }));
   return (
     <section>
       <h2 tabIndex={-1} ref={headingRef}>Results</h2>
@@ -97,14 +98,9 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, 
                 <GroupedSkills skills={match.document.skills} />
                 <ExplainPanel direction={direction} query={query} matchId={match.id} fetchImpl={fetchImpl} />
                 {chatEnabled && (
-                  <ChatOnDemand
-                    direction={direction}
-                    query={query}
-                    focusId={match.id}
-                    matches={chatMatches}
-                    system={system}
-                    fetchImpl={fetchImpl}
-                  />
+                  <a className="btn btn-secondary" href={chatHref(match.id)} data-chat-link>
+                    Chat about this suggestion
+                  </a>
                 )}
               </MatchCard>
             </li>
@@ -115,16 +111,38 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, 
   );
 }
 
+// Results come back from the chat page only for the same direction and only once.
+function restoreSnapshot(direction) {
+  const snap = loadResults();
+  if (snap?.returning !== true || snap.direction !== direction) return null;
+  const knownId = snap.response.matches.some((m) => m.id === snap.expandedId);
+  return { response: snap.response, expandedId: knownId ? snap.expandedId : null };
+}
+
 export default function FindPage({ direction, health, fetchImpl }) {
   const copy = COPY[direction];
-  const [state, setState] = useState(IDLE);
-  const [expandedId, setExpandedId] = useState(null);
+  const [restored] = useState(() => restoreSnapshot(direction));
+  const [state, setState] = useState(
+    restored ? { status: "done", response: restored.response, error: null } : IDLE,
+  );
+  const [expandedId, setExpandedId] = useState(restored?.expandedId ?? null);
   const [lastKind, setLastKind] = useState(null);
   const headingRef = useRef(null);
 
   useEffect(() => {
-    if (state.status === "done") headingRef.current?.focus();
-  }, [state]);
+    if (!restored) return;
+    setReturning(false);
+    const link = document.querySelector("[data-chat-link]");
+    (link ?? headingRef.current)?.focus();
+  }, [restored]);
+
+  useEffect(() => {
+    if (state.status === "done" && state.response !== restored?.response) headingRef.current?.focus();
+  }, [state, restored]);
+
+  useEffect(() => {
+    if (state.status === "done") saveResults({ direction, response: state.response, expandedId });
+  }, [state, expandedId, direction]);
 
   async function submit(request) {
     setState({ ...IDLE, status: "loading" });
@@ -132,6 +150,7 @@ export default function FindPage({ direction, health, fetchImpl }) {
     setExpandedId(null);
     try {
       const response = await postMatch(request, fetchImpl);
+      clearAllConversations();
       setState({ status: "done", response, error: null });
     } catch (error) {
       setState({ status: "error", response: null, error });

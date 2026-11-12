@@ -3,19 +3,23 @@ import Layout from "./Layout.jsx";
 import Notice from "./components/Notice.jsx";
 import { describeError, getHealth } from "./api.js";
 import AboutPage from "./pages/AboutPage.jsx";
+import ChatPage from "./pages/ChatPage.jsx";
 import FindPage from "./pages/FindPage.jsx";
-import { DIRECTION_BY_ROUTE, parseRoute } from "./routes.js";
+import { chatIdFromHash, DIRECTION_BY_ROUTE, parseRoute } from "./routes.js";
 
-const ROUTE_TITLES = { jobs: "Find jobs", candidates: "Find candidates", about: "About GetWork" };
+const ROUTE_TITLES = {
+  jobs: "Find jobs", candidates: "Find candidates", about: "About GetWork",
+  chat: "Chat about this suggestion",
+};
 
-function useHashRoute() {
-  const [route, setRoute] = useState(() => parseRoute(window.location.hash));
+function useHash() {
+  const [hash, setHash] = useState(() => window.location.hash);
   useEffect(() => {
-    const onChange = () => setRoute(parseRoute(window.location.hash));
+    const onChange = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
-  return route;
+  return hash;
 }
 
 function useHealth(fetchImpl) {
@@ -51,13 +55,18 @@ function UnreachableAlert({ error, onRetry }) {
 const defaultFetch = (...args) => fetch(...args);
 
 export default function App({ fetchImpl = defaultFetch }) {
-  const route = useHashRoute();
+  const hash = useHash();
+  const route = parseRoute(hash);
+  const chatId = chatIdFromHash(hash);
   const [{ status, health, error }, retry] = useHealth(fetchImpl);
 
   return (
     <Layout route={route} health={health}>
       {status === "ready" && route === "about" && <AboutPage health={health} />}
-      {status === "ready" && route !== "about" && (
+      {status === "ready" && route === "chat" && (
+        <ChatPage key={chatId} matchId={chatId} health={health} fetchImpl={fetchImpl} />
+      )}
+      {status === "ready" && (route === "jobs" || route === "candidates") && (
         <FindPage key={route} direction={DIRECTION_BY_ROUTE[route]} health={health} fetchImpl={fetchImpl} />
       )}
       {status !== "ready" && (

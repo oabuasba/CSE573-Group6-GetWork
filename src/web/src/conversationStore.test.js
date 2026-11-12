@@ -29,6 +29,16 @@ test("invalid data and clear all", () => {
     window.sessionStorage.setItem(`${CONVERSATION_PREFIX}bad`, raw);
     expect(loadConversation("bad")).toEqual([]);
   }
+  const partial = { role: "assistant", reply: "x", claims: [], facts: [], suggested_questions: [], off_topic: false };
+  for (const bad of [
+    { ...partial, claims: undefined },
+    { ...partial, facts: "no" },
+    { ...partial, suggested_questions: null },
+    { ...partial, off_topic: "false" },
+  ]) {
+    window.sessionStorage.setItem(`${CONVERSATION_PREFIX}bad`, JSON.stringify([bad]));
+    expect(loadConversation("bad")).toEqual([]);
+  }
   saveResults({
     direction: "resume_to_posting",
     response: { query: { kind: "text" }, system: "Full", matches: [] },

@@ -3,6 +3,7 @@ import { MAX_MESSAGE } from "../chatHistory.js";
 import "../theme/chat.css";
 
 export const MAX_ROWS = 6;
+const IME_KEY_CODE = 229; // some browsers report Enter during composition only via keyCode
 
 export default function ChatComposer({ onSend, disabled = false, inputRef }) {
   const [draft, setDraft] = useState("");
@@ -16,7 +17,7 @@ export default function ChatComposer({ onSend, disabled = false, inputRef }) {
   }
 
   function handleKeyDown(event) {
-    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === IME_KEY_CODE) return;
     event.preventDefault();
     submit();
   }
@@ -35,6 +36,7 @@ export default function ChatComposer({ onSend, disabled = false, inputRef }) {
       <div className="chat-composer-row">
         <textarea
           id="chat-input"
+          aria-describedby="chat-counter"
           ref={inputRef}
           rows={rows}
           maxLength={MAX_MESSAGE}
@@ -47,7 +49,7 @@ export default function ChatComposer({ onSend, disabled = false, inputRef }) {
           Send
         </button>
       </div>
-      <span className="chat-counter">
+      <span id="chat-counter" className="chat-counter">
         {draft.length} / {MAX_MESSAGE}
       </span>
     </form>

@@ -42,9 +42,9 @@ function Suggestions({ questions, disabled, onAsk }) {
   if (questions.length === 0) return null;
   return (
     <div className="chat-suggestions">
-      {questions.map((question) => (
+      {questions.map((question, index) => (
         <button
-          key={question}
+          key={`${index}-${question}`}
           type="button"
           className="btn btn-secondary"
           disabled={disabled}
