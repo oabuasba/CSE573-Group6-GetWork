@@ -21,7 +21,7 @@ def test_failure_reasons() -> None:
     runner, fake = make_runner(flaky)
     assert_failed(run(runner), "llm_unavailable", len(fake.calls))
     runner, fake = make_runner([PermanentLLMError("bad request", status=400)])
-    assert_failed(run(runner), "llm_unavailable", len(fake.calls))
+    assert_failed(run(runner), "model_rejected", len(fake.calls))
     runner, fake = make_runner(["nope"] * 3)
     assert_failed(run(runner), "invalid_reply", len(fake.calls))
     assert len(fake.calls) == 3

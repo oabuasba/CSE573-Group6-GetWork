@@ -124,6 +124,7 @@ class AgentResult:
     prompt_version: str
     failure_reason: FailureReason | None = None  # set exactly when status == "failed"
     off_topic: bool = False
+    failure_detail: str | None = None  # redacted cause for the log; deliberately not in as_record
 
     def as_record(self) -> dict:
         """JSON-serializable dict with exactly the keys: status, failure_reason, off_topic, claims, facts, trace,

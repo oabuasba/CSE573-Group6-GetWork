@@ -53,6 +53,8 @@ BUILD_COMMAND = "npm --prefix src/web run build"
 STRUCTURE_DISABLED = "Disabled with --no-structure."
 EMBED_DISABLED = "Disabled with --no-embed."
 LOG_LEVEL = "info"
+APP_LOGGER = "getwork"
+LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 DEFAULT_AGENT_TIMEOUT_S = 60.0
 CHAT_OFF_REASON = "Disabled with --explainer template."
 EXPLAINERS = ("auto", "agent", "template")
@@ -243,6 +245,19 @@ def install_uvicorn_redaction(secrets: Sequence[str]) -> None:
     logger.addFilter(RedactingFilter(secrets))
 
 
+def configure_app_logging(secrets: Sequence[str]) -> None:
+    """Send `getwork.*` INFO and above (the `agent failed:` line) to stderr, redacted; uvicorn's config is untouched."""
+    logger = logging.getLogger(APP_LOGGER)
+    for existing in [h for h in logger.handlers if getattr(h, "_getwork_cli", False)]:
+        logger.removeHandler(existing)
+    handler = logging.StreamHandler(sys.stderr)
+    handler._getwork_cli = True  # type: ignore[attr-defined]
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
+    handler.addFilter(RedactingFilter(secrets))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+
 def build_agent(
     args: argparse.Namespace,
     *,
@@ -320,6 +335,7 @@ def _serve(
     if static_dir is None:
         print(f"The web UI is not built yet; build it with: {BUILD_COMMAND}")
     install_uvicorn_redaction(secrets)
+    configure_app_logging(secrets)
     if run is None:
         import uvicorn
 

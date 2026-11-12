@@ -56,6 +56,23 @@ Stop the model service, or start with a wrong model name, then send a chat messa
 Pass: the chat shows the plain message and hint ("The assistant could not be reached right now." or the
 matching pair); the match explanation is unaffected. Restart with `--explainer template` to remove the chat button.
 
+### Reading a failure in the console
+
+Every failed chat turn logs exactly one line on stderr (logger `getwork.agent`, WARNING), and the 502 body carries
+`error.reason`:
+
+```
+2026-11-11 21:30:00,123 WARNING getwork.agent: agent failed: reason=model_rejected detail=PermanentLLMError status=400: ...
+```
+
+`reason` is one of: `llm_unavailable` (connection, timeout, 5xx or rate limit after retries; detail names the error class and
+status), `model_rejected` (the service refused the request: 400/413/422 such as an unsupported `reasoning_effort` or
+`--extra-body`, or 401/403/404/410 for a bad key, wrong base URL or wrong model; detail has the class, status and the
+service's message), `invalid_reply` (the model's answer was not the expected JSON; detail has the parse error and the first
+200 characters of the reply), `unverified` (a claim named skills outside the two documents; detail lists the violations),
+`timeout`, `budget_exhausted` (no detail). The detail is redacted: the API key, bearer tokens, key-like tokens and whole
+URLs are removed, and it is truncated. The prompt and your message are never logged.
+
 ## MA-5 Reading the data in a later evaluation
 
 `AgentExplainer.explain_detailed(...)` returns an `AgentResult`; `as_record()` is one JSON line with the

@@ -78,7 +78,7 @@ def test_chat_not_registered() -> None:
 def test_failures_are_502_envelopes(reason: str) -> None:
     client = stub_client(AgentFailure(reason))  # type: ignore[arg-type]
     message, hint = FAILURE_COPY[reason]  # type: ignore[index]
-    expected = {"error": {"code": "assistant_failed", "message": message, "hint": hint, "field": None}}
+    expected = {"error": {"code": "assistant_failed", "message": message, "hint": hint, "field": None, "reason": reason}}
     explain_body = explain_json()
     for response in (client.post("/api/chat", json=chat_json()), client.post("/api/explain", json=explain_body)):
         assert response.status_code == 502 and response.json() == expected
@@ -93,6 +93,7 @@ def test_scripted_failures_are_502_envelopes() -> None:
         assert response.status_code == 502
         assert response.json()["error"] == {
             "code": "assistant_failed", "message": message, "hint": hint, "field": None,
+            "reason": "invalid_reply",
         }  # fmt: skip
         assert "not json" not in response.text
 
@@ -113,7 +114,7 @@ def test_chat_privacy_and_internal_error(caplog: pytest.LogCaptureFixture) -> No
         failed = client.post("/api/chat", json=chat_json(message=SECRET_MESSAGE))
     assert failed.status_code == 502
     messages = [record.getMessage() for record in caplog.records]
-    assert "agent failed: reason=invalid_reply" in messages
+    assert sum(m.startswith("agent failed: reason=invalid_reply detail=") for m in messages) == 1
     for text in messages:
         assert SECRET_MESSAGE not in text and "Front-end developer" not in text
     boom = stub_client(RuntimeError(f"boom {SECRET_MESSAGE}"))

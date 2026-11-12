@@ -1,4 +1,22 @@
+import re
+from collections.abc import Sequence
+
 from getwork.agent.models import FailureReason
+from getwork.llm.client import redact_secrets
+
+MAX_DETAIL_CHARS = 400
+_BEARER = re.compile(r"(?i)\bbearer\s+\S+")
+_URL = re.compile(r"https?://\S+")
+_KEY_LIKE = re.compile(r"\bsk-[A-Za-z0-9_-]{6,}")
+
+
+def redact_detail(text: str, secrets: Sequence[str] = ()) -> str:
+    """One short log-safe line: known secrets, bearer tokens, key-like tokens and whole URLs (host and query) removed."""
+    cleaned = redact_secrets(text, secrets)
+    for pattern, replacement in ((_BEARER, "Bearer ***"), (_URL, "<url>"), (_KEY_LIKE, "***")):
+        cleaned = pattern.sub(replacement, cleaned)
+    return " ".join(cleaned.split())[:MAX_DETAIL_CHARS]
+
 
 FAILURE_COPY: dict[FailureReason, tuple[str, str]] = {
     "timeout": (
@@ -38,9 +56,10 @@ class AgentFailure(Exception):
     message: str
     hint: str
 
-    def __init__(self, reason: FailureReason) -> None:
+    def __init__(self, reason: FailureReason, detail: str | None = None) -> None:
         message, hint = failure_copy(reason)
         super().__init__(message)
         self.reason = reason
         self.message = message
         self.hint = hint
+        self.detail = detail

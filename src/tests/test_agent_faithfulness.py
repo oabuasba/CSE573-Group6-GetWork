@@ -32,9 +32,11 @@ def test_persistent_hallucination_is_an_error_not_an_answer(caplog: pytest.LogCa
         response = client.post("/api/chat", json=chat_json())
     message, hint = FAILURE_COPY["unverified"]
     assert response.status_code == 502
-    assert response.json() == {"error": {"code": "assistant_failed", "message": message, "hint": hint, "field": None}}
+    assert response.json() == {"error": {"code": "assistant_failed", "message": message, "hint": hint, "field": None, "reason": "unverified"}}
     assert INTRUDER not in response.text
-    assert all(INTRUDER not in record.getMessage() for record in caplog.records)
+    # The one "agent failed:" line may name the rejected skill (the grounding violation); nothing else may.
+    other = [r.getMessage() for r in caplog.records if not r.getMessage().startswith("agent failed:")]
+    assert all(INTRUDER not in text for text in other)
 
 
 def test_misattribution_rejected() -> None:

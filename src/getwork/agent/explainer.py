@@ -82,7 +82,7 @@ class AgentExplainer:
         An off_topic result (not expected for the fixed question) raises AgentFailure("invalid_reply")."""
         result = self.explain_detailed(direction, query, match)
         if result.status == "failed" and result.failure_reason is not None:
-            raise AgentFailure(result.failure_reason)
+            raise AgentFailure(result.failure_reason, result.failure_detail)
         if result.off_topic or not result.claims:
             raise AgentFailure("invalid_reply")
         texts = [claim.text for claim in result.claims]
@@ -128,7 +128,7 @@ class ChatService:
             self._graph, self._runner, ctx=ctx, question=request.message, history=request.history
         )
         if result.status == "failed" and result.failure_reason is not None:
-            raise AgentFailure(result.failure_reason)
+            raise AgentFailure(result.failure_reason, result.failure_detail)
         return ChatResponse(
             reply=OFF_TOPIC_REPLY if result.off_topic else " ".join(c.text for c in result.claims),
             claims=result.claims,

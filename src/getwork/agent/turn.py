@@ -5,15 +5,17 @@ from collections.abc import Callable, Sequence
 from typing import Literal
 
 from getwork.agent import grounding, prompt, tools
+from getwork.agent.failure import redact_detail
 from getwork.agent.grounding import Vocabulary
 from getwork.agent.models import AgentResult, ChatMessage, Claim, FailureReason, ToolTrace, Usage
 from getwork.agent.state import AgentConfig, Turn
-from getwork.llm.client import FatalLLMError, LLMClient, LLMError, LLMRequest
+from getwork.llm.client import FatalLLMError, LLMClient, LLMError, LLMRequest, PermanentLLMError
 from getwork.llm.retry import RetriesExhausted, Throttle
 from getwork.llm.validated import ValidationExhausted, complete_validated
 
 MAX_PARSE_ATTEMPTS = 3
 MAX_FEEDBACK_VIOLATIONS = 8
+REPLY_EXCERPT_CHARS = 200
 NO_MORE_TOOLS = "No more tool calls are allowed; answer now."
 REJECTED_PREFIX = "Your last answer was rejected:"
 
@@ -57,23 +59,34 @@ class AgentRunner:
             return self._route_to_fail(turn=turn, reason="budget_exhausted")
         request = self._build_request(turn)
         turn.feedback = None
+        replies: list[str] = []
+
+        def parse(text: str) -> prompt.Action:
+            replies.append(text)
+            return prompt.parse_action(text)
+
         try:
             action = complete_validated(
                 self.client,
                 request,
-                prompt.parse_action,
+                parse,
                 cfg=self.cfg.retry,
                 throttle=Throttle(clock=self._clock, sleep=self._sleep),
                 sleep=self._sleep,
                 stats=turn.stats,
                 max_attempts=min(MAX_PARSE_ATTEMPTS, self.cfg.max_llm_calls - turn.stats.calls),
             )
-        except FatalLLMError:
-            return self._route_to_fail(turn=turn, reason="model_rejected")
-        except ValidationExhausted:
-            return self._route_to_fail(turn=turn, reason="invalid_reply")
-        except (RetriesExhausted, LLMError):
-            return self._route_to_fail(turn=turn, reason="llm_unavailable")
+        except (FatalLLMError, PermanentLLMError) as e:
+            return self._route_to_fail(turn=turn, reason="model_rejected", detail=_describe_llm_error(e))
+        except ValidationExhausted as e:
+            excerpt = replies[-1][:REPLY_EXCERPT_CHARS] if replies else ""
+            detail = f"{e.last_error}; last reply starts: {excerpt!r}"
+            return self._route_to_fail(turn=turn, reason="invalid_reply", detail=detail)
+        except RetriesExhausted as e:
+            detail = f"{e.kind} retries exhausted after {e.attempts} calls: {_describe_llm_error(e.last_error)}"
+            return self._route_to_fail(turn=turn, reason="llm_unavailable", detail=detail)
+        except LLMError as e:
+            return self._route_to_fail(turn=turn, reason="llm_unavailable", detail=_describe_llm_error(e))
         return self._route_action(turn=turn, action=action)
 
     def run_tool(self, turn: Turn) -> Turn:
@@ -109,7 +122,7 @@ class AgentRunner:
             turn.answer = None
             turn.route = "decide"
         else:
-            self._route_to_fail(turn=turn, reason="unverified")
+            self._route_to_fail(turn=turn, reason="unverified", detail="; ".join(violations))
         return turn
 
     def finish(self, turn: Turn) -> Turn:
@@ -125,7 +138,9 @@ class AgentRunner:
     def fail(self, turn: Turn) -> Turn:
         if turn.failure_reason is None:
             raise ValueError("fail needs turn.failure_reason")
-        turn.result = self._build_result(turn, status="failed", claims=[], reason=turn.failure_reason)
+        turn.result = self._build_result(
+            turn, status="failed", claims=[], reason=turn.failure_reason, detail=turn.failure_detail
+        )
         turn.route = "end"
         return turn
 
@@ -163,9 +178,9 @@ class AgentRunner:
             turn.route = "run_tool"
         return turn
 
-    @staticmethod
-    def _route_to_fail(*, turn: Turn, reason: FailureReason) -> Turn:
+    def _route_to_fail(self, *, turn: Turn, reason: FailureReason, detail: str | None = None) -> Turn:
         turn.failure_reason = reason
+        turn.failure_detail = redact_detail(detail, self.secrets) if detail else None
         turn.route = "fail"
         return turn
 
@@ -177,6 +192,7 @@ class AgentRunner:
         claims: list[Claim],
         reason: FailureReason | None = None,
         off_topic: bool = False,
+        detail: str | None = None,
     ) -> AgentResult:
         usage = Usage(
             llm_calls=turn.stats.calls,
@@ -195,6 +211,7 @@ class AgentRunner:
             prompt_version=self.cfg.prompt_version,
             failure_reason=reason,
             off_topic=off_topic,
+            failure_detail=detail,
         )
 
 
@@ -206,3 +223,7 @@ def drive(runner: AgentRunner, turn: Turn) -> AgentResult:
     if turn.result is None:
         raise RuntimeError("the turn ended without a result")
     return turn.result
+
+
+def _describe_llm_error(error: LLMError) -> str:
+    return f"{type(error).__name__} status={error.status}: {error}"

@@ -2372,9 +2372,25 @@
           ],
           "batch": "AD",
           "notes": "User: no LLM call on \"Why this match?\"; explain always rules-based, agent only for chat. User also saw POST /api/explain 502 with agent explainer (model call failed; cause unknown, user-run). Planner list: web-app T-9/match-agent T-13 text. Reviewed pass. Non-blocking: deviations.md P-18 should list all 5 chat fields; README ~l.104 wording; cli.py ~401 lines (split agent wiring); unused AgentExplainer built in _serve. Planner must update match-agent T-13, AC-18/20/24, FindPage text and web-app T-9 health contract (chat block; explain always template)."
+        },
+        "AD-3": {
+          "phase": "merged",
+          "deps": [
+            "AD-2"
+          ],
+          "batch": "AD",
+          "notes": "User saw POST /api/chat 502 twice with no reason. Add redacted failure detail logging, console logging config, map PermanentLLMError to model_rejected 502 (was unhandled 500). Real cause still unknown (user-run). Reviewed pass. Non-blocking: redact before slicing reply excerpt (secret straddling char 200), _URL case-insensitive, other auth header forms, lines >120, cli.py ~417 lines. Planner must update match-agent MA-6/failure table (Permanent->model_rejected, error.reason, detail= log suffix)."
         }
       },
       "notes": "User request 2026-11-11: make chat about results a default feature; project goal = conversational agent explaining matches. Planner list: web-app T-9 / match-agent T-13 text (explainer default, auto mode, health reason). Commit locally when reviewed; ask before pushing."
+    },
+    "ui-polish-3": {
+      "spec": "specs/features/web-app.html",
+      "phase": "planning",
+      "planner_agent": "a5242b49a97f886cb",
+      "branch": "dev",
+      "tasks": {},
+      "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner."
     }
   },
   "adhoc": {
