@@ -155,7 +155,7 @@ export default function FindPage({ direction, health, fetchImpl }) {
       {state.status === "done" && (
         <Results
           response={state.response} copy={copy} headingRef={headingRef} fetchImpl={fetchImpl}
-          chatEnabled={health?.explainer?.kind === "agent"}
+          chatEnabled={health?.chat?.enabled === true}
           expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)}
         />
       )}

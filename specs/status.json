@@ -2364,6 +2364,14 @@
           "deps": [],
           "batch": "AD",
           "notes": "--explainer auto default (agent when LLM settings + langgraph available, else template with stderr notice + health reason); model = same backend/model as structurer (VOYAGER_MODEL), nothing hard-coded. User wording \"same qwen model as the relay\" interpreted as the Voyager endpoint model in VOYAGER_MODEL; confirm with user. Reviewed pass (round 2). Non-blocking: cli.py ~387 lines (split agent wiring), minor style, weak assertion in test_readme_status. Spec text for web-app T-9 / match-agent T-13 still to be updated by planner."
+        },
+        "AD-2": {
+          "phase": "merged",
+          "deps": [
+            "AD-1"
+          ],
+          "batch": "AD",
+          "notes": "User: no LLM call on \"Why this match?\"; explain always rules-based, agent only for chat. User also saw POST /api/explain 502 with agent explainer (model call failed; cause unknown, user-run). Planner list: web-app T-9/match-agent T-13 text. Reviewed pass. Non-blocking: deviations.md P-18 should list all 5 chat fields; README ~l.104 wording; cli.py ~401 lines (split agent wiring); unused AgentExplainer built in _serve. Planner must update match-agent T-13, AC-18/20/24, FindPage text and web-app T-9 health contract (chat block; explain always template)."
         }
       },
       "notes": "User request 2026-11-11: make chat about results a default feature; project goal = conversational agent explaining matches. Planner list: web-app T-9 / match-agent T-13 text (explainer default, auto mode, health reason). Commit locally when reviewed; ask before pushing."

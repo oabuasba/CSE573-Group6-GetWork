@@ -165,7 +165,7 @@ Only the raw inputs are git-ignored; you place them yourself. The outputs of pre
                                  |
                                  v
                  FastAPI backend + React UI (src/web/dist) at http://127.0.0.1:8000
-                 default --explainer auto (LLM explanations and chat when LLM settings are set)
+                 default --explainer auto (LLM chat when LLM settings are set; explanations stay rules-based)
 ```
 
 ## 6. The pipeline, stage by stage
@@ -448,19 +448,20 @@ The full runbook is [`src/getwork/webapp/README.md`](../src/getwork/webapp/READM
 
 ## 9. The match agent
 
-The LangGraph agent is the default explainer (`--explainer auto`). It explains each match with claims verified against the two
-documents and answers follow-up questions in a per-match chat (the "Chat about this suggestion" button). It makes real model calls with your key,
+Match explanations (`POST /api/explain`, "Why this match?") are always rules-based and never call a model. The LangGraph agent is the
+per-match chat only (`--explainer auto` by default): it answers follow-up questions with claims verified against the two
+documents (the "Chat about this suggestion" button). It makes real model calls with your key,
 using the model in `VOYAGER_MODEL`, the same as the structurer (so `--model` is not needed). If `VOYAGER_API_KEY`, `VOYAGER_BASE_URL`
 or `VOYAGER_MODEL` (or `LOCAL_LLM_*` with `LLM_BACKEND=local`) is missing, or `langgraph` is not installed, the server prints one
-`chat agent disabled: ...` notice naming the variables and falls back to the rules-based template; `/api/health` then shows `explainer.reason`.
+`chat agent disabled: ...` notice naming the variables and starts with chat off; `/api/health` then shows `chat.enabled: false` and `chat.reason`.
 
 ```
 uv sync --extra agent
-uv run webapp check --demo                                          # no model call; health shows the explainer ("agent", or "template" with a reason)
+uv run webapp check --demo                                          # no model call; health shows explainer "template" plus chat (enabled with the model, or disabled with a reason)
 uv run webapp serve --demo
 uv run webapp serve --artifacts-dir artifacts_trial
 uv run webapp serve --artifacts-dir artifacts_trial --explainer agent   # strict: exit 2 if the agent cannot start
-uv run webapp serve --artifacts-dir artifacts_trial --explainer template   # rules-based only, no chat
+uv run webapp serve --artifacts-dir artifacts_trial --explainer template   # chat off
 ```
 
 Flags: `--explainer {auto,agent,template}` (default `auto`), `--agent-backend {voyager,local}`, `--agent-model ID`,
@@ -468,9 +469,9 @@ Flags: `--explainer {auto,agent,template}` (default `auto`), `--agent-backend {v
 `--agent-*` flags override them. `--agent-backend local` reads `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY`. The agent
 reads its skill vocabulary from the resolved run folder.
 
-Failure behaviour: if the model is unreachable, rejects the request, times out, or its answer cannot be verified, the card shows a short
-plain-language message and keeps the evidence chips; there is no fallback to the rules-based text. Restart with `--explainer template` to
-get template explanations. Only structured fields (titles, levels, skills, clusters, ranks, scores, the conversation) go to the model,
+Failure behaviour: if the model is unreachable, rejects the request, times out, or its answer cannot be verified, the chat shows a short
+plain-language message; the match explanation is separate and always rules-based. Restart with `--explainer template` to
+remove the chat. Only structured fields (titles, levels, skills, clusters, ranks, scores, the conversation) go to the model,
 never raw resume or posting text. Full runbook (MA-1 to MA-6): [`src/getwork/agent/README.md`](../src/getwork/agent/README.md).
 
 ## 10. Verification and troubleshooting
@@ -488,7 +489,7 @@ Pass: both suites exit 0 with no key, model or network.
 | `uv` reports a stale lock, or tests fail on a new dependency | `uv.lock` is out of date after a `pyproject.toml` change: run `uv lock` online, then `uv sync`. Offline, run `uv run --offline --frozen pytest -q` (documented in the specs; the lock is currently consistent: `uv lock --check --offline` passes) |
 | `langgraph is not installed; run: uv sync --extra agent` | install the agent extra (also installed by plain `uv sync` through the dev group) |
 | `missing required setting(s): VOYAGER_API_KEY, ...` | `.env` lacks those names (the message lists names, never values); check `--env-file` and `--backend` |
-| No "Chat about this suggestion" button | the server fell back to the rules-based explainer: read the `chat agent disabled: ...` stderr notice, or `explainer.reason` in `uv run webapp check`; set the named variables (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL`) or install langgraph. Not shown either with `--explainer template` |
+| No "Chat about this suggestion" button | the server started with chat off: read the `chat agent disabled: ...` stderr notice, or `chat.reason` in `uv run webapp check`; set the named variables (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL`) or install langgraph. Not shown either with `--explainer template` |
 | `/` shows "Frontend not built" | run `npm --prefix src/web ci` then `npm --prefix src/web run build` |
 | `artifacts directory not found` / `is not a complete artifacts run: missing folders ...` | pass the run folder itself (for example `artifacts_trial/v5`) or build the missing stages (`alias-table build`, `taxonomy build`, `doc-embed build`); the web app needs `alias/`, `documents/`, `taxonomy/` |
 | `webapp check` exits 2 naming `doc-embed build` or `doc-embed embed` | the chosen (highest complete) `vN` lacks that stage; run it, or pass an older complete run explicitly |

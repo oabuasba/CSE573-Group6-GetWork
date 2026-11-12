@@ -38,7 +38,8 @@ def serve(
 
 
 def health_of(run: RecordingRun) -> dict:
-    return TestClient(run.calls[0]).get("/api/health").json()["explainer"]
+    """The chat block of /api/health; explanations stay rules-based whatever it says."""
+    return TestClient(run.calls[0]).get("/api/health").json()["chat"]
 
 
 def test_serve_agent_demo() -> None:
@@ -46,8 +47,10 @@ def test_serve_agent_demo() -> None:
     code, run = serve("--explainer", "agent", "--model", "demo-model", client=fake)
     assert code == 0 and len(run.calls) == 1
     assert health_of(run) == {
-        "kind": "agent", "model": "demo-model", "backend": "voyager", "prompt_version": "agent_v1",
+        "enabled": True, "model": "demo-model", "backend": "voyager",
+        "prompt_version": "agent_v1", "reason": None,
     }  # fmt: skip
+    assert TestClient(run.calls[0]).get("/api/health").json()["explainer"]["kind"] == "template"
     response = TestClient(run.calls[0]).post("/api/chat", json=chat_json())
     assert response.status_code == 200 and response.json()["explainer"]["kind"] == "agent"
 
@@ -84,7 +87,9 @@ def test_explicit_template_has_no_chat() -> None:
     code, run = serve("--explainer", "template", client=FakeLLMClient(script=[]))
     assert code == 0
     client = TestClient(run.calls[0])
-    assert client.get("/api/health").json()["explainer"] == {"kind": "template", "model": None}
+    health = client.get("/api/health").json()
+    assert health["explainer"] == {"kind": "template", "model": None}
+    assert health["chat"]["enabled"] is False and "--explainer template" in health["chat"]["reason"]
     assert client.post("/api/chat", json=chat_json()).status_code == 404
     query = demo.DemoEngine().get_document("r-1").model_dump(mode="json")
     body = {"direction": "resume_to_posting", "query": query, "match_id": "j-1"}
@@ -133,7 +138,7 @@ def test_check_with_agent_makes_no_call(capsys: pytest.CaptureFixture[str]) -> N
     code = cli.main(["check", "--demo", "--explainer", "agent", "--model", "m"], environ={}, llm_client=fake)
     assert code == 0 and fake.calls == []
     health = models.HealthResponse.model_validate_json(capsys.readouterr().out)
-    assert health.explainer.kind == "agent" and health.explainer.model == "m"
+    assert health.explainer.kind == "template" and health.chat.enabled and health.chat.model == "m"
 
 
 def test_build_agent_loads_vocabulary_from_the_resolved_root(tmp_path: Path) -> None:
@@ -157,7 +162,7 @@ def test_auto_is_the_default_and_uses_the_agent_when_settings_resolve() -> None:
     fake = FakeLLMClient(script=[good_answer()])
     code, run = serve("--model", "demo-model", client=fake)
     assert code == 0
-    assert health_of(run)["kind"] == "agent" and health_of(run)["model"] == "demo-model"
+    assert health_of(run)["enabled"] and health_of(run)["model"] == "demo-model"
     response = TestClient(run.calls[0]).post("/api/chat", json=chat_json())
     assert response.status_code == 200
     assert cli._build_parser().parse_args(["check"]).explainer == "auto"
@@ -171,7 +176,7 @@ def test_auto_without_settings_falls_back_to_template(capsys: pytest.CaptureFixt
     assert "VOYAGER_API_KEY" in captured.err and "VOYAGER_MODEL" in captured.err
     assert "example.invalid" not in captured.out + captured.err
     info = health_of(run)
-    assert info["kind"] == "template" and "VOYAGER_API_KEY" in info["reason"]
+    assert info["enabled"] is False and "VOYAGER_API_KEY" in info["reason"]
     assert TestClient(run.calls[0]).post("/api/chat", json=chat_json()).status_code == 404
 
 
@@ -182,7 +187,7 @@ def test_auto_without_langgraph_falls_back_to_template(
     monkeypatch.setitem(sys.modules, "langgraph.graph", None)
     code, run = serve("--model", "m", client=FakeLLMClient(script=[]))
     assert code == 0 and "uv sync --extra agent" in capsys.readouterr().err
-    assert health_of(run)["kind"] == "template"
+    assert health_of(run)["enabled"] is False
     assert TestClient(run.calls[0]).post("/api/chat", json=chat_json()).status_code == 404
 
 
@@ -207,11 +212,12 @@ def test_check_auto_reports_explainer_and_reason_without_a_call(
     fake = FakeLLMClient(script=[])
     assert cli.main(["check", "--demo", "--model", "m"], environ={}, llm_client=fake) == 0
     assert fake.calls == []
-    assert models.HealthResponse.model_validate_json(capsys.readouterr().out).explainer.kind == "agent"
+    assert models.HealthResponse.model_validate_json(capsys.readouterr().out).chat.enabled
     assert cli.main(["check", "--demo"], environ={}) == 0
     captured = capsys.readouterr()
     health = models.HealthResponse.model_validate_json(captured.out)
-    assert health.explainer.kind == "template" and "VOYAGER_API_KEY" in (health.explainer.reason or "")
+    assert health.explainer.kind == "template" and not health.chat.enabled
+    assert "VOYAGER_API_KEY" in (health.chat.reason or "")
     assert "chat agent disabled" in captured.err
 
 
@@ -222,7 +228,7 @@ def test_auto_falls_back_on_missing_artifacts_and_rejects_bad_extra_body(
     root = tmp_path.resolve() / "artifacts"
     argv = ["serve", "--demo", "--model", "m", "--artifacts-dir", str(root)]
     assert cli.main(argv, environ={}, llm_client=FakeLLMClient(script=[]), run=run) == 0
-    assert health_of(run)["kind"] == "agent"
+    assert health_of(run)["enabled"]
     monkey_args = cli._build_parser().parse_args(["check", "--model", "m", "--artifacts-dir", str(root)])
     choice = cli._choose_agent(
         monkey_args, demo.DemoEngine(), environ={}, llm_client=FakeLLMClient(script=[])
@@ -231,3 +237,18 @@ def test_auto_falls_back_on_missing_artifacts_and_rejects_bad_extra_body(
     assert "chat agent disabled" in capsys.readouterr().err
     code, run = serve("--model", "m", "--extra-body", "[1]", client=FakeLLMClient(script=[]))
     assert code == 2 and run.calls == [] and "--extra-body" in capsys.readouterr().err
+
+
+def test_explain_is_rules_based_and_makes_no_llm_call_while_chat_works() -> None:
+    fake = FakeLLMClient(script=[good_answer()])
+    code, run = serve("--model", "demo-model", client=fake)
+    assert code == 0 and health_of(run)["enabled"] is True
+    client = TestClient(run.calls[0])
+    query = demo.DemoEngine().get_document("r-1").model_dump(mode="json")
+    body = {"direction": "resume_to_posting", "query": query, "match_id": "j-1"}
+    explained = client.post("/api/explain", json=body)
+    assert explained.status_code == 200
+    assert explained.json()["explainer"] == {"kind": "template", "model": None}
+    assert fake.calls == []
+    assert client.post("/api/chat", json=chat_json()).status_code == 200
+    assert len(fake.calls) > 0

@@ -85,11 +85,11 @@ def _install_error_handlers(app: FastAPI, secrets: Sequence[str]) -> None:
 
 
 def _install_api_routes(
-    app: FastAPI, engine: engine_mod.Engine, explainer: explain.Explainer
+    app: FastAPI, engine: engine_mod.Engine, explainer: explain.Explainer, chat: models.ChatInfo
 ) -> None:
     @app.get("/api/health", response_model=models.HealthResponse)
     def health() -> models.HealthResponse:
-        return models.HealthResponse(**engine.health().model_dump(), explainer=explainer.info)
+        return models.HealthResponse(**engine.health().model_dump(), explainer=explainer.info, chat=chat)
 
     @app.get("/api/examples", response_model=models.ExamplesResponse)
     def examples(
@@ -163,10 +163,11 @@ def create_app(
     *,
     static_dir: Path | None = None,
     secrets: Sequence[str] = (),
+    chat: models.ChatInfo | None = None,
 ) -> FastAPI:
-    """No CORS middleware is installed. static_dir None: GET / is the "Frontend not built" page."""
+    """chat is reported in health only; the chat routes are registered separately. No CORS middleware is installed. static_dir None: GET / is the "Frontend not built" page."""
     app = FastAPI(title="GetWork")
     _install_error_handlers(app, secrets)
-    _install_api_routes(app, engine, explainer)
+    _install_api_routes(app, engine, explainer, chat or models.ChatInfo())
     _install_static(app, static_dir)
     return app

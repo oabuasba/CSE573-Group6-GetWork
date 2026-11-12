@@ -101,11 +101,11 @@ uv run webapp serve --artifacts-dir artifacts_trial
 
 See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
 
-The explanation agent and the per-match chat are the default (`--explainer auto`). They use the same LLM settings and model as the structurer (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL` in `.env`, or `LLM_BACKEND=local` with `LOCAL_LLM_*`) and need `langgraph` (`uv sync --extra agent`, or a plain `uv sync`). The model calls are made by you, with your own key; see `src/getwork/agent/README.md`. If a setting is missing the server prints a `chat agent disabled: ...` notice and falls back to the rules-based explainer (no chat button):
+Match explanations are always rules-based (no model call). The per-match chat agent ("Chat about this suggestion") is the default (`--explainer auto`). They use the same LLM settings and model as the structurer (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL` in `.env`, or `LLM_BACKEND=local` with `LOCAL_LLM_*`) and need `langgraph` (`uv sync --extra agent`, or a plain `uv sync`). The model calls are made by you, with your own key; see `src/getwork/agent/README.md`. If a setting is missing the server prints a `chat agent disabled: ...` notice and runs with chat off (no chat button):
 
 ```
 uv run webapp serve --demo
-# optional: --explainer template (no agent) | agent (fail if it cannot start), --model MODEL (default VOYAGER_MODEL),
+# optional: --explainer template (chat off) | agent (fail if it cannot start), --model MODEL (default VOYAGER_MODEL),
 #           --agent-backend voyager|local, --agent-model MODEL, --agent-timeout SECONDS (default 60)
 ```
 

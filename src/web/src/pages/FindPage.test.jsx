@@ -164,7 +164,7 @@ test("real FindPage without injected props makes a small number of network calls
   expect(fetchImpl).toHaveBeenCalledTimes(3);
 });
 
-const agentHealth = { ...health, explainer: { kind: "agent", model: "demo-model" } };
+const agentHealth = { ...health, chat: { enabled: true, model: "demo-model" } };
 
 function agentFetch({ explain = reply(agent.explain_agent) } = {}) {
   return vi.fn(async (path) => {
@@ -186,7 +186,7 @@ async function openCard(user, health_, fetchImpl, index = 0) {
 
 const openChat = (user) => user.click(screen.getByRole("button", { name: "Chat about this suggestion" }));
 
-test("chat appears only for the agent explainer", async () => {
+test("chat appears only when health.chat.enabled", async () => {
   const user = userEvent.setup();
   const template = await openCard(user, health, routedFetch());
   await screen.findByText(contract.explain.summary);

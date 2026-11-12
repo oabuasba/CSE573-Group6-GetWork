@@ -1,11 +1,11 @@
 # agent (pipeline step 8)
 
-A small LangGraph agent that explains each match and answers follow-up questions about it. It asks the
+A small LangGraph agent that answers follow-up questions about a match (the per-match chat). The match card's own explanation (`POST /api/explain`) is always the rules-based one and never calls the model. It asks the
 model to call one of four read-only tools or to give an answer made of claims. Every claim is checked by
 a deterministic verifier against the facts the tools produced and the final skill sets of the two
 documents. A claim that cannot be verified goes back to the model with the reason; if the answer still
-cannot be verified, the user sees a short plain-language error and no explanation text. The rules-based
-explainer is never used as a fallback. See `specs/features/match-agent.html`.
+cannot be verified, the user sees a short plain-language chat error and no answer text. The rules-based
+explainer is never used as a replacement for a failed chat answer. See `specs/features/match-agent.html`.
 
 Code: `models.py` (claims, facts, results), `facts.py`, `tools.py`, `grounding.py` (the verifier),
 `prompt.py` and `prompts/agent_v1.md`, `turn.py` (node logic), `graph.py` (LangGraph wiring),
@@ -23,24 +23,24 @@ uv run webapp serve --demo
 The agent is the default (`--explainer auto`). It uses the same LLM settings and model as the structurer:
 `VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL` (or `LLM_BACKEND=local` with `LOCAL_LLM_*`) from `.env` or the
 environment, so `--model` is not needed when `VOYAGER_MODEL` is set; `--backend` and `--model` override them. User-run
-step: it makes real model calls with your key. If a setting or `langgraph` is missing, the server starts with the rules
-explainer, prints one `chat agent disabled: ...` notice naming the missing variables, has no chat route, and
-`/api/health` shows `explainer.reason`. Use `--explainer agent` to make that an error (exit 2) and
-`--explainer template` to turn the agent off.
+step: it makes real model calls with your key. If a setting or `langgraph` is missing, the server starts with chat off,
+prints one `chat agent disabled: ...` notice naming the missing variables, has no chat route, and
+`/api/health` shows `chat.reason` (`chat.enabled` is false). Use `--explainer agent` to make that an error (exit 2) and
+`--explainer template` to turn chat off.
 
 With real artifacts, replace `--demo` by `--artifacts-dir artifacts_trial` (or `WEBAPP_ARTIFACTS_DIR`); the agent's skill
 vocabulary is read from the run folder the server resolved (for example `artifacts_trial/v5`), and the page works the
 same way.
 
-Pass: `uv run webapp check --demo` prints health with `"kind": "agent"` (or `"template"` and a `reason`)
+Pass: `uv run webapp check --demo` prints health with `"chat": {"enabled": true, ...}` (or `enabled: false` and a `reason`)
 and makes no model call; the server prints the address it serves on.
 
 ## MA-2 Read an explanation
 
-Open the page, search from a demo example, expand a match.
+Open the page, search from a demo example, expand a match ("Why this match?").
 
-Pass: the explanation is a list of claims, and every skill a claim names is in one of the two documents.
-"Show evidence" lists the cited facts.
+Pass: the explanation is the rules-based one (summary and bullets, "Explained by rules, no language model" line) and no model call is made. Chat
+replies (MA-3) are the claim lists whose skills are all in one of the two documents; "Show evidence" lists the cited facts.
 
 ## MA-3 Ask a follow-up
 
@@ -51,11 +51,10 @@ below it.
 
 ## MA-4 Force a failure
 
-Stop the model service, or start with a wrong model name, then expand a match or send a chat message.
+Stop the model service, or start with a wrong model name, then send a chat message (expanding a match still works: it is rules-based).
 
-Pass: the page shows the plain message and hint ("The assistant could not be reached right now." or the
-matching pair), keeps the evidence chips, and shows no rules-based text. Restart with
-`--explainer template` to get the rules explanations again.
+Pass: the chat shows the plain message and hint ("The assistant could not be reached right now." or the
+matching pair); the match explanation is unaffected. Restart with `--explainer template` to remove the chat button.
 
 ## MA-5 Reading the data in a later evaluation
 

@@ -125,7 +125,7 @@ def test_serve_artifacts_with_agent_uses_resolved_root(
     assert code == 0 and "v3" in capsys.readouterr().out
     client = TestClient(run.calls[0][0])
     body = client.get("/api/health").json()
-    assert body["explainer"]["kind"] == "agent" and body["artifacts_dir"] == str(trial / "v3")
+    assert body["chat"]["enabled"] is True and body["artifacts_dir"] == str(trial / "v3")
     assert client.post("/api/chat", json={}).status_code != 404
 
 
@@ -138,7 +138,7 @@ def test_serve_artifacts_auto_without_settings_uses_template(
     code = cli.main(["serve", "--artifacts-dir", str(root)], environ={}, run=run)
     assert code == 0 and "chat agent disabled" in capsys.readouterr().err
     client = TestClient(run.calls[0][0])
-    assert client.get("/api/health").json()["explainer"]["kind"] == "template"
+    assert client.get("/api/health").json()["chat"]["enabled"] is False
     assert client.post("/api/chat", json={}).status_code == 404
 
 

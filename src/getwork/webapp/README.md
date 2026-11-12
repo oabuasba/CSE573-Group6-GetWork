@@ -1,13 +1,16 @@
 # Web app runbook
 
 FastAPI backend (`webapp serve`, `webapp check`) and a React UI (`src/web`). It matches resumes to postings with the
-three systems (GetWork skill clusters, embeddings only, keywords only) and explains each match. The default is
-`--explainer auto`: the chat agent (`src/getwork/agent/README.md`) is used when the LLM settings resolve (the same
+three systems (GetWork skill clusters, embeddings only, keywords only) and explains each match. Explanations
+(`POST /api/explain`) are always rules-based and never call a language model. The chat agent
+(`src/getwork/agent/README.md`, `POST /api/chat`, the "Chat about this suggestion" button) is the only LLM feature. The default is
+`--explainer auto`: the chat agent is enabled when the LLM settings resolve (the same
 `VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL`, or `LLM_BACKEND=local` with `LOCAL_LLM_*`, that the structurer
-uses; `--backend`, `--model` and `--env-file` apply) and `langgraph` is installed. Otherwise the server starts with the
-rules-based explainer, prints one `chat agent disabled: ...` notice on stderr naming the missing variables (never values),
-and shows the reason as `explainer.reason` in `/api/health`. `--explainer agent` requires the agent (exit 2 if it cannot
-start); `--explainer template` never uses it. `webapp check` reports the choice and calls no model.
+uses; `--backend`, `--model` and `--env-file` apply) and `langgraph` is installed. Otherwise the server starts with chat off, prints one `chat agent disabled: ...` notice on stderr naming the missing variables (never values),
+and shows the reason as `chat.reason` in `/api/health`. `--explainer agent` requires the agent (exit 2 if it cannot
+start); `--explainer template` turns chat off (`chat.reason` says so). `/api/health` has `explainer` (always `template`) and
+`chat` (`enabled`, `model`, `backend`, `prompt_version`, `reason`); the UI shows the chat button when `chat.enabled` is true.
+`webapp check` prints the same health JSON (rules-based explanations plus the chat state) and calls no model.
 
 Which artifacts are served is your choice, never fixed in code:
 
@@ -86,8 +89,8 @@ Pass: `http://127.0.0.1:8000/` shows the app and `/docs` shows the API. For fron
   `--embed-model` used for `doc-embed embed`.
 - Capability unavailable (503): read `capabilities` in `webapp check`; the reason names the missing setting, such as
   `VOYAGER_API_KEY`, or the flag that disabled it (`--no-structure`, `--no-embed`).
-- No "Chat about this suggestion" button: the button needs `explainer.kind` `"agent"`. Run `uv run webapp check --demo`
-  (or `--artifacts-dir ...`) and read `explainer`: `"template"` with a `reason` and the stderr notice name the missing
+- No "Chat about this suggestion" button: the button needs `chat.enabled` true. Run `uv run webapp check --demo`
+  (or `--artifacts-dir ...`) and read `chat`: `enabled: false` with a `reason`, and the stderr notice, name the missing
   setting (for example `VOYAGER_API_KEY`, `VOYAGER_MODEL`) or `uv sync --extra agent`. It is also absent with
   `--explainer template`.
 - Public host warning: `--host` other than 127.0.0.1 binds to a public address and there is no authentication and no

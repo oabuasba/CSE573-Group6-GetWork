@@ -33,6 +33,15 @@ class AgentChoice:
     parts: AgentParts | None = None
     fallback_reason: str | None = None
 
+    @property
+    def chat_info(self) -> models.ChatInfo:
+        if self.parts is None:
+            return models.ChatInfo(enabled=False, reason=self.fallback_reason or CHAT_OFF_REASON)
+        info = self.parts[1].info
+        return models.ChatInfo(
+            enabled=True, model=info.model, backend=info.backend, prompt_version=info.prompt_version
+        )
+
 WEB_DIST: Path = Path(__file__).resolve().parents[2] / "web" / "dist"
 DEFAULT_ARTIFACTS_DIR = "artifacts_trial"
 ARTIFACTS_DIR_ENV = "WEBAPP_ARTIFACTS_DIR"
@@ -45,6 +54,7 @@ STRUCTURE_DISABLED = "Disabled with --no-structure."
 EMBED_DISABLED = "Disabled with --no-embed."
 LOG_LEVEL = "info"
 DEFAULT_AGENT_TIMEOUT_S = 60.0
+CHAT_OFF_REASON = "Disabled with --explainer template."
 EXPLAINERS = ("auto", "agent", "template")
 AGENT_DISABLED_PREFIX = "chat agent disabled"
 
@@ -291,8 +301,10 @@ def _serve(
     agent = choice.parts
     static_dir = _static_dir(args)
     secrets: Sequence[str] = agent[2] if agent else ()
-    explainer = agent[0] if agent else explain.TemplateExplainer(reason=choice.fallback_reason)
-    app = api.create_app(app_engine, explainer, static_dir=static_dir, secrets=secrets)
+    app = api.create_app(
+        app_engine, explain.TemplateExplainer(), static_dir=static_dir, secrets=secrets,
+        chat=choice.chat_info,
+    )
     if agent:
         from getwork.agent.api import register_chat_routes
 
@@ -335,15 +347,19 @@ def _choose_agent(
             raise
         reason = str(exc)
         print(
-            f"{AGENT_DISABLED_PREFIX}: {reason}. Using the rules-based explainer; "
-            "pass --explainer template to silence this.",
+            f"{AGENT_DISABLED_PREFIX}: {reason}. Chat is off; match explanations stay rules-based. "
+            "Pass --explainer template to silence this.",
             file=sys.stderr,
         )
         return AgentChoice(fallback_reason=reason)
 
 
-def _check(app_engine: engine.Engine, info: models.ExplainerInfo) -> int:
-    health = models.HealthResponse(**app_engine.health().model_dump(), explainer=info)
+def _check(app_engine: engine.Engine, choice: AgentChoice) -> int:
+    health = models.HealthResponse(
+        **app_engine.health().model_dump(),
+        explainer=explain.TemplateExplainer.info,
+        chat=choice.chat_info,
+    )
     print(health.model_dump_json(indent=2))
     return 0
 
@@ -381,7 +397,5 @@ def main(
         print(f"error: {exc}", file=sys.stderr)
         return 2
     if args.command == "check":
-        parts = choice.parts
-        info = parts[0].info if parts else explain.TemplateExplainer(reason=choice.fallback_reason).info
-        return _check(app_engine, info)
+        return _check(app_engine, choice)
     return _serve(args, app_engine, run, choice)

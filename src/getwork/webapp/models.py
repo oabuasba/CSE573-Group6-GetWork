@@ -185,21 +185,31 @@ class ExplainerInfo(BaseModel):
     model: str | None = None
     backend: str | None = None
     prompt_version: str | None = None
-    reason: str | None = None  # why the chat agent is off when --explainer auto fell back to the template
 
     # Keeps the old JSON shape when the new fields are None.
     @model_serializer(mode="wrap")
     def _omit_unset_agent_fields(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data = handler(self)
-        for key in ("backend", "prompt_version", "reason"):
+        for key in ("backend", "prompt_version"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data
 
 
+class ChatInfo(BaseModel):
+    """Whether the per-match chat agent is on (explanations are always rules-based); reason says why not."""
+
+    enabled: bool = False
+    model: str | None = None
+    backend: str | None = None
+    prompt_version: str | None = None
+    reason: str | None = None
+
+
 class HealthResponse(EngineHealth):
     status: Literal["ok"] = "ok"
     explainer: ExplainerInfo
+    chat: ChatInfo = Field(default_factory=ChatInfo)
 
 
 class ExamplesResponse(BaseModel):

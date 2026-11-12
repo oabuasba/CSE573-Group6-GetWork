@@ -82,7 +82,7 @@ test("no axe violations with an expanded explanation", async () => {
   await searchAndAxe(reply(contract.match), true);
 });
 
-const agentHealth = { ...health, explainer: { kind: "agent", model: "demo-model" } };
+const agentHealth = { ...health, chat: { enabled: true, model: "demo-model" } };
 
 async function openAgentCard(explainReply) {
   const user = userEvent.setup();
