@@ -2330,6 +2330,28 @@
       "branch": "dev",
       "tasks": {},
       "notes": "DEFERRED by user 2026-11-11. Idea: show candidate name and contact info (if applicable) on the Find candidates page. Finding: resumes carry no name/contact fields; structurer schema/prompt (extract_v1) ask only for title, level, years, skills, experience, education; resume ids are r-<number>. Raw cleaned text (text_clean) may contain names/emails/phones (not inspected; data/ is not read by agents). Options: (1) regex-extract email/phone from raw text offline into the documents artifact (cheap; names unreliable), (2) LLM extraction of name/email/phone via schema+prompt change and structurer re-run (costly: ~37k calls), (3) stay anonymous. Privacy decision needed (project leans anonymous). Suggested first step when picked up: count emails/phones in resume text (counts only, no content). Needs planner spec before build."
+    },
+    "ui-polish-2": {
+      "spec": null,
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "UP-A": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "UI-A",
+          "notes": "Why this match = brief summary (rest behind toggle); \"Chat about this suggestion\" button reveals existing ChatPanel (agent explainer only). Frontend only. LangGraph agent already powers /api/chat. | Dev done (122 web tests): AgentSummary shows claims[0].text; ChatOnDemand button; deviations from match-agent AC-22/AC-24. | Reviewer pass. Follow-ups sent: single-claim + focus tests; contract_agent.json explain_agent summary/bullets bug (regenerate from claims + invariant test); ClaimList useId. SPEC (planner): match-agent AC-22/AC-24 and ExplainPanel row -> summary-first + Show all N points toggle; ChatOnDemand \"Chat about this suggestion\" (agent only, closed by default)."
+        },
+        "UP-B": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "UI-B",
+          "notes": "About page: cleaner layout, remove \"Data in use\", better ranking-method and cluster descriptions sourced from specs/docs. | Dev done (122 web tests). Admitted inferences: B2 partial-credit/strengths/limits sentences not documented. Demo-data notice removed from About (check other banner). Reviewer dispatched. | Review FAIL (blocking: B2 card claims unsupported/false). Fix round 1 sent (+ nits: Full/B1+/cluster copy, dt style, per-card tests). Demo mode still signalled by Layout banner (no regression). SPEC (planner): web-app AC-36, T-17 instructions, screens table line ~376 still require Data in use/versions/demo statement; update to new About design. | Fix round 1 landed (125 web tests). Dev lists 4 partly-sourced sentences; fresh reviewer dispatched. | 2nd review FAIL (B2 credit \"only\" + strengths wrong comparison). User approved third round (2026-11-11): dev fix sent, then fresh reviewer. | Round 3 landed (126 web tests); third review dispatched.",
+          "fix_rounds": 2
+        }
+      },
+      "notes": "User request 2026-11-11. Two parallel frontend developers (A: result card/chat; B: About page). Not in specs: planner list (match-agent AC-22/AC-24, web-app card + About descriptions). Commit when reviewed; ask before pushing. | BUILT + reviewed 2026-11-11; committed locally (2aac457 + docs). Not pushed: awaiting user."
     }
   },
   "adhoc": {
