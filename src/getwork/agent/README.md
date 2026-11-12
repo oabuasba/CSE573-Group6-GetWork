@@ -17,17 +17,22 @@ Tests never call a model: they use `FakeLLMClient` with scripted replies and the
 
 ```
 uv sync --extra agent
-uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
+uv run webapp serve --demo
 ```
 
-User-run step: it makes real model calls with your `VOYAGER_API_KEY`. Without `webapp serve --explainer agent` the
-server uses the rules explainer and has no chat route.
+The agent is the default (`--explainer auto`). It uses the same LLM settings and model as the structurer:
+`VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL` (or `LLM_BACKEND=local` with `LOCAL_LLM_*`) from `.env` or the
+environment, so `--model` is not needed when `VOYAGER_MODEL` is set; `--backend` and `--model` override them. User-run
+step: it makes real model calls with your key. If a setting or `langgraph` is missing, the server starts with the rules
+explainer, prints one `chat agent disabled: ...` notice naming the missing variables, has no chat route, and
+`/api/health` shows `explainer.reason`. Use `--explainer agent` to make that an error (exit 2) and
+`--explainer template` to turn the agent off.
 
 With real artifacts, replace `--demo` by `--artifacts-dir artifacts_trial` (or `WEBAPP_ARTIFACTS_DIR`); the agent's skill
 vocabulary is read from the run folder the server resolved (for example `artifacts_trial/v5`), and the page works the
 same way.
 
-Pass: `uv run webapp check --demo --explainer agent --model MODEL` prints health with `"kind": "agent"`
+Pass: `uv run webapp check --demo` prints health with `"kind": "agent"` (or `"template"` and a `reason`)
 and makes no model call; the server prints the address it serves on.
 
 ## MA-2 Read an explanation
@@ -49,8 +54,8 @@ below it.
 Stop the model service, or start with a wrong model name, then expand a match or send a chat message.
 
 Pass: the page shows the plain message and hint ("The assistant could not be reached right now." or the
-matching pair), keeps the evidence chips, and shows no rules-based text. Restart without
-`--explainer agent` to get the rules explanations again.
+matching pair), keeps the evidence chips, and shows no rules-based text. Restart with
+`--explainer template` to get the rules explanations again.
 
 ## MA-5 Reading the data in a later evaluation
 

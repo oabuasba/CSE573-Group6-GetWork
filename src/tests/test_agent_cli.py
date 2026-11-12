@@ -80,8 +80,8 @@ def test_agent_options_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert seen["timeout_s"] == 12.5 and seen["backend"] == "local" and seen["model"] == "agent-m"
 
 
-def test_default_template_has_no_chat() -> None:
-    code, run = serve()
+def test_explicit_template_has_no_chat() -> None:
+    code, run = serve("--explainer", "template", client=FakeLLMClient(script=[]))
     assert code == 0
     client = TestClient(run.calls[0])
     assert client.get("/api/health").json()["explainer"] == {"kind": "template", "model": None}
@@ -151,3 +151,83 @@ def test_build_agent_loads_vocabulary_from_the_resolved_root(tmp_path: Path) -> 
         args, engine=ResolvedEngine(), environ={}, llm_client=FakeLLMClient(script=[])
     )
     assert agent.info.kind == "agent"
+
+
+def test_auto_is_the_default_and_uses_the_agent_when_settings_resolve() -> None:
+    fake = FakeLLMClient(script=[good_answer()])
+    code, run = serve("--model", "demo-model", client=fake)
+    assert code == 0
+    assert health_of(run)["kind"] == "agent" and health_of(run)["model"] == "demo-model"
+    response = TestClient(run.calls[0]).post("/api/chat", json=chat_json())
+    assert response.status_code == 200
+    assert cli._build_parser().parse_args(["check"]).explainer == "auto"
+
+
+def test_auto_without_settings_falls_back_to_template(capsys: pytest.CaptureFixture[str]) -> None:
+    code, run = serve(environ={"VOYAGER_BASE_URL": "https://example.invalid"})
+    captured = capsys.readouterr()
+    assert code == 0
+    assert captured.err.count("chat agent disabled") == 1
+    assert "VOYAGER_API_KEY" in captured.err and "VOYAGER_MODEL" in captured.err
+    assert "example.invalid" not in captured.out + captured.err
+    info = health_of(run)
+    assert info["kind"] == "template" and "VOYAGER_API_KEY" in info["reason"]
+    assert TestClient(run.calls[0]).post("/api/chat", json=chat_json()).status_code == 404
+
+
+def test_auto_without_langgraph_falls_back_to_template(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(sys.modules, "langgraph", None)
+    monkeypatch.setitem(sys.modules, "langgraph.graph", None)
+    code, run = serve("--model", "m", client=FakeLLMClient(script=[]))
+    assert code == 0 and "uv sync --extra agent" in capsys.readouterr().err
+    assert health_of(run)["kind"] == "template"
+    assert TestClient(run.calls[0]).post("/api/chat", json=chat_json()).status_code == 404
+
+
+def test_explicit_agent_still_exits_2_without_settings(capsys: pytest.CaptureFixture[str]) -> None:
+    code, run = serve("--explainer", "agent")
+    assert code == 2 and run.calls == [] and "VOYAGER_API_KEY" in capsys.readouterr().err
+
+
+def test_auto_model_flag_wins_over_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = FakeLLMClient(script=[])
+    monkeypatch.setattr(llm_factory, "_real_client", lambda settings, timeout_s: fake)
+    env = {"VOYAGER_API_KEY": FAKE_SECRET, "VOYAGER_BASE_URL": "https://x.invalid", "VOYAGER_MODEL": "env-model"}
+    _, run = serve(environ=env)
+    assert health_of(run)["model"] == "env-model"
+    _, run = serve("--model", "flag-model", environ=env)
+    assert health_of(run)["model"] == "flag-model"
+
+
+def test_check_auto_reports_explainer_and_reason_without_a_call(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake = FakeLLMClient(script=[])
+    assert cli.main(["check", "--demo", "--model", "m"], environ={}, llm_client=fake) == 0
+    assert fake.calls == []
+    assert models.HealthResponse.model_validate_json(capsys.readouterr().out).explainer.kind == "agent"
+    assert cli.main(["check", "--demo"], environ={}) == 0
+    captured = capsys.readouterr()
+    health = models.HealthResponse.model_validate_json(captured.out)
+    assert health.explainer.kind == "template" and "VOYAGER_API_KEY" in (health.explainer.reason or "")
+    assert "chat agent disabled" in captured.err
+
+
+def test_auto_falls_back_on_missing_artifacts_and_rejects_bad_extra_body(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    run = RecordingRun()
+    root = tmp_path.resolve() / "artifacts"
+    argv = ["serve", "--demo", "--model", "m", "--artifacts-dir", str(root)]
+    assert cli.main(argv, environ={}, llm_client=FakeLLMClient(script=[]), run=run) == 0
+    assert health_of(run)["kind"] == "agent"
+    monkey_args = cli._build_parser().parse_args(["check", "--model", "m", "--artifacts-dir", str(root)])
+    choice = cli._choose_agent(
+        monkey_args, demo.DemoEngine(), environ={}, llm_client=FakeLLMClient(script=[])
+    )
+    assert choice.parts is None and "alias-table build" in (choice.fallback_reason or "")
+    assert "chat agent disabled" in capsys.readouterr().err
+    code, run = serve("--model", "m", "--extra-body", "[1]", client=FakeLLMClient(script=[]))
+    assert code == 2 and run.calls == [] and "--extra-body" in capsys.readouterr().err

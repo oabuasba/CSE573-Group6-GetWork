@@ -119,7 +119,7 @@ def test_serve_artifacts_with_agent_uses_resolved_root(
     trial = tmp_path / "artifacts_trial"
     build_artifacts(trial / "v3")
     run = RecordingRun()
-    argv = ["serve", "--artifacts-dir", str(trial), "--explainer", "agent", "--model", "m"]
+    argv = ["serve", "--artifacts-dir", str(trial), "--model", "m"]  # --explainer auto is the default
     code = cli.main(argv, environ={}, llm_client=FakeLLMClient(script=[]),
                     embedding_client=FakeEmbeddingClient(dim=16), run=run)
     assert code == 0 and "v3" in capsys.readouterr().out
@@ -127,6 +127,19 @@ def test_serve_artifacts_with_agent_uses_resolved_root(
     body = client.get("/api/health").json()
     assert body["explainer"]["kind"] == "agent" and body["artifacts_dir"] == str(trial / "v3")
     assert client.post("/api/chat", json={}).status_code != 404
+
+
+def test_serve_artifacts_auto_without_settings_uses_template(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tmp_path / "art"
+    build_artifacts(root)
+    run = RecordingRun()
+    code = cli.main(["serve", "--artifacts-dir", str(root)], environ={}, run=run)
+    assert code == 0 and "chat agent disabled" in capsys.readouterr().err
+    client = TestClient(run.calls[0][0])
+    assert client.get("/api/health").json()["explainer"]["kind"] == "template"
+    assert client.post("/api/chat", json={}).status_code == 404
 
 
 def test_serve_artifacts_template(tmp_path: Path) -> None:

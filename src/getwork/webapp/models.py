@@ -185,12 +185,13 @@ class ExplainerInfo(BaseModel):
     model: str | None = None
     backend: str | None = None
     prompt_version: str | None = None
+    reason: str | None = None  # why the chat agent is off when --explainer auto fell back to the template
 
     # Keeps the old JSON shape when the new fields are None.
     @model_serializer(mode="wrap")
     def _omit_unset_agent_fields(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data = handler(self)
-        for key in ("backend", "prompt_version"):
+        for key in ("backend", "prompt_version", "reason"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data

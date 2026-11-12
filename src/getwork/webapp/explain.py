@@ -142,6 +142,10 @@ def _bullets(evidence: models.Evidence) -> list[str]:
 class TemplateExplainer:
     info: models.ExplainerInfo = models.ExplainerInfo(kind="template", model=None)
 
+    def __init__(self, reason: str | None = None) -> None:
+        if reason:
+            self.info = models.ExplainerInfo(kind="template", model=None, reason=reason)
+
     def explain(
         self, direction: models.Direction, query: models.DocumentView, match: models.DocumentView
     ) -> models.Explanation:

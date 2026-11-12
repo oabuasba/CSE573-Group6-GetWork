@@ -1,8 +1,13 @@
 # Web app runbook
 
 FastAPI backend (`webapp serve`, `webapp check`) and a React UI (`src/web`). It matches resumes to postings with the
-three systems (GetWork skill clusters, embeddings only, keywords only) and explains each match. The default explainer
-is rules-based; the optional agent is described in `src/getwork/agent/README.md`.
+three systems (GetWork skill clusters, embeddings only, keywords only) and explains each match. The default is
+`--explainer auto`: the chat agent (`src/getwork/agent/README.md`) is used when the LLM settings resolve (the same
+`VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL`, or `LLM_BACKEND=local` with `LOCAL_LLM_*`, that the structurer
+uses; `--backend`, `--model` and `--env-file` apply) and `langgraph` is installed. Otherwise the server starts with the
+rules-based explainer, prints one `chat agent disabled: ...` notice on stderr naming the missing variables (never values),
+and shows the reason as `explainer.reason` in `/api/health`. `--explainer agent` requires the agent (exit 2 if it cannot
+start); `--explainer template` never uses it. `webapp check` reports the choice and calls no model.
 
 Which artifacts are served is your choice, never fixed in code:
 
@@ -81,6 +86,10 @@ Pass: `http://127.0.0.1:8000/` shows the app and `/docs` shows the API. For fron
   `--embed-model` used for `doc-embed embed`.
 - Capability unavailable (503): read `capabilities` in `webapp check`; the reason names the missing setting, such as
   `VOYAGER_API_KEY`, or the flag that disabled it (`--no-structure`, `--no-embed`).
+- No "Chat about this suggestion" button: the button needs `explainer.kind` `"agent"`. Run `uv run webapp check --demo`
+  (or `--artifacts-dir ...`) and read `explainer`: `"template"` with a `reason` and the stderr notice name the missing
+  setting (for example `VOYAGER_API_KEY`, `VOYAGER_MODEL`) or `uv sync --extra agent`. It is also absent with
+  `--explainer template`.
 - Public host warning: `--host` other than 127.0.0.1 binds to a public address and there is no authentication and no
   CORS; keep the default unless you trust the network.
 - Run selection: the resolver picks the highest `vN` that has `alias/`, `documents/` and `taxonomy/`; if that run lacks a

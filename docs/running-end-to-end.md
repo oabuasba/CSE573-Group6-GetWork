@@ -68,7 +68,7 @@ Extras in `pyproject.toml`:
 | --- | --- | --- |
 | (core) | fastapi, uvicorn, pandas, pyarrow, numpy, scikit-learn, scipy, umap-learn, plotly, matplotlib, openai, pydantic, python-dotenv, langdetect | everything except the two below |
 | `embed` | sentence-transformers, torch | the `local` embedding backend (`EMBED_BACKEND=local` is the default). Not needed with `--embed-backend voyager` |
-| `agent` | langgraph | `webapp serve --explainer agent`. `langgraph` is also in the `dev` group, which a plain `uv sync` installs, so the extra matters for `--no-dev` installs |
+| `agent` | langgraph | `webapp serve` (the default `--explainer auto` needs it for chat). `langgraph` is also in the `dev` group, which a plain `uv sync` installs, so the extra matters for `--no-dev` installs |
 
 Combine extras in one command if you want both (`uv sync --extra embed --extra agent`); each `uv sync` makes the environment match the
 flags given, so repeat the extras every time.
@@ -165,7 +165,7 @@ Only the raw inputs are git-ignored; you place them yourself. The outputs of pre
                                  |
                                  v
                  FastAPI backend + React UI (src/web/dist) at http://127.0.0.1:8000
-                 optional: --explainer agent (LLM explanations and chat)
+                 default --explainer auto (LLM explanations and chat when LLM settings are set)
 ```
 
 ## 6. The pipeline, stage by stage
@@ -448,23 +448,28 @@ The full runbook is [`src/getwork/webapp/README.md`](../src/getwork/webapp/READM
 
 ## 9. The match agent
 
-The default explainer is the rules-based template. The optional LangGraph agent explains each match with claims verified against the two
-documents and answers follow-up questions in a per-match chat. It makes real model calls with your key.
+The LangGraph agent is the default explainer (`--explainer auto`). It explains each match with claims verified against the two
+documents and answers follow-up questions in a per-match chat (the "Chat about this suggestion" button). It makes real model calls with your key,
+using the model in `VOYAGER_MODEL`, the same as the structurer (so `--model` is not needed). If `VOYAGER_API_KEY`, `VOYAGER_BASE_URL`
+or `VOYAGER_MODEL` (or `LOCAL_LLM_*` with `LLM_BACKEND=local`) is missing, or `langgraph` is not installed, the server prints one
+`chat agent disabled: ...` notice naming the variables and falls back to the rules-based template; `/api/health` then shows `explainer.reason`.
 
 ```
 uv sync --extra agent
-uv run webapp check --demo --explainer agent --model MODEL          # no model call, but LLM settings must be configured (exit 2 otherwise); health shows "kind": "agent"
-uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
-uv run webapp serve --artifacts-dir artifacts_trial --explainer agent --backend voyager --model MODEL
+uv run webapp check --demo                                          # no model call; health shows the explainer ("agent", or "template" with a reason)
+uv run webapp serve --demo
+uv run webapp serve --artifacts-dir artifacts_trial
+uv run webapp serve --artifacts-dir artifacts_trial --explainer agent   # strict: exit 2 if the agent cannot start
+uv run webapp serve --artifacts-dir artifacts_trial --explainer template   # rules-based only, no chat
 ```
 
-Flags: `--explainer {template,agent}` (default `template`), `--agent-backend {voyager,local}`, `--agent-model ID`,
+Flags: `--explainer {auto,agent,template}` (default `auto`), `--agent-backend {voyager,local}`, `--agent-model ID`,
 `--agent-timeout SECONDS` (default 60). By default the agent uses the structuring backend and model (`--backend`, `--model`); the
 `--agent-*` flags override them. `--agent-backend local` reads `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY`. The agent
 reads its skill vocabulary from the resolved run folder.
 
 Failure behaviour: if the model is unreachable, rejects the request, times out, or its answer cannot be verified, the card shows a short
-plain-language message and keeps the evidence chips; there is no fallback to the rules-based text. Restart without `--explainer agent` to
+plain-language message and keeps the evidence chips; there is no fallback to the rules-based text. Restart with `--explainer template` to
 get template explanations. Only structured fields (titles, levels, skills, clusters, ranks, scores, the conversation) go to the model,
 never raw resume or posting text. Full runbook (MA-1 to MA-6): [`src/getwork/agent/README.md`](../src/getwork/agent/README.md).
 
@@ -483,6 +488,7 @@ Pass: both suites exit 0 with no key, model or network.
 | `uv` reports a stale lock, or tests fail on a new dependency | `uv.lock` is out of date after a `pyproject.toml` change: run `uv lock` online, then `uv sync`. Offline, run `uv run --offline --frozen pytest -q` (documented in the specs; the lock is currently consistent: `uv lock --check --offline` passes) |
 | `langgraph is not installed; run: uv sync --extra agent` | install the agent extra (also installed by plain `uv sync` through the dev group) |
 | `missing required setting(s): VOYAGER_API_KEY, ...` | `.env` lacks those names (the message lists names, never values); check `--env-file` and `--backend` |
+| No "Chat about this suggestion" button | the server fell back to the rules-based explainer: read the `chat agent disabled: ...` stderr notice, or `explainer.reason` in `uv run webapp check`; set the named variables (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL`) or install langgraph. Not shown either with `--explainer template` |
 | `/` shows "Frontend not built" | run `npm --prefix src/web ci` then `npm --prefix src/web run build` |
 | `artifacts directory not found` / `is not a complete artifacts run: missing folders ...` | pass the run folder itself (for example `artifacts_trial/v5`) or build the missing stages (`alias-table build`, `taxonomy build`, `doc-embed build`); the web app needs `alias/`, `documents/`, `taxonomy/` |
 | `webapp check` exits 2 naming `doc-embed build` or `doc-embed embed` | the chosen (highest complete) `vN` lacks that stage; run it, or pass an older complete run explicitly |

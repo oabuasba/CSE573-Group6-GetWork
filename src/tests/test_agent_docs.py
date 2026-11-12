@@ -7,7 +7,9 @@ pytestmark = pytest.mark.usefixtures("offline")
 REPO = Path(__file__).resolve().parents[2]
 RUNBOOK = REPO / "src" / "getwork" / "agent" / "README.md"
 REQUIRED_STRINGS = [
-    "webapp serve --explainer agent",
+    "webapp serve --demo",
+    "--explainer auto",
+    "--explainer template",
     "--agent-model",
     "uv sync --extra agent",
     "FakeLLMClient",
@@ -33,5 +35,6 @@ def test_readme_status() -> None:
     rows = [line for line in lines if line.startswith("|") and "explanation agent" in line]
     assert len(rows) == 1 and rows[0].rstrip().endswith("| Built |")
     text = "\n".join(lines)
-    assert "uv run webapp serve --demo --explainer agent" in text
+    assert "uv run webapp serve --demo" in text
+    assert "--explainer auto" not in text or "--explainer template" in text
     assert "--agent-model" in text

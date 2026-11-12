@@ -6,6 +6,7 @@ import os
 import sys
 import traceback
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,14 @@ if TYPE_CHECKING:
 
 AgentParts = tuple["AgentExplainer", "ChatService", Sequence[str]]
 
+
+@dataclass(frozen=True)
+class AgentChoice:
+    """The agent parts, or None with the reason --explainer auto fell back to the template."""
+
+    parts: AgentParts | None = None
+    fallback_reason: str | None = None
+
 WEB_DIST: Path = Path(__file__).resolve().parents[2] / "web" / "dist"
 DEFAULT_ARTIFACTS_DIR = "artifacts_trial"
 ARTIFACTS_DIR_ENV = "WEBAPP_ARTIFACTS_DIR"
@@ -36,7 +45,8 @@ STRUCTURE_DISABLED = "Disabled with --no-structure."
 EMBED_DISABLED = "Disabled with --no-embed."
 LOG_LEVEL = "info"
 DEFAULT_AGENT_TIMEOUT_S = 60.0
-EXPLAINERS = ("template", "agent")
+EXPLAINERS = ("auto", "agent", "template")
+AGENT_DISABLED_PREFIX = "chat agent disabled"
 
 
 class UsageError(ValueError):
@@ -74,7 +84,10 @@ def _build_parser(environ: Mapping[str, str] | None = None) -> argparse.Argument
     common.add_argument("--no-structure", action="store_true")
     common.add_argument("--no-embed", action="store_true")
     llm_factory.add_llm_args(common)
-    common.add_argument("--explainer", choices=EXPLAINERS, default="template")
+    common.add_argument("--explainer", choices=EXPLAINERS, default="auto",
+        help="auto uses the chat agent when the LLM settings and langgraph are available "
+        "(default); agent requires it; template never uses it",
+    )
     common.add_argument("--agent-backend", choices=BACKENDS, default=None)
     common.add_argument("--agent-model", default=None)
     common.add_argument("--agent-timeout", type=_positive_float, default=DEFAULT_AGENT_TIMEOUT_S)
@@ -273,11 +286,12 @@ def _serve(
     args: argparse.Namespace,
     app_engine: engine.Engine,
     run: Callable[..., None] | None,
-    agent: AgentParts | None,
+    choice: AgentChoice,
 ) -> int:
+    agent = choice.parts
     static_dir = _static_dir(args)
     secrets: Sequence[str] = agent[2] if agent else ()
-    explainer = agent[0] if agent else explain.TemplateExplainer()
+    explainer = agent[0] if agent else explain.TemplateExplainer(reason=choice.fallback_reason)
     app = api.create_app(app_engine, explainer, static_dir=static_dir, secrets=secrets)
     if agent:
         from getwork.agent.api import register_chat_routes
@@ -300,6 +314,32 @@ def _serve(
         run = uvicorn.run
     run(app, host=args.host, port=args.port, log_level=LOG_LEVEL)
     return 0
+
+
+def _choose_agent(
+    args: argparse.Namespace,
+    app_engine: engine.Engine,
+    *,
+    environ: Mapping[str, str],
+    llm_client: LLMClient | None,
+) -> AgentChoice:
+    """Explicit agent errors propagate; auto falls back on missing settings, but a bad --extra-body is a usage error."""
+    if args.explainer == "template":
+        return AgentChoice()
+    llm_factory.parse_extra_body(args.extra_body)
+    try:
+        parts = build_agent(args, engine=app_engine, environ=environ, llm_client=llm_client)
+        return AgentChoice(parts=parts)
+    except (ConfigError, RuntimeError, ValueError, OSError) as exc:
+        if args.explainer == "agent":
+            raise
+        reason = str(exc)
+        print(
+            f"{AGENT_DISABLED_PREFIX}: {reason}. Using the rules-based explainer; "
+            "pass --explainer template to silence this.",
+            file=sys.stderr,
+        )
+        return AgentChoice(fallback_reason=reason)
 
 
 def _check(app_engine: engine.Engine, info: models.ExplainerInfo) -> int:
@@ -333,18 +373,15 @@ def main(
     except (UsageError, engine.EngineLoadError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    agent = None
-    if args.explainer == "agent":
-        try:
-            agent = build_agent(
-                args,
-                engine=app_engine,
-                environ=env,
-                llm_client=llm_client,
-            )
-        except (ConfigError, RuntimeError, ValueError, OSError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
+    try:
+        choice = _choose_agent(
+            args, app_engine, environ=env, llm_client=llm_client
+        )
+    except (ConfigError, RuntimeError, ValueError, OSError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     if args.command == "check":
-        return _check(app_engine, agent[0].info if agent else explain.TemplateExplainer.info)
-    return _serve(args, app_engine, run, agent)
+        parts = choice.parts
+        info = parts[0].info if parts else explain.TemplateExplainer(reason=choice.fallback_reason).info
+        return _check(app_engine, info)
+    return _serve(args, app_engine, run, choice)

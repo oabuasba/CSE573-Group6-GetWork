@@ -2352,6 +2352,21 @@
         }
       },
       "notes": "User request 2026-11-11. Two parallel frontend developers (A: result card/chat; B: About page). Not in specs: planner list (match-agent AC-22/AC-24, web-app card + About descriptions). Commit when reviewed; ask before pushing. | BUILT + reviewed 2026-11-11; committed locally (2aac457 + docs). Not pushed: awaiting user."
+    },
+    "agent-default": {
+      "spec": null,
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "AD-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "AD",
+          "notes": "--explainer auto default (agent when LLM settings + langgraph available, else template with stderr notice + health reason); model = same backend/model as structurer (VOYAGER_MODEL), nothing hard-coded. User wording \"same qwen model as the relay\" interpreted as the Voyager endpoint model in VOYAGER_MODEL; confirm with user. Reviewed pass (round 2). Non-blocking: cli.py ~387 lines (split agent wiring), minor style, weak assertion in test_readme_status. Spec text for web-app T-9 / match-agent T-13 still to be updated by planner."
+        }
+      },
+      "notes": "User request 2026-11-11: make chat about results a default feature; project goal = conversational agent explaining matches. Planner list: web-app T-9 / match-agent T-13 text (explainer default, auto mode, health reason). Commit locally when reviewed; ask before pushing."
     }
   },
   "adhoc": {

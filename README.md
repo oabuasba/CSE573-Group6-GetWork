@@ -14,7 +14,7 @@ New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the sing
 | Document embeddings (`doc-embed`) | Built |
 | Retrieval (B1+, B2, Full) | Built |
 | Web app (FastAPI backend, React UI, deterministic explainer; try `webapp serve --demo`) | Built |
-| LLM explanation agent (`webapp serve --explainer agent`, `src/getwork/agent`) | Built |
+| LLM explanation agent and chat (default in `webapp serve` when the LLM settings are present; `src/getwork/agent`) | Built |
 | Evaluation | Planned |
 
 ## Architecture
@@ -47,7 +47,7 @@ New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the sing
                                    |
                                    v
    [BUILT, demo data] FastAPI backend + React UI + template explainer
-   [BUILT, optional extra] LLM explanation agent + chat (webapp serve --explainer agent)
+   [BUILT, optional extra] LLM explanation agent + chat (default when LLM settings are set)
 ```
 
 ## Prerequisites
@@ -101,12 +101,12 @@ uv run webapp serve --artifacts-dir artifacts_trial
 
 See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
 
-The default explainer is the rules-based template. To use the explanation agent and the per-match chat, install the extra and add the agent flags (the model call is made by you, with your own key; see `src/getwork/agent/README.md`):
+The explanation agent and the per-match chat are the default (`--explainer auto`). They use the same LLM settings and model as the structurer (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL` in `.env`, or `LLM_BACKEND=local` with `LOCAL_LLM_*`) and need `langgraph` (`uv sync --extra agent`, or a plain `uv sync`). The model calls are made by you, with your own key; see `src/getwork/agent/README.md`. If a setting is missing the server prints a `chat agent disabled: ...` notice and falls back to the rules-based explainer (no chat button):
 
 ```
-uv sync --extra agent
-uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
-# optional: --agent-backend voyager|local, --agent-model MODEL, --agent-timeout SECONDS (default 60)
+uv run webapp serve --demo
+# optional: --explainer template (no agent) | agent (fail if it cannot start), --model MODEL (default VOYAGER_MODEL),
+#           --agent-backend voyager|local, --agent-model MODEL, --agent-timeout SECONDS (default 60)
 ```
 
 ## Preprocess and structure
