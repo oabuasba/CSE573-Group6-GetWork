@@ -258,3 +258,41 @@ test("chat works when storage writes fail", async () => {
   await ask(user, "Why?");
   expect(await screen.findByText(agent.chat.claims[0].text)).toBeInTheDocument();
 });
+
+test("back to results from the disabled state marks returning", async () => {
+  seed();
+  const user = userEvent.setup();
+  render(<ChatPage matchId={first.id} health={{ ...health, chat: { enabled: false } }} fetchImpl={routedFetch()} />);
+  expect(snapshot().returning).toBe(false);
+  await user.click(screen.getByRole("link", { name: "Back to results" }));
+  expect(snapshot().returning).toBe(true);
+});
+
+test("start over is disabled while the request is pending", async () => {
+  const pendingChat = vi.fn(() => new Promise(() => {}));
+  const { user } = setup({ fetchImpl: routedFetch({ chat: pendingChat }) });
+  await ask(user, "Why?");
+  expect(screen.getByRole("button", { name: "Start over" })).toBeDisabled();
+});
+
+test("a failed user turn is not stored and is absent from the next history", async () => {
+  let fail = true;
+  const fetchImpl = routedFetch({ chat: () => (fail ? reply(agent.chat_error, 502) : reply(agent.chat)) });
+  const { user } = setup({ fetchImpl });
+  await ask(user, "First?");
+  await screen.findByRole("alert");
+  expect(loadConversation(first.id)).toEqual([]);
+  fail = false;
+  await ask(user, "Second?");
+  await screen.findByText(agent.chat.claims[0].text);
+  const sent = bodies(fetchImpl, "/api/chat");
+  expect(sent.map((b) => b.message)).toEqual(["First?", "Second?"]);
+  expect(sent[1].history).toEqual([]);
+});
+
+test("the focus match card shows its evidence chips", () => {
+  setup();
+  const card = screen.getByRole("region", { name: "The suggestion" }).querySelector("article");
+  expect(first.evidence).toBeTruthy();
+  expect(card.querySelectorAll(".chip").length).toBeGreaterThan(0);
+});

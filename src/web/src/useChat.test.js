@@ -81,6 +81,21 @@ test("history skips an unanswered turn", async () => {
   expect(bodyOf(fetchImpl, 2).history.map((h) => h.content)).toEqual(["second", agent.chat.reply]);
 });
 
+test("a new message after a failure replaces the failed turn", async () => {
+  const fetchImpl = vi
+    .fn()
+    .mockResolvedValueOnce(reply(agent.chat_error, 502))
+    .mockResolvedValue(reply(agent.chat));
+  const onTurns = vi.fn();
+  const { result } = renderHook(() => useChat({ ...props(fetchImpl), onTurns }));
+  act(() => result.current.send("first"));
+  await waitFor(() => expect(result.current.status).toBe("error"));
+  act(() => result.current.send("second"));
+  await waitFor(() => expect(result.current.status).toBe("idle"));
+  expect(result.current.turns.map((t) => t.content ?? t.reply)).toEqual(["second", agent.chat.reply]);
+  expect(onTurns.mock.calls.at(-1)[0].map((t) => t.role)).toEqual(["user", "assistant"]);
+});
+
 test("a second send while thinking is ignored", async () => {
   let resolve;
   const fetchImpl = vi.fn(() => new Promise((r) => { resolve = r; }));

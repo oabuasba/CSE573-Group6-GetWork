@@ -292,6 +292,17 @@ test("returning tolerates an unknown expanded id", () => {
   }
 });
 
+test("returning ignores a snapshot with null entries in matches", () => {
+  seed();
+  const stored = snapshotOf();
+  window.sessionStorage.setItem(
+    "getwork.results.v1",
+    JSON.stringify({ ...stored, returning: true, response: { ...stored.response, matches: [null] } }),
+  );
+  render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);
+  expect(screen.queryByRole("heading", { name: "Results" })).not.toBeInTheDocument();
+});
+
 test("no restore without the flag or for the other direction", () => {
   seed();
   const first = render(<FindPage direction="resume_to_posting" health={agentHealth} fetchImpl={agentFetch()} />);

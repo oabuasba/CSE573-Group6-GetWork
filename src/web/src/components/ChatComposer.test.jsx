@@ -35,6 +35,15 @@ test("blank and composing input is not sent", async () => {
   expect(onSend).not.toHaveBeenCalled();
 });
 
+test("enter during an IME composition (keyCode 229) is not sent", async () => {
+  const user = userEvent.setup();
+  const onSend = vi.fn();
+  render(<ChatComposer onSend={onSend} />);
+  await user.type(box(), "text");
+  fireEvent.keyDown(box(), { key: "Enter", keyCode: 229 });
+  expect(onSend).not.toHaveBeenCalled();
+});
+
 test("rows follow the draft and the cap", () => {
   render(<ChatComposer onSend={vi.fn()} />);
   expect(box()).toHaveAttribute("rows", "1");

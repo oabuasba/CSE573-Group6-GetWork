@@ -115,7 +115,8 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, 
 function restoreSnapshot(direction) {
   const snap = loadResults();
   if (snap?.returning !== true || snap.direction !== direction) return null;
-  const knownId = snap.response.matches.some((m) => m.id === snap.expandedId);
+  if (!snap.response.matches.every((m) => m !== null && typeof m === "object")) return null;
+  const knownId = snap.response.matches.some((m) => m?.id === snap.expandedId);
   return { response: snap.response, expandedId: knownId ? snap.expandedId : null };
 }
 

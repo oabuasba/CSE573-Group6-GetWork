@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "vitest-axe";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import App from "./App.jsx";
+import ChatPage from "./pages/ChatPage.jsx";
 import FindPage from "./pages/FindPage.jsx";
+import { saveResults } from "./resultsSession.js";
 import contract from "./fixtures/contract.json";
 import agent from "./fixtures/contract_agent.json";
 
@@ -114,3 +116,77 @@ test("no axe violations with all points expanded", async () => {
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
 
+test("no axe violations on the find page with the example select", async () => {
+  const user = userEvent.setup();
+  const { container } = render(
+    <FindPage direction="resume_to_posting" health={health} fetchImpl={fakeFetch(reply(contract.match))} />,
+  );
+  await user.click(screen.getByRole("button", { name: "Pick an example" }));
+  await screen.findByRole("combobox", { name: /Example/ });
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations with the chat link", async () => {
+  const { container, user } = await openAgentCard(reply(agent.explain_agent));
+  await screen.findByRole("link", { name: "Chat about this suggestion" });
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  expect(user).toBeDefined();
+});
+
+const chatHealth = { ...health, chat: { enabled: true, model: "demo-model" } };
+const focus = contract.match.matches[0];
+
+function renderChat({ chat, health: h = chatHealth, id = focus.id, seed = true } = {}) {
+  if (seed) saveResults({ direction: "resume_to_posting", response: contract.match, expandedId: null });
+  const fetchImpl = vi.fn(async (path) => {
+    if (path.startsWith("/api/chat")) return chat();
+    return reply(contract.explain);
+  });
+  const user = userEvent.setup();
+  return { user, ...render(<ChatPage matchId={id} health={h} fetchImpl={fetchImpl} />) };
+}
+
+async function sendMessage(user) {
+  await user.type(screen.getByLabelText("Your question"), "Why?");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+}
+
+const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.tagName[1]));
+
+test("no axe violations on the chat page empty", async () => {
+  const { container } = renderChat({ chat: () => reply(agent.chat) });
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  expect(headingLevels()).toEqual([1, 2, 3, 2]);
+});
+
+test("no axe violations on the chat page with turns", async () => {
+  const { container, user } = renderChat({ chat: () => reply(agent.chat) });
+  await sendMessage(user);
+  await screen.findByText(agent.chat.claims[0].text);
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations on the chat page while pending", async () => {
+  const { container, user } = renderChat({ chat: () => new Promise(() => {}) });
+  await sendMessage(user);
+  await screen.findByRole("status");
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations on the chat page with an error", async () => {
+  const { container, user } = renderChat({ chat: () => reply(agent.chat_error, 502) });
+  await sendMessage(user);
+  await screen.findByRole("alert");
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations on the chat page when chat is disabled", async () => {
+  const off = { ...health, chat: { enabled: false, reason: "Set VOYAGER_API_KEY to enable chat." } };
+  const { container } = renderChat({ chat: () => reply(agent.chat), health: off });
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations on the chat page without a session", async () => {
+  const { container } = renderChat({ chat: () => reply(agent.chat), seed: false });
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});

@@ -2394,7 +2394,7 @@
     },
     "ui-polish-3": {
       "spec": "specs/features/ui-polish-3.html",
-      "phase": "building",
+      "phase": "done",
       "planner_agent": "a5242b49a97f886cb",
       "branch": "dev",
       "tasks": {
@@ -2460,13 +2460,13 @@
           "notes": "large Reviewer non-blocking: disabled state Back-to-results should set returning flag when snapshot exists; add tests (Start over disabled while thinking, failed turn not stored, evidence chips); null guard m?.id in restoreSnapshot; a11y.test trailing blank line."
         },
         "T-9": {
-          "phase": "building",
+          "phase": "merged",
           "deps": [
             "T-4",
             "T-8"
           ],
           "batch": null,
-          "notes": ""
+          "notes": " Reviewed pass. Nits: a11y.test noise assertion; running-end-to-end.md says \"button\" should be \"link\", footer sentence placement; T-9 text says seven states, AC says six."
         }
       },
       "notes": "User 2026-11-11: chat button -> new claude.ai-style chat page for that one match; example picker -> dropdown; three controls on one line. Waiting on planner. Approved by user 2026-11-11; start building after AD-4 developer finishes (in place on dev, batches: T-1/T-2/T-3 ; T-5/T-6/T-7 ; then T-4/T-8 ; then T-9). Chat page/thread must render ChatResponse.note (fixed omitted-claims note) and style it.",

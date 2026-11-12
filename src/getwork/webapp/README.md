@@ -82,6 +82,13 @@ Pass: `http://127.0.0.1:8000/` shows the app and `/docs` shows the API. For fron
 `npm --prefix src/web run dev` (a mock API by default; set `GETWORK_REAL_API=1` to proxy to the real server, and
 `GETWORK_API_HOST` / `GETWORK_API_PORT` to change its address, default 127.0.0.1 and 8000). Tests: `npm --prefix src/web test`.
 
+"Chat about this suggestion" is a link in an expanded result card that opens a separate chat page (`#/chat/<id>`). The last
+results and the conversations are kept only in the browser tab (`sessionStorage`) and are lost when the tab closes; a new search
+clears the conversations and "Start over" clears one. "Back to results" restores the results with the same card open. To try the
+chat page run `uv run webapp serve` with chat enabled; the `npm run dev` mock server has no `/api/chat` endpoint. The footer follows
+the content (at the bottom of short pages, after it on long ones). Layout (sticky footer, one-row controls, the composer staying at
+the bottom of a long conversation, Back and Forward) cannot be checked in jsdom and is a visual check you run yourself.
+
 ## WA-6 troubleshooting
 
 - Frontend not built: `/` shows "Frontend not built"; run the build above.

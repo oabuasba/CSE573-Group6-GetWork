@@ -39,7 +39,11 @@ function ChatDisabled({ reason, snapshot }) {
   return (
     <StateShell>
       <Notice kind="warning" label="Chat is unavailable.">{reason ?? UNAVAILABLE}</Notice>
-      <p><a className="link" href={back.href}>{back.text}</a></p>
+      <p>
+        <a className="link" href={back.href} onClick={snapshot ? () => setReturning(true) : undefined}>
+          {back.text}
+        </a>
+      </p>
     </StateShell>
   );
 }

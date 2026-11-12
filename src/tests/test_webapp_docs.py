@@ -10,7 +10,7 @@ RUNBOOK = REPO / "src" / "getwork" / "webapp" / "README.md"
 REQUIRED_STRINGS = (
     "webapp serve --demo", "webapp check", "artifacts_trial", "--artifacts-dir artifacts",
     "npm --prefix src/web ci", "npm --prefix src/web run build", "EMBED_BACKEND",
-    "no authentication", "WEBAPP_ARTIFACTS_DIR",
+    "no authentication", "WEBAPP_ARTIFACTS_DIR", "Chat about this suggestion", "sessionStorage",
 )
 
 

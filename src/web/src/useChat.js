@@ -2,6 +2,9 @@ import { useCallback, useRef, useState } from "react";
 import { postChat } from "./api.js";
 import { toHistory } from "./chatHistory.js";
 
+// A trailing user turn means its request failed; a new message replaces it.
+const withoutUnansweredTurn = (turns) => (turns.at(-1)?.role === "user" ? turns.slice(0, -1) : turns);
+
 export function useChat({
   direction,
   query,
@@ -64,9 +67,10 @@ export function useChat({
   const send = useCallback(
     (message) => {
       if (busy.current) return;
-      historySnapshot.current = toHistory(turnsRef.current);
+      const answered = withoutUnansweredTurn(turnsRef.current);
+      historySnapshot.current = toHistory(answered);
       lastMessage.current = message;
-      turnsRef.current = [...turnsRef.current, { role: "user", content: message }];
+      turnsRef.current = [...answered, { role: "user", content: message }];
       setTurns(turnsRef.current);
       post(message);
     },

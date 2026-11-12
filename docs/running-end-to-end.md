@@ -469,6 +469,13 @@ Flags: `--explainer {auto,agent,template}` (default `auto`), `--agent-backend {v
 `--agent-*` flags override them. `--agent-backend local` reads `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY`. The agent
 reads its skill vocabulary from the resolved run folder.
 
+"Chat about this suggestion" is a link in an expanded result card that opens a separate chat page (`#/chat/<id>`). The last results and
+the conversations are kept only in the browser tab (`sessionStorage`) and are lost when the tab closes; a new search clears the
+conversations, and "Start over" clears one. "Back to results" restores the results with the same card open. To try the chat page, run
+`uv run webapp serve` with chat enabled (the variables above); the `npm run dev` mock server has no `/api/chat` endpoint, so the page
+shows its unavailable state there. The page layout (footer at the bottom of short pages, one-row controls, the composer staying at the
+bottom of a long conversation, Back and Forward) cannot be checked in jsdom and needs a visual check by you in a real browser. The footer follows the content.
+
 Failure behaviour: if the model is unreachable, rejects the request, times out, or its answer cannot be verified, the chat shows a short
 plain-language message; the match explanation is separate and always rules-based. Restart with `--explainer template` to
 remove the chat. Only structured fields (titles, levels, skills, clusters, ranks, scores, the conversation) go to the model,
