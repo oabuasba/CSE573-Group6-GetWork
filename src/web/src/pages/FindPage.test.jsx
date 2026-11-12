@@ -236,3 +236,45 @@ test("one cta button with chat open", async () => {
   await screen.findByRole("heading", { name: "Ask about this match" });
   expect(ctaCount(container)).toBe(1);
 });
+
+async function showResults(user) {
+  await fillAndSubmit(user);
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+}
+const toggle = (name) => screen.getByRole("button", { name });
+const understoodPanel = () => document.getElementById(toggle(/details$/).getAttribute("aria-controls"));
+
+test("understood card is closed by default", async () => {
+  const { user } = setup(routedFetch());
+  await showResults(user);
+  expect(screen.getByRole("heading", { name: "What we understood" })).toBeInTheDocument();
+  expect(toggle("Show details")).toHaveAttribute("aria-expanded", "false");
+  expect(understoodPanel()).toBeEmptyDOMElement();
+  expect(screen.queryByText(/years of experience/)).not.toBeInTheDocument();
+});
+
+test("understood card opens, shows the same content and toggles closed", async () => {
+  const { user } = setup(routedFetch());
+  await showResults(user);
+  await user.click(toggle("Show details"));
+  const button = toggle("Hide details");
+  expect(button).toHaveAttribute("aria-expanded", "true");
+  expect(button).toHaveAttribute("aria-controls", understoodPanel().id);
+  const panel = understoodPanel();
+  expect(panel).toBeVisible();
+  expect(panel).toHaveTextContent("Frontend Developer, Associate, 3 years of experience");
+  expect(panel).toHaveTextContent("Front-end");
+  await user.click(button);
+  expect(toggle("Show details")).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByText(/years of experience/)).not.toBeInTheDocument();
+});
+
+test("understood card resets to closed when new results arrive", async () => {
+  const { user } = setup(routedFetch());
+  await showResults(user);
+  await user.click(toggle("Show details"));
+  expect(toggle("Hide details")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+  expect(toggle("Show details")).toHaveAttribute("aria-expanded", "false");
+});

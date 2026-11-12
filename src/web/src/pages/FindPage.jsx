@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { describeError, NETWORK_ERROR_CODE, postMatch } from "../api.js";
 import ChatPanel from "../components/ChatPanel.jsx";
 import ExplainPanel from "../components/ExplainPanel.jsx";
@@ -22,14 +22,32 @@ const COPY = {
 const IDLE = { status: "idle", response: null, error: null, system: null };
 
 function UnderstoodCard({ query }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   return (
     <section className="card" aria-labelledby="understood-heading">
       <h3 id="understood-heading">What we understood</h3>
-      <p>
-        {query.title || "Untitled"}, {query.level}
-        {query.years_experience != null && `, ${query.years_experience} years of experience`}
-      </p>
-      <GroupedSkills skills={query.skills} />
+      <button
+        type="button"
+        className="btn btn-secondary"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-describedby="understood-heading"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? "Hide details" : "Show details"}
+      </button>
+      <div id={panelId} hidden={!open}>
+        {open && (
+          <>
+            <p>
+              {query.title || "Untitled"}, {query.level}
+              {query.years_experience != null && `, ${query.years_experience} years of experience`}
+            </p>
+            <GroupedSkills skills={query.skills} />
+          </>
+        )}
+      </div>
     </section>
   );
 }

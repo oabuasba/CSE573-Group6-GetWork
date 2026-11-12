@@ -61,6 +61,19 @@ test("no axe violations in result and error states", async () => {
   await searchAndAxe(reply(contract.match));
 });
 
+test("no axe violations with the understood card open", async () => {
+  const user = userEvent.setup();
+  const { container } = render(
+    <FindPage direction="resume_to_posting" health={health} fetchImpl={fakeFetch(reply(contract.match))} />,
+  );
+  await user.click(screen.getByRole("button", { name: "Fill in a form" }));
+  await user.type(screen.getByLabelText("Skills"), "Vue");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  await screen.findByRole("heading", { name: "Results" });
+  await user.click(screen.getByRole("button", { name: "Show details" }));
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
 test("no axe violations with an error alert", async () => {
   await searchAndAxe(reply(contract.error, 503));
 });
