@@ -7,7 +7,6 @@ from getwork.agent.models import (
     DEFAULT_TIMEOUT_S,
     MAX_LLM_CALLS,
     MAX_TOOL_STEPS,
-    MAX_VERIFY_RETRIES,
     PROMPT_VERSION,
     AgentResult,
     ChatMessage,
@@ -30,18 +29,15 @@ class AgentConfig:
     extra_body: Mapping[str, object] | None = None
     max_tool_steps: int = MAX_TOOL_STEPS
     max_llm_calls: int = MAX_LLM_CALLS
-    max_verify_retries: int = MAX_VERIFY_RETRIES
     timeout_s: float = DEFAULT_TIMEOUT_S
     retry: RetryConfig = RetryConfig()
 
     def __post_init__(self) -> None:
-        """ValueError for an empty model, max_tool_steps < 0, max_llm_calls < 1, max_verify_retries < 0,
-        timeout_s <= 0."""
+        """ValueError for an empty model, max_tool_steps < 0, max_llm_calls < 1, timeout_s <= 0."""
         problems = {
             "model": not self.model.strip(),
             "max_tool_steps": self.max_tool_steps < 0,
             "max_llm_calls": self.max_llm_calls < 1,
-            "max_verify_retries": self.max_verify_retries < 0,
             "timeout_s": self.timeout_s <= 0,
         }
         for name, is_bad in problems.items():
@@ -60,12 +56,10 @@ class Turn:
     trace: list[ToolTrace] = field(default_factory=list)
     stats: CallStats = field(default_factory=CallStats)
     tool_steps: int = 0
-    verify_retries: int = 0
-    feedback: str | None = None  # text for the next prompt (tool-limit or verifier violations)
+    feedback: str | None = None  # text for the next prompt (tool limit or a rejected reply)
     pending: Action | None = None  # the tool request decide parsed
     answer: Action | None = None  # the answer decide parsed
-    route: str = "decide"  # "decide" | "run_tool" | "verify" | "finish" | "fail" | "end"
+    route: str = "decide"  # "decide" | "run_tool" | "finish" | "fail" | "end"
     failure_reason: FailureReason | None = None  # set by a node before it routes to "fail"
-    dropped_claims: int = 0  # claims the verifier removed from the final answer
     failure_detail: str | None = None  # redacted cause of the failure, for the log only
     result: AgentResult | None = None

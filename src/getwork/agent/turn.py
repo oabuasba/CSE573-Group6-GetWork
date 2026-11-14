@@ -1,6 +1,5 @@
 """Node logic of one agent turn as plain methods; graph.py only wires them (no LangGraph import)."""
 
-import dataclasses
 import time
 from collections.abc import Callable, Sequence
 from typing import Literal
@@ -8,17 +7,15 @@ from typing import Literal
 from getwork.agent import grounding, prompt, tools
 from getwork.agent.failure import redact_detail
 from getwork.agent.grounding import Vocabulary
-from getwork.agent.models import AgentResult, ChatMessage, Claim, FailureReason, ToolTrace, Usage
+from getwork.agent.models import AgentResult, ChatMessage, FailureReason, ToolTrace, Usage
 from getwork.agent.state import AgentConfig, Turn
 from getwork.llm.client import FatalLLMError, LLMClient, LLMError, LLMRequest, PermanentLLMError
 from getwork.llm.retry import RetriesExhausted, Throttle
 from getwork.llm.validated import ValidationExhausted, complete_validated
 
 MAX_PARSE_ATTEMPTS = 3
-MAX_FEEDBACK_VIOLATIONS = 8
 REPLY_EXCERPT_CHARS = 200
 NO_MORE_TOOLS = "No more tool calls are allowed; answer now."
-REJECTED_PREFIX = "Your last answer was rejected:"
 
 
 class AgentRunner:
@@ -107,42 +104,13 @@ class AgentRunner:
         turn.route = "decide"
         return turn
 
-    def verify(self, turn: Turn) -> Turn:
-        answer = turn.answer
-        if answer is None or answer.claims is None:
-            raise ValueError("verify needs an answer")
-        violations = grounding.verify_claims(
-            answer.claims, facts=turn.ctx.book.facts, scope=turn.ctx.docs, vocab=self.vocab
-        )
-        if not violations:
-            turn.route = "finish"
-        elif turn.verify_retries < self.cfg.max_verify_retries:
-            turn.verify_retries += 1
-            shown = violations[:MAX_FEEDBACK_VIOLATIONS]
-            turn.feedback = "\n".join([REJECTED_PREFIX, *shown])
-            turn.answer = None
-            turn.route = "decide"
-        else:
-            self._keep_verified_or_fail(turn=turn, claims=answer.claims, violations=violations)
-        return turn
-
-    def _keep_verified_or_fail(self, *, turn: Turn, claims: list[Claim], violations: list[str]) -> None:
-        """Retries are spent: show only the claims that verified, or fail when none did."""
-        kept = grounding.verified_claims(claims, violations)
-        if not kept:
-            self._route_to_fail(turn=turn, reason="unverified", detail="; ".join(violations))
-            return
-        turn.answer = dataclasses.replace(turn.answer, claims=kept)  # type: ignore[type-var]
-        turn.dropped_claims = len(claims) - len(kept)
-        turn.route = "finish"
-
     def finish(self, turn: Turn) -> Turn:
         answer = turn.answer
         if answer is None:
             raise ValueError("finish needs an answer")
-        turn.result = self._build_result(
-            turn, status="ok", claims=answer.claims or [], off_topic=answer.off_topic
-        )
+        reply = answer.text or ""
+        ungrounded = grounding.ungrounded_skills(reply, list(turn.ctx.docs.values()), self.vocab)
+        turn.result = self._build_result(turn, status="ok", reply=reply, ungrounded=ungrounded)
         turn.route = "end"
         return turn
 
@@ -150,7 +118,7 @@ class AgentRunner:
         if turn.failure_reason is None:
             raise ValueError("fail needs turn.failure_reason")
         turn.result = self._build_result(
-            turn, status="failed", claims=[], reason=turn.failure_reason, detail=turn.failure_detail
+            turn, status="failed", reason=turn.failure_reason, detail=turn.failure_detail
         )
         turn.route = "end"
         return turn
@@ -180,7 +148,7 @@ class AgentRunner:
     def _route_action(self, *, turn: Turn, action: prompt.Action) -> Turn:
         if action.kind == "answer":
             turn.answer = action
-            turn.route = "finish" if action.off_topic else "verify"
+            turn.route = "finish"
         elif turn.tool_steps >= turn.max_tool_steps:
             turn.feedback = NO_MORE_TOOLS
             turn.route = "decide"
@@ -200,20 +168,19 @@ class AgentRunner:
         turn: Turn,
         *,
         status: Literal["ok", "failed"],
-        claims: list[Claim],
+        reply: str = "",
         reason: FailureReason | None = None,
-        off_topic: bool = False,
         detail: str | None = None,
+        ungrounded: list[str] | None = None,
     ) -> AgentResult:
         usage = Usage(
             llm_calls=turn.stats.calls,
             tool_calls=len(turn.trace),
-            verify_retries=turn.verify_retries,
             elapsed_ms=int((self._clock() - turn.started) * 1000),
         )
         return AgentResult(
             status=status,
-            claims=claims,
+            reply=reply,
             facts=list(turn.ctx.book.facts.values()),
             trace=list(turn.trace),
             usage=usage,
@@ -221,15 +188,14 @@ class AgentRunner:
             backend=self.cfg.backend,
             prompt_version=self.cfg.prompt_version,
             failure_reason=reason,
-            off_topic=off_topic,
             failure_detail=detail,
-            dropped_claims=turn.dropped_claims,
+            ungrounded_skills=list(ungrounded or []),
         )
 
 
 def drive(runner: AgentRunner, turn: Turn) -> AgentResult:
     """Plain driver, the oracle for the graph: while turn.route != "end", call the node named by turn.route
-    (decide, run_tool, verify, finish, fail) and return turn.result (never None)."""
+    (decide, run_tool, finish, fail) and return turn.result (never None)."""
     while turn.route != "end":
         getattr(runner, turn.route)(turn)
     if turn.result is None:

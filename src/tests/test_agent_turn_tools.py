@@ -4,10 +4,11 @@ from agent_helpers import answer, make_runner, run, tool_call
 pytestmark = pytest.mark.usefixtures("offline")
 
 
-def test_tool_then_answer() -> None:
+def test_tool_then_plain_answer() -> None:
     runner, fake = make_runner([tool_call("compare_matches", id_a="j-1", id_b="j-2"), answer()])
     result = run(runner)
     assert result.status == "ok" and result.usage.llm_calls == 2 and result.usage.tool_calls == 1
+    assert result.reply == answer()
     step = result.trace[0]
     assert (step.tool, step.ok, step.fact_ids) == ("compare_matches", True, ["f5", "f6", "f7"])
     assert step.args == {"id_a": "j-1", "id_b": "j-2"}

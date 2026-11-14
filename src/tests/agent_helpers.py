@@ -7,7 +7,7 @@ from typing import Any
 
 from getwork.agent import facts, graph, grounding, models, state, tools, turn
 from getwork.agent import vocab as vocab_loader
-from getwork.agent.explainer import AgentExplainer, ChatService
+from getwork.agent.explainer import ChatService
 from getwork.llm.fake import FakeLLMClient
 from getwork.llm.retry import RetryConfig
 from getwork.webapp import demo, explain
@@ -61,9 +61,12 @@ def run(runner: turn.AgentRunner, max_tool_steps: int | None = None) -> models.A
     return turn.drive(runner, started)
 
 
-def answer(text: str = "Both list CSS.", **overrides: object) -> str:
-    claim = {"text": text, "doc_ids": ["query", "j-1"], "skills": ["CSS"], "facts": ["f1"], **overrides}
-    return json.dumps({"action": "answer", "claims": [claim]})
+def answer(text: str = "Both documents list CSS and JavaScript.") -> str:
+    return text
+
+
+def good_answer() -> str:
+    return answer("Both documents list JavaScript and CSS.")
 
 
 def tool_call(tool: str, **args: object) -> str:
@@ -72,12 +75,10 @@ def tool_call(tool: str, **args: object) -> str:
 
 def make_agent(
     script: list, *, vocab: grounding.Vocabulary | None = None, **cfg: Any
-) -> tuple[AgentExplainer, ChatService, FakeLLMClient]:
-    """Explainer and chat service over one scripted fake, the demo engine and the demo vocabulary."""
+) -> tuple[ChatService, FakeLLMClient]:
+    """Chat service over one scripted fake, the demo engine and the demo vocabulary."""
     runner, fake = make_runner(script, vocab=vocab or vocab_loader.demo_vocabulary(), **cfg)
-    compiled = graph.build_graph(runner)
-    eng = demo.DemoEngine()
-    return AgentExplainer(compiled, runner, eng), ChatService(compiled, runner, eng), fake
+    return ChatService(graph.build_graph(runner), runner, demo.DemoEngine()), fake
 
 
 def chat_request(**overrides: Any) -> models.ChatRequest:
@@ -92,23 +93,21 @@ def chat_request(**overrides: Any) -> models.ChatRequest:
     return models.ChatRequest.model_validate({**base, **overrides})
 
 
-SHARED_CLAIM = ("Both documents list JavaScript and CSS.", ["JavaScript", "CSS"], ["f1"])
-
-
-def good_answer() -> str:
-    text, skills, fact_ids = SHARED_CLAIM
-    return answer(text, skills=skills, facts=fact_ids)
+def outside_vocab() -> grounding.Vocabulary:
+    """Demo vocabulary plus two skills that appear in no demo document (Terraform, Cluster)."""
+    base = vocab_loader.demo_vocabulary()
+    return grounding.make_vocabulary([*base.skills.values(), "Terraform", "Cluster"], base.clusters)
 
 
 def make_client(script: list, *, vocab: grounding.Vocabulary | None = None):  # noqa: ANN201
-    """TestClient over the demo engine with the agent explainer and /api/chat registered."""
+    """TestClient over the demo engine with the rules explainer and /api/chat registered."""
     from fastapi.testclient import TestClient
 
     from getwork.agent.api import register_chat_routes
     from getwork.webapp import api
 
-    agent, chat, fake = make_agent(script, vocab=vocab)
-    app = api.create_app(demo.DemoEngine(), agent, secrets=[SECRET])
+    chat, fake = make_agent(script, vocab=vocab)
+    app = api.create_app(demo.DemoEngine(), explain.TemplateExplainer(), secrets=[SECRET])
     register_chat_routes(app, chat, secrets=[SECRET])
     return TestClient(app, raise_server_exceptions=False), fake
 

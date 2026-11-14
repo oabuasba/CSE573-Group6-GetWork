@@ -9,10 +9,10 @@ from getwork.agent.models import FailureReason
 pytestmark = pytest.mark.usefixtures("offline")
 
 FORBIDDEN = {"error", "exception", "traceback", "http", "api", "token", "key", "llm", "json", "model"}
-REASONS = ["timeout", "budget_exhausted", "llm_unavailable", "model_rejected", "invalid_reply", "unverified"]
+REASONS = ["timeout", "budget_exhausted", "llm_unavailable", "model_rejected", "invalid_reply"]
 
 
-def test_copy_covers_every_reason() -> None:
+def test_failure_copy_covers_every_reason() -> None:
     assert set(FAILURE_COPY) == set(get_args(FailureReason)) == set(REASONS)
     for reason in REASONS:
         message, hint = failure_copy(reason)
@@ -20,9 +20,6 @@ def test_copy_covers_every_reason() -> None:
     assert FAILURE_COPY["timeout"] == (
         "The assistant took too long to answer.",
         "Try again in a moment, or ask a shorter question.",
-    )
-    assert FAILURE_COPY["unverified"][1] == (
-        "Try asking in different words. The skills listed on the card are unaffected."
     )
     assert FAILURE_COPY["llm_unavailable"][1].endswith("to check the assistant's service.")
 

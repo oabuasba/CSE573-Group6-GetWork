@@ -1,9 +1,10 @@
 import json
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
 
-from getwork.agent import models
+from getwork.agent import models, prompt
 
 pytestmark = pytest.mark.usefixtures("offline")
 
@@ -29,12 +30,8 @@ def chat_request(**overrides: object) -> dict:
     return {**base, **overrides}
 
 
-def make_claim() -> models.Claim:
-    return models.Claim(text="Both list React.", doc_ids=["query", "j-1"], skills=["React"], facts=["f1"])
-
-
 def make_usage() -> models.Usage:
-    return models.Usage(llm_calls=1, tool_calls=0, verify_retries=0, elapsed_ms=5)
+    return models.Usage(llm_calls=1, tool_calls=0, elapsed_ms=5)
 
 
 def test_chat_request_limits() -> None:
@@ -62,11 +59,23 @@ def test_chat_request_limits() -> None:
             models.ChatRequest.model_validate(chat_request(**overrides))
 
 
-def test_claim_limits() -> None:
-    models.Claim(text="x" * 400, doc_ids=[], skills=[], facts=[])
-    for text in ("", "x" * 401):
-        with pytest.raises(ValidationError):
-            models.Claim(text=text, doc_ids=[], skills=[], facts=[])
+def test_failure_reasons_have_no_unverified() -> None:
+    assert set(get_args(models.FailureReason)) == {
+        "timeout", "budget_exhausted", "llm_unavailable", "model_rejected", "invalid_reply",
+    }  # fmt: skip
+    for gone in ("Claim", "OMITTED_NOTE", "MAX_CLAIMS", "MAX_CLAIM_CHARS", "MAX_VERIFY_RETRIES"):
+        assert not hasattr(models, gone)
+    assert models.MAX_REPLY_CHARS == 4000
+
+
+def test_default_prompt_is_agent_v3() -> None:
+    assert models.PROMPT_VERSION == "agent_v3"
+    assert prompt.load_system_prompt()
+
+
+def test_usage_and_chat_response_keys() -> None:
+    assert set(models.Usage.model_fields) == {"llm_calls", "tool_calls", "elapsed_ms"}
+    assert set(models.ChatResponse.model_fields) == {"reply", "trace", "usage", "explainer"}
 
 
 def test_models_round_trip() -> None:
@@ -74,40 +83,43 @@ def test_models_round_trip() -> None:
     trace = models.ToolTrace(tool="compare_matches", args={"a": "j-1"}, ok=True, fact_ids=["f1"])
     response = models.ChatResponse(
         reply="Both list React.",
-        claims=[make_claim()],
-        facts=[fact],
-        suggested_questions=["Why?"],
         trace=[trace],
         usage=make_usage(),
-        explainer={"kind": "agent", "model": "m", "backend": "voyager", "prompt_version": "agent_v2"},
+        explainer={"kind": "agent", "model": "m", "backend": "voyager", "prompt_version": "agent_v3"},
     )
-    for model in (fact, trace, make_claim(), make_usage(), response):
+    for model in (fact, trace, make_usage(), response):
         dumped = model.model_dump()
         assert type(model).model_validate(dumped).model_dump() == dumped
     request = models.ChatRequest.model_validate(chat_request())
     assert models.ChatRequest.model_validate(request.model_dump()) == request
 
 
-def test_as_record_keys_and_json() -> None:
-    result = models.AgentResult(
-        status="failed",
-        claims=[make_claim()],
-        facts=[],
-        trace=[models.ToolTrace(tool="t", args={}, ok=False, error="bad")],
-        usage=make_usage(),
-        model="m",
-        backend="voyager",
-        prompt_version="agent_v2",
-        failure_reason="timeout",
-    )
+def make_result(**overrides: object) -> models.AgentResult:
+    base = {
+        "status": "failed",
+        "reply": "",
+        "facts": [],
+        "trace": [models.ToolTrace(tool="t", args={}, ok=False, error="bad")],
+        "usage": make_usage(),
+        "model": "m",
+        "backend": "voyager",
+        "prompt_version": "agent_v3",
+        "failure_reason": "timeout",
+    }
+    return models.AgentResult(**{**base, **overrides})
+
+
+def test_agent_result_record_keys() -> None:
+    result = make_result()
     record = result.as_record()
     assert set(record) == {
-        "status", "failure_reason", "off_topic", "claims", "facts", "trace",
-        "usage", "model", "backend", "prompt_version", "dropped_claims",
+        "status", "failure_reason", "reply", "facts", "trace",
+        "usage", "model", "backend", "prompt_version", "ungrounded_skills",
     }  # fmt: skip
     assert json.loads(json.dumps(record)) == record
-    assert set(record["claims"][0]) == {"text", "doc_ids", "skills", "facts"}
-    assert record["claims"][0]["text"] == "Both list React."
+    assert record["ungrounded_skills"] == []
+    assert set(record["usage"]) == {"llm_calls", "tool_calls", "elapsed_ms"}
+    assert make_result(ungrounded_skills=["Terraform"]).as_record()["ungrounded_skills"] == ["Terraform"]
 
 
 def test_chat_response_has_no_fallback_fields() -> None:

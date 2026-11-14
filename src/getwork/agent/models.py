@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -22,22 +22,16 @@ FailureReason = Literal[
     "llm_unavailable",
     "model_rejected",
     "invalid_reply",
-    "unverified",
 ]
 QUERY_DOC: str = "query"
-PROMPT_VERSION: str = "agent_v2"
-OMITTED_NOTE: str = (
-    "Part of the answer was left out because it could not be checked against these two documents."
-)
+PROMPT_VERSION: str = "agent_v3"
 MAX_MESSAGE_CHARS: int = 1000
+MAX_REPLY_CHARS: int = 4000
 MAX_HISTORY: int = 20
 MAX_HISTORY_CHARS: int = 2000
 MAX_MATCH_REFS: int = 50
-MAX_CLAIMS: int = 8
-MAX_CLAIM_CHARS: int = 400
 MAX_TOOL_STEPS: int = 4
 MAX_LLM_CALLS: int = 6
-MAX_VERIFY_RETRIES: int = 2
 DEFAULT_TIMEOUT_S: float = 60.0
 AGENT_ERROR_CODE: str = "assistant_failed"
 AGENT_ERROR_STATUS: int = 502
@@ -56,13 +50,6 @@ class Fact(BaseModel):
     text: str  # code-generated sentence
 
 
-class Claim(BaseModel):
-    text: str = Field(min_length=1, max_length=MAX_CLAIM_CHARS)
-    doc_ids: list[str]
-    skills: list[str]  # every skill the text names, as spelled in the documents
-    facts: list[str]  # fact ids
-
-
 class ToolTrace(BaseModel):
     tool: str
     args: dict[str, Any]
@@ -74,7 +61,6 @@ class ToolTrace(BaseModel):
 class Usage(BaseModel):
     llm_calls: int
     tool_calls: int
-    verify_retries: int
     elapsed_ms: int
 
 
@@ -104,22 +90,17 @@ class ChatRequest(_Strict):
         return value.strip() if isinstance(value, str) else value
 
 
-class ChatResponse(BaseModel):  # only for a verified answer or an off-topic reply
-    reply: str  # claim texts joined by a space, or the fixed off-topic text
-    claims: list[Claim]
-    facts: list[Fact]
-    suggested_questions: list[str]  # at most 3, rules-generated
-    off_topic: bool = False
+class ChatResponse(BaseModel):
+    reply: str  # the model's text, at most MAX_REPLY_CHARS characters
     trace: list[ToolTrace]
     usage: Usage
     explainer: ExplainerInfo  # kind "agent"
-    note: str | None = None  # OMITTED_NOTE when unverifiable claims were dropped from the reply
 
 
 @dataclass(frozen=True)
 class AgentResult:
     status: Literal["ok", "failed"]
-    claims: list[Claim]  # empty when failed or off_topic
+    reply: str  # "" when failed
     facts: list[Fact]
     trace: list[ToolTrace]
     usage: Usage
@@ -127,23 +108,21 @@ class AgentResult:
     backend: str
     prompt_version: str
     failure_reason: FailureReason | None = None  # set exactly when status == "failed"
-    off_topic: bool = False
     failure_detail: str | None = None  # redacted cause for the log; deliberately not in as_record
-    dropped_claims: int = 0  # claims removed by the verifier from an otherwise ok answer
+    ungrounded_skills: list[str] = field(default_factory=list)  # vocabulary skills named but in no document
 
     def as_record(self) -> dict:
-        """JSON-serializable dict with exactly the keys: status, failure_reason, off_topic, claims, facts, trace,
-        usage, model, backend, prompt_version, dropped_claims (claims, facts, trace, usage via model_dump)."""
+        """JSON-serializable dict with exactly the keys: status, failure_reason, reply, facts, trace, usage, model,
+        backend, prompt_version, ungrounded_skills (facts, trace, usage via model_dump)."""
         return {
             "status": self.status,
             "failure_reason": self.failure_reason,
-            "off_topic": self.off_topic,
-            "claims": [claim.model_dump() for claim in self.claims],
+            "reply": self.reply,
             "facts": [fact.model_dump() for fact in self.facts],
             "trace": [step.model_dump() for step in self.trace],
             "usage": self.usage.model_dump(),
             "model": self.model,
             "backend": self.backend,
             "prompt_version": self.prompt_version,
-            "dropped_claims": self.dropped_claims,
+            "ungrounded_skills": list(self.ungrounded_skills),
         }

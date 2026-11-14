@@ -5,21 +5,19 @@ import sys
 import pytest
 from agent_helpers import VOCAB, answer, make_ctx, make_runner, tool_call
 
-from getwork.agent import graph, models, state, turn
+from getwork.agent import graph, grounding, models, state, turn
 from getwork.llm.client import FatalLLMError, TransientLLMError
 from getwork.llm.fake import FakeLLMClient
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-BAD = answer("Both list CSS and Kubernetes.", skills=["CSS", "Kubernetes"])
-OFF_TOPIC = '{"action": "answer", "off_topic": true}'
+OUTSIDE = answer("Both list CSS and Kubernetes.")
 CALL = tool_call("cluster_lookup", name="CSS")
 # (script, runner options, max_tool_steps)
 SCRIPTS = {
-    "off_topic": ([OFF_TOPIC], {}, None),
     "direct": ([answer()], {}, None),
-    "retry_then_ok": ([BAD, answer()], {}, None),
-    "unverified": ([BAD] * 3, {}, None),
+    "outside_skill": ([OUTSIDE], {}, None),
+    "empty_then_ok": ([""] * 2 + [answer()], {}, None),
     "tool_then_answer": ([tool_call("compare_matches", id_a="j-1", id_b="j-2"), answer()], {}, None),
     "tool_error": ([tool_call("compare_matches", id_a="j-1", id_b="j-9"), answer()], {}, None),
     "tool_limit": ([CALL, CALL, answer()], {"max_tool_steps": 1}, None),
@@ -27,12 +25,28 @@ SCRIPTS = {
     "endless_tools": ([CALL] * 10, {}, None),
     "fatal": ([FatalLLMError("no", status=401)], {}, None),
     "transient": ([TransientLLMError("down", status=503)] * 2, {}, None),
-    "unparsable": (["nope"] * 3, {}, None),
+    "unparsable": ([""] * 3, {}, None),
 }
 
 
 def summary(result: models.AgentResult) -> tuple:
-    return (result.status, result.claims, result.failure_reason, result.usage.llm_calls, result.off_topic)
+    return (
+        result.status,
+        result.reply,
+        result.failure_reason,
+        result.usage.llm_calls,
+        result.ungrounded_skills,
+    )
+
+
+def test_graph_matches_driver_with_tool() -> None:
+    script = SCRIPTS["tool_then_answer"][0]
+    plain_runner, _ = make_runner(list(script))
+    plain = turn.drive(plain_runner, plain_runner.new_turn(ctx=make_ctx(), question="Q", history=[]))
+    runner, _ = make_runner(list(script))
+    result = graph.run_agent(graph.build_graph(runner), runner, ctx=make_ctx(), question="Q", history=[])
+    assert result.status == "ok" and summary(result) == summary(plain)
+    assert [t.tool for t in result.trace] == ["compare_matches"] == [t.tool for t in plain.trace]
 
 
 @pytest.mark.parametrize("name", sorted(SCRIPTS))
@@ -51,10 +65,20 @@ def test_graph_matches_plain_driver(name: str) -> None:
     assert [t.tool for t in result.trace] == [t.tool for t in plain.trace]
 
 
+def test_no_verify_step_anywhere() -> None:
+    assert graph.NODE_NAMES == ("decide", "run_tool", "finish", "fail")
+    assert not hasattr(turn.AgentRunner, "verify")
+    assert not hasattr(grounding, "verify_claims")
+    with pytest.raises(TypeError):
+        state.AgentConfig(model="m", backend="b", max_verify_retries=1)  # type: ignore[call-arg]
+    runner, _ = make_runner([answer()])
+    assert "verify" not in graph.build_graph(runner).get_graph().nodes
+
+
 def test_run_agent_result_identity() -> None:
     runner, _ = make_runner([answer()])
     result = graph.run_agent(graph.build_graph(runner), runner, ctx=make_ctx(), question="Q", history=[])
-    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v2")
+    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v3")
     assert result.status == "ok" and json.dumps(result.as_record())
 
 
@@ -64,7 +88,7 @@ def test_recursion_limit_becomes_failure() -> None:
     runner = turn.AgentRunner(fake, cfg, VOCAB, sleep=lambda s: None)
     result = graph.run_agent(graph.build_graph(runner), runner, ctx=make_ctx(), question="Q", history=[])
     assert result.status == "failed" and result.failure_reason == "budget_exhausted"
-    assert result.claims == [] and 0 < len(fake.calls) < 500
+    assert result.reply == "" and 0 < len(fake.calls) < 500
 
 
 def test_unexpected_exception_propagates() -> None:

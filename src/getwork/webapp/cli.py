@@ -21,9 +21,9 @@ from getwork.structure.extract import ExtractConfig
 from getwork.webapp import api, artifacts, demo, engine, explain, models
 
 if TYPE_CHECKING:
-    from getwork.agent.explainer import AgentExplainer, ChatService
+    from getwork.agent.explainer import ChatService
 
-AgentParts = tuple["AgentExplainer", "ChatService", Sequence[str]]
+AgentParts = tuple["ChatService", Sequence[str]]
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ class AgentChoice:
     def chat_info(self) -> models.ChatInfo:
         if self.parts is None:
             return models.ChatInfo(enabled=False, reason=self.fallback_reason or CHAT_OFF_REASON)
-        info = self.parts[1].info
+        info = self.parts[0].info
         return models.ChatInfo(
             enabled=True, model=info.model, backend=info.backend, prompt_version=info.prompt_version
         )
@@ -265,7 +265,7 @@ def build_agent(
     environ: Mapping[str, str],
     llm_client: LLMClient | None,
 ) -> AgentParts:
-    """The agent explainer and chat service over one client (ADR-21: the structuring backend and model unless
+    """The chat service over one client (ADR-21: the structuring backend and model unless
     --agent-backend or --agent-model say otherwise), and the secrets to redact. Imports the agent lazily."""
     from getwork.agent import explainer, graph, state, turn, vocab
 
@@ -288,11 +288,7 @@ def build_agent(
     )
     runner = turn.AgentRunner(client=bundle.client, cfg=cfg, vocab=vocabulary, secrets=bundle.secrets)
     compiled = graph.build_graph(runner)
-    return (
-        explainer.AgentExplainer(graph=compiled, runner=runner, engine=engine),
-        explainer.ChatService(graph=compiled, runner=runner, engine=engine),
-        bundle.secrets,
-    )
+    return explainer.ChatService(graph=compiled, runner=runner, engine=engine), bundle.secrets
 
 
 def _loaded_root(args: argparse.Namespace, loaded: engine.Engine) -> Path:
@@ -315,7 +311,7 @@ def _serve(
 ) -> int:
     agent = choice.parts
     static_dir = _static_dir(args)
-    secrets: Sequence[str] = agent[2] if agent else ()
+    secrets: Sequence[str] = agent[1] if agent else ()
     app = api.create_app(
         app_engine, explain.TemplateExplainer(), static_dir=static_dir, secrets=secrets,
         chat=choice.chat_info,
@@ -323,7 +319,7 @@ def _serve(
     if agent:
         from getwork.agent.api import register_chat_routes
 
-        register_chat_routes(app, agent[1], secrets=secrets)
+        register_chat_routes(app, agent[0], secrets=secrets)
     if args.host not in LOOPBACK_HOSTS:
         print(
             f"warning: {args.host} is a public address and the server has no authentication; "

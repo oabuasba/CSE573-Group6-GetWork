@@ -17,6 +17,8 @@ REQUIRED_STRINGS = [
     "ungrounded_skills",
     "error share",
     "must differ from",
+    "agent_v3",
+    "outside these documents",
 ]
 
 

@@ -1,24 +1,25 @@
 import logging
 
 import pytest
-from agent_helpers import SECRET, chat_json, explain_json, good_answer, make_agent, make_client
+from agent_helpers import SECRET, chat_json, explain_json, make_client, outside_vocab
 from fastapi.testclient import TestClient
 
 from getwork.agent.api import register_chat_routes
 from getwork.agent.failure import FAILURE_COPY, AgentFailure
 from getwork.agent.models import ChatResponse
-from getwork.webapp import api, demo, models
+from getwork.webapp import api, demo, explain, models
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-REASONS = ["timeout", "budget_exhausted", "llm_unavailable", "model_rejected", "invalid_reply", "unverified"]
+REASONS = ["timeout", "budget_exhausted", "llm_unavailable", "model_rejected", "invalid_reply"]
+PLAIN = "Both documents list JavaScript and CSS."
 SECRET_MESSAGE = "ZEBRA-QUESTION-7"
 
 
 class StubService:
     """Chat service and explainer in one: raises what it is told to."""
 
-    info = models.ExplainerInfo(kind="agent", model="stub", backend="voyager", prompt_version="agent_v2")
+    info = models.ExplainerInfo(kind="agent", model="stub", backend="voyager", prompt_version="agent_v3")
 
     def __init__(self, error: Exception) -> None:
         self.error = error
@@ -37,13 +38,24 @@ def stub_client(error: Exception) -> TestClient:
     return TestClient(app, raise_server_exceptions=False)
 
 
-def test_chat_ok() -> None:
-    client, _ = make_client([good_answer()])
+def test_chat_success_shape() -> None:
+    client, _ = make_client([PLAIN])
     response = client.post("/api/chat", json=chat_json())
     assert response.status_code == 200
-    body = ChatResponse.model_validate(response.json())
-    assert body.reply == "Both documents list JavaScript and CSS." and body.explainer.kind == "agent"
-    assert client.get("/api/health").json()["explainer"]["kind"] == "agent"
+    body = response.json()
+    assert set(body) == {"reply", "trace", "usage", "explainer"}
+    assert set(body["usage"]) == {"llm_calls", "tool_calls", "elapsed_ms"}
+    assert body["explainer"]["prompt_version"] == "agent_v3"
+    parsed = ChatResponse.model_validate(body)
+    assert parsed.reply == PLAIN and parsed.explainer.kind == "agent"
+
+
+def test_reply_naming_outside_skills_is_returned() -> None:
+    text = "Learn Terraform, and think about a Cluster."
+    client, fake = make_client([text], vocab=outside_vocab())
+    response = client.post("/api/chat", json=chat_json())
+    assert response.status_code == 200 and response.json()["reply"] == text
+    assert len(fake.calls) == 1
 
 
 def test_chat_errors() -> None:
@@ -64,8 +76,7 @@ def test_chat_errors() -> None:
 
 
 def test_chat_not_registered() -> None:
-    agent, _, _ = make_agent([])
-    app = api.create_app(demo.DemoEngine(), agent)
+    app = api.create_app(demo.DemoEngine(), explain.TemplateExplainer())
     client = TestClient(app)
     response = client.post("/api/chat", json=chat_json())
     assert response.status_code == 404 and response.json()["error"]["code"] == "not_found"
@@ -86,30 +97,19 @@ def test_failures_are_502_envelopes(reason: str) -> None:
 
 
 def test_scripted_failures_are_502_envelopes() -> None:
-    client, _ = make_client(["not json"] * 6)
+    client, _ = make_client([""] * 6)
     message, hint = FAILURE_COPY["invalid_reply"]
-    for path, body in (("/api/chat", chat_json()), ("/api/explain", explain_json())):
-        response = client.post(path, json=body)
-        assert response.status_code == 502
-        assert response.json()["error"] == {
-            "code": "assistant_failed", "message": message, "hint": hint, "field": None,
-            "reason": "invalid_reply",
-        }  # fmt: skip
-        assert "not json" not in response.text
-
-
-def test_explain_route_with_agent() -> None:
-    client, _ = make_client([good_answer()])
-    response = client.post("/api/explain", json=explain_json())
-    assert response.status_code == 200
-    body = response.json()
-    assert body["explainer"]["kind"] == "agent" and body["explainer"]["backend"] == "voyager"
-    assert body["summary"] == "Both documents list JavaScript and CSS."
-    assert body["claims"] and body["facts"]
+    response = client.post("/api/chat", json=chat_json(message=SECRET_MESSAGE))
+    assert response.status_code == 502
+    assert response.json()["error"] == {
+        "code": "assistant_failed", "message": message, "hint": hint, "field": None,
+        "reason": "invalid_reply",
+    }  # fmt: skip
+    assert SECRET_MESSAGE not in response.text
 
 
 def test_chat_privacy_and_internal_error(caplog: pytest.LogCaptureFixture) -> None:
-    client, _ = make_client(["nope"] * 3)
+    client, _ = make_client([""] * 3)
     with caplog.at_level(logging.DEBUG):
         failed = client.post("/api/chat", json=chat_json(message=SECRET_MESSAGE))
     assert failed.status_code == 502

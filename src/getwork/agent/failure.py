@@ -40,10 +40,6 @@ FAILURE_COPY: dict[FailureReason, tuple[str, str]] = {
         "The assistant gave a reply that could not be used.",
         "Try again, or ask the question in different words.",
     ),
-    "unverified": (
-        "The assistant could not give an answer that matched the skills in these two documents.",
-        "Try asking in different words. The skills listed on the card are unaffected.",
-    ),
 }
 
 

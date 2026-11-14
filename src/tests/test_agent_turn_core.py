@@ -8,10 +8,11 @@ from getwork.llm.client import FatalLLMError, PermanentLLMError, TransientLLMErr
 
 pytestmark = pytest.mark.usefixtures("offline")
 
+
 def assert_failed(result: models.AgentResult, reason: str, calls: int) -> None:
     assert result.status == "failed" and result.failure_reason == reason
-    assert result.claims == [] and result.usage.llm_calls == calls
-    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v2")
+    assert result.reply == "" and result.usage.llm_calls == calls
+    assert (result.model, result.backend, result.prompt_version) == ("demo-model", "voyager", "agent_v3")
 
 
 def test_failure_reasons() -> None:
@@ -22,13 +23,13 @@ def test_failure_reasons() -> None:
     assert_failed(run(runner), "llm_unavailable", len(fake.calls))
     runner, fake = make_runner([PermanentLLMError("bad request", status=400)])
     assert_failed(run(runner), "model_rejected", len(fake.calls))
-    runner, fake = make_runner(["nope"] * 3)
+    runner, fake = make_runner([""] * 3)
     assert_failed(run(runner), "invalid_reply", len(fake.calls))
     assert len(fake.calls) == 3
 
 
 def test_attempts_capped_by_call_budget() -> None:
-    runner, fake = make_runner(["nope"] * 5, max_llm_calls=2)
+    runner, fake = make_runner([""] * 5, max_llm_calls=2)
     assert_failed(run(runner), "invalid_reply", 2)
     assert len(fake.calls) == 2
 
@@ -51,11 +52,32 @@ def test_timeout_uses_injected_clock() -> None:
     assert fake.calls == []
 
 
-def test_failed_result_has_no_claims() -> None:
-    runner, _ = make_runner(["I think the answer is: Kubernetes rocks"] * 3)
+def test_empty_reply_is_retried_then_fails() -> None:
+    runner, fake = make_runner(["", "  \n", answer()])
+    result = run(runner)
+    assert result.status == "ok" and result.reply == answer() and len(fake.calls) == 3
+    assert "Your previous reply was rejected: empty reply" in fake.calls[1].user
+    assert "Your previous reply was rejected" not in fake.calls[0].user
+    runner, fake = make_runner([""] * 3)
+    failed = run(runner)
+    assert_failed(failed, "invalid_reply", 3)
+    assert "empty reply" in (failed.failure_detail or "")
+
+
+def test_non_tool_json_is_retried() -> None:
+    runner, fake = make_runner(['{"action": "answer", "text": "hi"}', answer()])
+    result = run(runner)
+    assert result.status == "ok" and result.reply == answer() and len(fake.calls) == 2
+    assert "Your previous reply was rejected" in fake.calls[1].user
+    assert "must be one tool request" in fake.calls[1].user
+    assert "Your previous reply was rejected" not in fake.calls[0].user
+
+
+def test_failed_result_has_no_reply() -> None:
+    runner, _ = make_runner(["{I think the answer is: Kubernetes rocks"] * 3)
     result = run(runner)
     record = result.as_record()
-    assert record["claims"] == [] and record["status"] == "failed"
+    assert record["reply"] == "" and record["status"] == "failed"
     assert "Kubernetes rocks" not in json.dumps(record)
     assert [f["id"] for f in record["facts"]] == ["f1", "f2", "f3", "f4"]
 
@@ -63,7 +85,7 @@ def test_failed_result_has_no_claims() -> None:
 def test_secrets_not_in_result() -> None:
     runner, _ = make_runner([FatalLLMError(f"rejected {SECRET}", status=401)])
     assert SECRET not in json.dumps(run(runner).as_record())
-    runner, _ = make_runner([f"{SECRET} not json"] * 3)
+    runner, _ = make_runner([f"{{{SECRET} not json"] * 3)
     assert SECRET not in json.dumps(run(runner).as_record())
 
 

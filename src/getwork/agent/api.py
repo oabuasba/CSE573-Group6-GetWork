@@ -18,7 +18,8 @@ def register_chat_routes(app: FastAPI, service: ChatService, *, secrets: Sequenc
     """Adds POST /api/chat (response_model ChatResponse) ahead of the web-app /api/{rest:path} catch-all, and an
     exception handler for AgentFailure on the app (so /api/explain gets it too): it logs "agent failed:
     reason=<reason> detail=<redacted cause>" at WARNING (never the prompt or message) and returns status AGENT_ERROR_STATUS
-    with ErrorEnvelope(error=ErrorBody(code=AGENT_ERROR_CODE, message=failure.message, hint=failure.hint)).
+    with ErrorEnvelope(error=ErrorBody(code=AGENT_ERROR_CODE, message=failure.message, hint=failure.hint));
+    error.reason is one of the five reason codes.
     EngineError and request validation use the app's existing handlers. Any other exception becomes the existing
     generic 500 internal envelope (no message text logged)."""
 

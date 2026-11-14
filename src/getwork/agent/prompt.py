@@ -7,11 +7,9 @@ from functools import cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import ValidationError
-
-from getwork.agent.models import MAX_CLAIMS, PROMPT_VERSION, ChatMatchRef, ChatMessage, Claim, Fact
+from getwork.agent.models import MAX_REPLY_CHARS, PROMPT_VERSION, ChatMatchRef, ChatMessage, Fact
 from getwork.agent.tools import TOOL_NAMES
-from getwork.llm.validated import parse_json_object
+from getwork.llm.validated import parse_json_object, strip_reply_wrappers
 from getwork.webapp.models import DocumentView
 
 MAX_HISTORY_MESSAGES = 10
@@ -24,8 +22,7 @@ class Action:
     kind: Literal["tool", "answer"]
     tool: str | None = None
     args: dict[str, object] | None = None
-    claims: list[Claim] | None = None
-    off_topic: bool = False
+    text: str | None = None  # the answer text when kind == "answer"
 
 
 @cache
@@ -96,40 +93,32 @@ def _parse_tool(data: Mapping[str, object]) -> Action:
     return Action(kind="tool", tool=str(tool), args=args)
 
 
-def _parse_claim(index: int, raw: object) -> Claim:
-    if not isinstance(raw, dict):
-        raise ValueError(f"claims[{index}] must be an object")
+NOT_A_TOOL_HINT = "a reply that starts with { must be one tool request; otherwise write plain text"
+ELLIPSIS = "…"
+
+
+def _clip(text: str) -> str:
+    if len(text) <= MAX_REPLY_CHARS:
+        return text
+    return text[: MAX_REPLY_CHARS - len(ELLIPSIS)] + ELLIPSIS
+
+
+def _parse_tool_request(cleaned: str) -> Action:
     try:
-        return Claim.model_validate(raw)
-    except ValidationError as e:
-        first = e.errors()[0]
-        location = ".".join(str(part) for part in first["loc"])
-        raise ValueError(f"claims[{index}].{location}: {first['msg']}") from e
-
-
-def _parse_answer(data: Mapping[str, object]) -> Action:
-    off_topic = data.get("off_topic", False)
-    if not isinstance(off_topic, bool):
-        raise ValueError("off_topic must be true or false")
-    if off_topic:
-        return Action(kind="answer", claims=[], off_topic=True)
-    raw_claims = data.get("claims")
-    if not isinstance(raw_claims, list) or not raw_claims:
-        raise ValueError("an answer needs at least one claim unless off_topic is true")
-    if len(raw_claims) > MAX_CLAIMS:
-        raise ValueError(f"at most {MAX_CLAIMS} claims are allowed")
-    claims = [_parse_claim(i, raw) for i, raw in enumerate(raw_claims)]
-    return Action(kind="answer", claims=claims, off_topic=False)
+        data = parse_json_object(cleaned)
+    except ValueError as e:
+        raise ValueError(NOT_A_TOOL_HINT) from e
+    if data.get("action") != "tool":
+        raise ValueError(NOT_A_TOOL_HINT)
+    return _parse_tool(data)
 
 
 def parse_action(text: str) -> Action:
-    """parse_json_object, then: "action" is "tool" (tool in TOOL_NAMES, args an object) or "answer" (off_topic
-    bool default false; claims a list of objects with text, doc_ids, skills, facts validated as Claim; 1 to
-    MAX_CLAIMS claims unless off_topic). ValueError with a short reason otherwise (fed back to the model)."""
-    data = parse_json_object(text)
-    action = data.get("action")
-    if action == "tool":
-        return _parse_tool(data)
-    if action == "answer":
-        return _parse_answer(data)
-    raise ValueError('"action" must be "tool" or "answer"' if action else 'missing "action"')
+    """A reply starting with "{" must be a valid tool request (ValueError with a short reason otherwise, fed back to
+    the model); blank text is ValueError("empty reply"); anything else is the answer, clipped to MAX_REPLY_CHARS."""
+    cleaned = strip_reply_wrappers(text)
+    if not cleaned:
+        raise ValueError("empty reply")
+    if cleaned.startswith("{"):
+        return _parse_tool_request(cleaned)
+    return Action(kind="answer", text=_clip(cleaned))

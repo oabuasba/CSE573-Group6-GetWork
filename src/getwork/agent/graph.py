@@ -10,8 +10,8 @@ from getwork.agent.turn import AgentRunner
 
 RECURSION_LIMIT = 25
 MISSING_LANGGRAPH = "langgraph is not installed; run: uv sync --extra agent"
-NODE_NAMES = ("decide", "run_tool", "verify", "finish", "fail")
-BRANCHING_NODES = ("decide", "run_tool", "verify")
+NODE_NAMES = ("decide", "run_tool", "finish", "fail")
+BRANCHING_NODES = ("decide", "run_tool")
 
 
 class GraphState(TypedDict):

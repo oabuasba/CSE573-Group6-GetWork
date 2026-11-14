@@ -1,14 +1,9 @@
 # agent (pipeline step 8)
 
-A small LangGraph agent that answers follow-up questions about a match (the per-match chat). The match card's own explanation (`POST /api/explain`) is always the rules-based one and never calls the model. It asks the
-model to call one of four read-only tools or to give an answer made of claims. Every claim is checked by
-a deterministic verifier against the facts the tools produced and the final skill sets of the two
-documents. A claim that cannot be verified goes back to the model with the reason; if the answer still
-cannot be verified, the user sees a short plain-language chat error and no answer text. The rules-based
-explainer is never used as a replacement for a failed chat answer. See `specs/features/match-agent.html`.
+A small LangGraph agent that answers follow-up questions about a match (the per-match chat). The match card's own explanation (`POST /api/explain`) is always the rules-based one and never calls the model. The model answers in plain text and may call one of four read-only tools first; there is no verifier, so the reply is shown as the model wrote it (the page says so in a disclaimer). A turn fails only for one of five reasons (see "Reading a failure in the console") and then the user sees a short plain-language chat error and no answer text. The rules-based explainer is never used as a replacement for a failed chat answer. See `specs/features/chat-conversational.html`.
 
-Code: `models.py` (claims, facts, results), `facts.py`, `tools.py`, `grounding.py` (the verifier),
-`prompt.py` and `prompts/agent_v2.md` (`agent_v1.md` is kept for history), `turn.py` (node logic), `graph.py` (LangGraph wiring),
+Code: `models.py` (facts, results), `facts.py`, `tools.py`, `grounding.py` (vocabulary scan for the log), `prompt.py` and
+`prompts/agent_v3.md` (`agent_v1.md` and `agent_v2.md` are kept for history), `turn.py` (node logic), `graph.py` (LangGraph wiring),
 `explainer.py` (explainer and chat service), `api.py` (`POST /api/chat`, the failure handler).
 
 Tests never call a model: they use `FakeLLMClient` with scripted replies and the demo engine.
@@ -40,14 +35,13 @@ and makes no model call; the server prints the address it serves on.
 Open the page, search from a demo example, expand a match ("Why this match?").
 
 Pass: the explanation is the rules-based one (summary and bullets, "Explained by rules, no language model" line) and no model call is made. Chat
-replies (MA-3) are the claim lists whose skills are all in one of the two documents; "Show evidence" lists the cited facts.
+replies (MA-3) are conversational plain text.
 
 ## MA-3 Ask a follow-up
 
-In the expanded card ask "why is #1 ranked above #2", then open "Show evidence" on a claim.
+Real model, run by you (user-run; nothing in the test suite does this). Start `uv run webapp serve --demo` with real model settings, search, open "Chat about this suggestion" and ask "why is this posting ranked here" and "what should I learn".
 
-Pass: the reply is made of claims, each with cited facts, and the suggested questions appear
-below it.
+Pass: after "The assistant is thinking…" a conversational plain-text answer appears in one piece; the greeting is at the top; there are no suggestion chips and no evidence buttons; the disclaimer ("The assistant is an AI and can be wrong...") is visible under the composer; the console shows no 502 for an answer; the match card's "Why this match?" text is unchanged.
 
 ## MA-4 Force a failure
 
@@ -56,15 +50,13 @@ Stop the model service, or start with a wrong model name, then send a chat messa
 Pass: the chat shows the plain message and hint ("The assistant could not be reached right now." or the
 matching pair); the match explanation is unaffected. Restart with `--explainer template` to remove the chat button.
 
-### Partly verified answers
+### Skills named outside the documents
 
-When the answer still fails verification after the retries, the claims that did verify are kept and the failing ones are
-dropped; the response then carries `note` ("Part of the answer was left out because it could not be checked against these
-two documents.") and the chat shows it under the claims. Only when no claim survives does the turn fail with `unverified`.
-Nothing unverified is ever shown. `AgentResult.as_record()` has `dropped_claims` for evaluation. Skills that are also plain
-English words ("lists", "code", "tools", "support", "service", "email", and a few more; never a word that can be a skill by itself, such as cloud or security) written in lower case in prose do not count as skill mentions (a declared
-skill is still checked, and capitalised or multi-word forms are still detected). Improvement questions are answered from the
-match's `gap_skills` fact (prompt `agent_v2`).
+When a reply names a skill from the taxonomy that is in neither document, the server logs one INFO line
+(`agent reply names skills outside these documents: ...`, logger `getwork.agent`) and `AgentResult.as_record()` lists them in
+`ungrounded_skills`. This never blocks or changes a reply. Skills that are also plain English words ("lists", "code", "tools",
+"support", "service", "email", and a few more) written in lower case in prose are not counted. Improvement questions are
+answered from the match's `gap_skills` fact (prompt `agent_v3`).
 
 ### Reading a failure in the console
 
@@ -75,20 +67,18 @@ Every failed chat turn logs exactly one line on stderr (logger `getwork.agent`, 
 2026-11-11 21:30:00,123 WARNING getwork.agent: agent failed: reason=model_rejected detail=PermanentLLMError status=400: ...
 ```
 
-`reason` is one of: `llm_unavailable` (connection, timeout, 5xx or rate limit after retries; detail names the error class and
+`reason` is one of five: `llm_unavailable` (connection, timeout, 5xx or rate limit after retries; detail names the error class and
 status), `model_rejected` (the service refused the request: 400/413/422 such as an unsupported `reasoning_effort` or
 `--extra-body`, or 401/403/404/410 for a bad key, wrong base URL or wrong model; detail has the class, status and the
-service's message), `invalid_reply` (the model's answer was not the expected JSON; detail has the parse error and the first
-200 characters of the reply), `unverified` (no claim survived verification; detail lists the violations),
-`timeout`, `budget_exhausted` (no detail). The detail is redacted: the API key, bearer tokens, key-like tokens and whole
+service's message), `invalid_reply` (the reply was empty or a malformed tool request after the retries; detail has the parse
+error and the first 200 characters), `timeout`, `budget_exhausted` (no detail). The detail is redacted: the API key, bearer tokens, key-like tokens and whole
 URLs are removed, and it is truncated. The prompt and your message are never logged.
 
 ## MA-5 Reading the data in a later evaluation
 
 `AgentExplainer.explain_detailed(...)` returns an `AgentResult`; `as_record()` is one JSON line with the
-keys status, failure_reason, off_topic, claims, facts, trace, usage, model, backend and prompt_version.
-`grounding.ungrounded_skills(claims, docs, vocab)` lists the skills a claim names that are in neither
-document (the hallucination definition); `named_skills` gives the denominator.
+keys status, failure_reason, reply, facts, trace, usage, model, backend, prompt_version and `ungrounded_skills`
+(the skills the reply names that are in neither document; the hallucination measure, now taken after the fact).
 
 Caveats the report must state: give the error share (failed results over all attempts, by
 `failure_reason`) next to the hallucination rate, because failed results have no claims. The vocabulary

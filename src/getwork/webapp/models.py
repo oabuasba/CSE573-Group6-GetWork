@@ -227,8 +227,6 @@ class Explanation(BaseModel):
     bullets: list[str]
     evidence: Evidence
     explainer: ExplainerInfo
-    claims: list[dict] = Field(default_factory=list)  # Claim.model_dump() items; [] for template explanations
-    facts: list[dict] = Field(default_factory=list)  # Fact.model_dump() items
 
 
 class ErrorBody(BaseModel):

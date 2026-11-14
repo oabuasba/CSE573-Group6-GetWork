@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from getwork import paths
+from getwork.agent.explainer import ChatService
 from getwork.alias.cli import TABLE_FILE
 from getwork.alias.table import make_table, save_table
 from getwork.llm import factory as llm_factory
@@ -48,7 +49,7 @@ def test_serve_agent_demo() -> None:
     assert code == 0 and len(run.calls) == 1
     assert health_of(run) == {
         "enabled": True, "model": "demo-model", "backend": "voyager",
-        "prompt_version": "agent_v2", "reason": None,
+        "prompt_version": "agent_v3", "reason": None,
     }  # fmt: skip
     assert TestClient(run.calls[0]).get("/api/health").json()["explainer"]["kind"] == "template"
     response = TestClient(run.calls[0]).post("/api/chat", json=chat_json())
@@ -94,7 +95,7 @@ def test_explicit_template_has_no_chat() -> None:
     query = demo.DemoEngine().get_document("r-1").model_dump(mode="json")
     body = {"direction": "resume_to_posting", "query": query, "match_id": "j-1"}
     explained = client.post("/api/explain", json=body).json()
-    assert explained["explainer"] == {"kind": "template", "model": None} and explained["claims"] == []
+    assert explained["explainer"] == {"kind": "template", "model": None}
 
 
 def write_artifacts(root: Path) -> None:
@@ -127,10 +128,21 @@ def test_agent_config_errors_exit_2(
     with pytest.raises(FileNotFoundError, match="alias-table build"):
         cli.build_agent(args, engine=demo.DemoEngine(), environ={}, llm_client=FakeLLMClient(script=[]))
     write_artifacts(root)
-    agent, chat, secrets = cli.build_agent(
+    chat, secrets = cli.build_agent(
         args, engine=demo.DemoEngine(), environ={}, llm_client=FakeLLMClient(script=[])
     )
-    assert agent.info.kind == "agent" and chat.info.model == "m" and list(secrets) == []
+    assert chat.info.kind == "agent" and chat.info.model == "m" and list(secrets) == []
+
+
+def test_build_agent_returns_chat_service_and_secrets() -> None:
+    args = cli._build_parser().parse_args(["check", "--demo", "--explainer", "agent", "--model", "m"])
+    parts = cli.build_agent(
+        args, engine=demo.DemoEngine(), environ={}, llm_client=FakeLLMClient(script=[])
+    )
+    assert len(parts) == 2
+    chat, secrets = parts
+    assert isinstance(chat, ChatService)
+    assert chat.info.model == "m" and list(secrets) == []
 
 
 def test_check_with_agent_makes_no_call(capsys: pytest.CaptureFixture[str]) -> None:
@@ -152,10 +164,10 @@ def test_build_agent_loads_vocabulary_from_the_resolved_root(tmp_path: Path) -> 
     args = cli._build_parser().parse_args(
         ["check", "--artifacts-dir", str(trial), "--explainer", "agent", "--model", "m"]
     )
-    agent, _, _ = cli.build_agent(
+    chat, _ = cli.build_agent(
         args, engine=ResolvedEngine(), environ={}, llm_client=FakeLLMClient(script=[])
     )
-    assert agent.info.kind == "agent"
+    assert chat.info.kind == "agent"
 
 
 def test_auto_is_the_default_and_uses_the_agent_when_settings_resolve() -> None:

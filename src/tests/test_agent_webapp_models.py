@@ -15,11 +15,13 @@ REPO = Path(__file__).resolve().parents[2]
 CONTRACT = REPO / "src" / "web" / "src" / "fixtures" / "contract.json"
 
 
+def test_explanation_has_no_claim_fields() -> None:
+    assert set(models.Explanation.model_fields) == {"summary", "bullets", "evidence", "explainer"}
+
+
 def test_old_explanation_payload_still_valid() -> None:
     fixture = json.loads(CONTRACT.read_text())
-    assert "claims" not in fixture["explain"] and "facts" not in fixture["explain"]
     parsed = models.Explanation.model_validate(fixture["explain"])
-    assert parsed.claims == [] and parsed.facts == []
     assert parsed.explainer.backend is None and parsed.explainer.prompt_version is None
 
 

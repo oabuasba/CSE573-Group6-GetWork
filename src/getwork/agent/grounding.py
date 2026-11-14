@@ -1,18 +1,14 @@
-"""Deterministic claim verification and skill naming (ADR-20); pure functions, no I/O."""
+"""Reads skill names from text (ADR-35); pure functions, no I/O."""
 
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
-from getwork.agent.models import MAX_CLAIMS, Claim, Fact
 from getwork.alias.normalize import normalize_key
 from getwork.webapp.models import DocumentView
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9#+.]+")
-NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
-FORBIDDEN_TEXT = ("http://", "https://", "```")
 MIN_SINGLE_TOKEN_CHARS = 3
-CLAIM_PREFIX_RE = re.compile(r"claim (\d+):")
 # Vocabulary entries that are also plain English words and almost never a skill on their own (never add a word that
 # can be a standalone resume skill, such as cloud or security). Written in lower case in prose they are not skill mentions;
 # a declared skill is still checked against the documents, and a capitalised or multi-word form is still detected.
@@ -83,136 +79,8 @@ def doc_skill_keys(doc: DocumentView) -> frozenset[str]:
     return frozenset(normalize_key(item.skill) for item in doc.skills)
 
 
-def _keys_of(*, doc_ids: Iterable[str], scope_keys: Mapping[str, frozenset[str]]) -> frozenset[str]:
-    return frozenset().union(*(scope_keys[doc_id] for doc_id in doc_ids if doc_id in scope_keys))
-
-
-def _check_count(claims: Sequence[Claim]) -> list[str]:
-    if 1 <= len(claims) <= MAX_CLAIMS:
-        return []
-    return [f"claims: give between 1 and {MAX_CLAIMS} claims, not {len(claims)}."]
-
-
-def _check_text(text: str) -> list[str]:
-    if any(bad in text for bad in FORBIDDEN_TEXT):
-        return ["remove links and code blocks from the text."]
-    return []
-
-
-def _check_fact_ids(*, claim: Claim, facts: Mapping[str, Fact]) -> list[str]:
-    if not claim.facts:
-        return ["cite at least one fact id."]
-    unknown = [fact_id for fact_id in claim.facts if fact_id not in facts]
-    return [f'fact "{fact_id}" does not exist; cite only fact ids you were given.' for fact_id in unknown]
-
-
-def _check_doc_ids(*, claim: Claim, scope: Mapping[str, DocumentView]) -> list[str]:
-    if not claim.doc_ids:
-        return ["name at least one document in doc_ids."]
-    return [f'document "{doc_id}" is not in this conversation.' for doc_id in claim.doc_ids if doc_id not in scope]
-
-
-def _check_fact_documents(*, claim: Claim, facts: Mapping[str, Fact]) -> list[str]:
-    messages: list[str] = []
-    if not claim.doc_ids:
-        return messages
-    for fact_id in claim.facts:
-        fact = facts.get(fact_id)
-        if fact is not None and not set(fact.doc_ids) & set(claim.doc_ids):
-            messages.append(f'fact "{fact_id}" is about other documents than {", ".join(claim.doc_ids)}.')
-    return messages
-
-
-def _check_declared_skills(
-    *, claim: Claim, facts: Mapping[str, Fact], scope_keys: Mapping[str, frozenset[str]]
-) -> list[str]:
-    doc_keys = _keys_of(doc_ids=claim.doc_ids, scope_keys=scope_keys)
-    fact_keys = frozenset(normalize_key(s) for f in claim.facts if f in facts for s in facts[f].skills)
-    messages = []
-    for skill in claim.skills:
-        key = normalize_key(skill)
-        if claim.doc_ids and key not in doc_keys:
-            messages.append(f'skill "{skill}" is not in the skills of {", ".join(claim.doc_ids)}.')
-        elif key not in fact_keys:
-            messages.append(f'skill "{skill}" is not in any fact you cited.')
-    return messages
-
-
-def _check_mentions(*, claim: Claim, scope_keys: Mapping[str, frozenset[str]], vocab: Vocabulary) -> list[str]:
-    doc_keys = _keys_of(doc_ids=claim.doc_ids, scope_keys=scope_keys)
-    declared = {normalize_key(skill) for skill in claim.skills}
-    messages = []
-    for skill in skill_mentions(claim.text, vocab):
-        key = normalize_key(skill)
-        if claim.doc_ids and key not in doc_keys:
-            owners = ", ".join(claim.doc_ids)
-            messages.append(f'the text names skill "{skill}", which is not in the skills of {owners}.')
-        elif key not in declared:
-            messages.append(f'the text names skill "{skill}"; add it to skills.')
-    return messages
-
-
-def _check_numbers(*, claim: Claim, facts: Mapping[str, Fact]) -> list[str]:
-    cited_text = " ".join(facts[f].text for f in claim.facts if f in facts)
-    cited_numbers = set(NUMBER_RE.findall(cited_text))
-    unsupported = [n for n in NUMBER_RE.findall(claim.text) if n not in cited_numbers]
-    return [f'the number {n} does not appear in the facts you cited.' for n in dict.fromkeys(unsupported)]
-
-
-def verify_claims(
-    claims: Sequence[Claim],
-    *,
-    facts: Mapping[str, Fact],
-    scope: Mapping[str, DocumentView],
-    vocab: Vocabulary,
-) -> list[str]:
-    """Violation messages, empty when everything holds. Each message starts with f"claim {i}: " (1-based).
-    Rules V-1 to V-8: claim count; no links or code; fact ids exist; doc ids in scope; facts concern the claim's
-    documents; declared skills are in those documents and cited facts; named skills are declared and in those
-    documents; numbers appear in the cited facts. The V-1 message starts with "claims: " since no claim is at fault."""
-    messages = _check_count(claims)
-    scope_keys = {doc_id: doc_skill_keys(doc) for doc_id, doc in scope.items()}
-    for number, claim in enumerate(claims, start=1):
-        found = [
-            *_check_text(claim.text),
-            *_check_fact_ids(claim=claim, facts=facts),
-            *_check_doc_ids(claim=claim, scope=scope),
-            *_check_fact_documents(claim=claim, facts=facts),
-            *_check_declared_skills(claim=claim, facts=facts, scope_keys=scope_keys),
-            *_check_mentions(claim=claim, scope_keys=scope_keys, vocab=vocab),
-            *_check_numbers(claim=claim, facts=facts),
-        ]
-        messages.extend(f"claim {number}: {message}" for message in found)
-    return messages
-
-
-def verified_claims(claims: Sequence[Claim], violations: Sequence[str]) -> list[Claim]:
-    """The claims no violation points at. A violation without a claim number (the claim count rule) leaves none."""
-    faulty: set[int] = set()
-    for message in violations:
-        found = CLAIM_PREFIX_RE.match(message)
-        if found is None:
-            return []
-        faulty.add(int(found.group(1)))
-    return [claim for number, claim in enumerate(claims, start=1) if number not in faulty]
-
-
-def named_skills(claims: Sequence[Claim], vocab: Vocabulary) -> list[str]:
-    """Declared skills plus skill_mentions of each claim text, deduplicated by key, first spelling, claim order."""
-    named: dict[str, str] = {}
-    for claim in claims:
-        for skill in [*claim.skills, *skill_mentions(claim.text, vocab)]:
-            key = normalize_key(skill)
-            if key:
-                named.setdefault(key, skill)
-    return list(named.values())
-
-
-def ungrounded_skills(claims: Sequence[Claim], docs: Sequence[DocumentView], vocab: Vocabulary) -> list[str]:
-    """named_skills whose key is in no document of docs, cluster names excluded (the hallucination definition)."""
-    grounded = frozenset().union(*(doc_skill_keys(doc) for doc in docs)) if docs else frozenset()
-    return [
-        skill
-        for skill in named_skills(claims, vocab)
-        if normalize_key(skill) not in grounded and normalize_key(skill) not in vocab.clusters
-    ]
+def ungrounded_skills(text: str, docs: Sequence[DocumentView], vocab: Vocabulary) -> list[str]:
+    """Skills named in text that are in no document of docs; cluster names never count (the hallucination
+    definition). In order of first appearance, one per key."""
+    grounded = frozenset().union(*(doc_skill_keys(doc) for doc in docs))
+    return [skill for skill in skill_mentions(text, vocab) if normalize_key(skill) not in grounded]

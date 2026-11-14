@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-from agent_helpers import SECRET, answer, chat_json, make_client
+from agent_helpers import SECRET, chat_json, make_client
 from fastapi.testclient import TestClient
 
 from getwork.agent.failure import MAX_DETAIL_CHARS, redact_detail
@@ -32,8 +32,7 @@ def post_chat(script: list, caplog: pytest.LogCaptureFixture) -> tuple[TestClien
         ([FatalLLMError("denied", status=401)], "model_rejected", "FatalLLMError status=401: denied"),
         ([PermanentLLMError("reasoning_effort not allowed", status=400)], "model_rejected",
          "PermanentLLMError status=400: reasoning_effort not allowed"),
-        (["nope"] * 3, "invalid_reply", "last reply starts: 'nope'"),
-        ([answer("Uses Haskell.", skills=["Haskell"])] * 3, "unverified", "Haskell"),
+        (["{not a tool"] * 3, "invalid_reply", "last reply starts: '{not a tool'"),
     ],
 )  # fmt: skip
 def test_each_failure_kind_logs_one_line_and_a_502_reason(
@@ -56,7 +55,7 @@ def test_secret_key_and_url_never_reach_logs_or_response(caplog: pytest.LogCaptu
 
 
 def test_secret_in_model_reply_is_redacted(caplog: pytest.LogCaptureFixture) -> None:
-    _, _, lines = post_chat([f"{SECRET} not json"] * 3, caplog)
+    _, _, lines = post_chat([f"{{{SECRET} not json"] * 3, caplog)
     assert len(lines) == 1 and SECRET not in lines[0]
 
 
