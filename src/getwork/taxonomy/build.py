@@ -32,9 +32,18 @@ def _ids_by_folded_name(names: Mapping[int, str]) -> dict[str, list[int]]:
     return groups
 
 
-def name_status(names: Mapping[int, str]) -> dict[int, str]:
+def name_status(
+    names: Mapping[int, str], members: Mapping[int, Sequence[str]] | None = None
+) -> dict[int, str]:
     duplicated = {i for ids in _ids_by_folded_name(names).values() if len(ids) > 1 for i in ids}
-    return {i: "duplicate" if i in duplicated else "ok" for i in names}
+    listed = set()
+    if members is not None:
+        listed = {
+            i for i, name in names.items() if model.member_list_reason(name, members.get(i, ()))
+        }
+    return {
+        i: "member_list" if i in listed else "duplicate" if i in duplicated else "ok" for i in names
+    }
 
 
 def _parse_id(raw: str, line: int) -> int:

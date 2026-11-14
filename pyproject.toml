@@ -32,6 +32,9 @@ doc-embed = "getwork.docembed.cli:main"
 retrieve = "getwork.retrieval.cli:main"
 
 [project.optional-dependencies]
+agent = [
+    "langgraph",
+]
 embed = [
     "sentence-transformers",
     "torch",
@@ -40,6 +43,7 @@ embed = [
 [dependency-groups]
 dev = [
     "httpx",
+    "langgraph",
     "pytest",
 ]
 
@@ -53,7 +57,8 @@ include = ["getwork*"]
 
 [tool.setuptools.package-data]
 "getwork.structure" = ["prompts/*.md"]
-"getwork.alias" = ["alias_curated.csv", "prompts/*.md"]
+"getwork.alias" = ["alias_curated.csv", "version_families.csv", "prompts/*.md"]
+"getwork.agent" = ["prompts/*.md"]
 "getwork.taxonomy" = ["prompts/*.md"]
 "getwork.relabel" = ["prompts/*.md"]
 

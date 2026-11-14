@@ -19,6 +19,7 @@ const ERROR_TITLES = {
   embedding_failed: "The embedding step failed",
   capability_unavailable: "That option is not available on this server",
   invalid_request: "Please check the form",
+  assistant_failed: "The assistant could not answer",
 };
 
 export class ApiError extends Error {
@@ -77,6 +78,8 @@ export const getExamples = (side, limit = 6, fetchImpl = fetch) =>
 export const postMatch = (body, fetchImpl = fetch) => request("POST", "/api/match", body, fetchImpl);
 
 export const postExplain = (body, fetchImpl = fetch) => request("POST", "/api/explain", body, fetchImpl);
+
+export const postChat = (body, fetchImpl = fetch) => request("POST", "/api/chat", body, fetchImpl);
 
 export function describeError(err) {
   if (!(err instanceof ApiError)) {

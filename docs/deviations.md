@@ -32,11 +32,11 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-12 | Embedding | Experience-level derivation | Clarification | draft | Yes |
 | P-13 | Relabeling | LLM-free default; add-only re-extraction | Departure | draft | Yes |
 | P-14 | Embedding | Optional Voyager embedding backend | Addition | draft | Conditional |
-| P-15 | Web app | Query-time hosting: user-run local process with lazy, optional models | Clarification | draft | Yes (one paragraph in 3.7) |
+| P-15 | Web app | Query-time hosting: user-run local process with lazy, optional models | Clarification | built | Yes (one paragraph in 3.7) |
 | P-16 | Structuring | Alias table: how it is built, and the display-spelling rule | Clarification | built | Yes (one or two sentences) |
-| P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | draft | Yes (scope sentence) |
-| P-18 | Agent | Agent uses a JSON action protocol (not native tool calls), a claim verifier, plain-language errors on failure, stateless non-streamed chat | Clarification | draft | Yes (one paragraph in 3.7) |
-| P-19 | Agent | Agent model is served by Voyager by default, not ASU CreateAI | Clarification | draft | Yes (one clause in 3.7) |
+| P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | built | Yes (scope sentence) |
+| P-18 | Agent | Agent uses a JSON action protocol (not native tool calls), a claim verifier, plain-language errors on failure, stateless non-streamed chat | Clarification | built | Yes (one paragraph in 3.7) |
+| P-19 | Agent | Agent model is served by Voyager by default, not ASU CreateAI | Clarification | built | Yes (one clause in 3.7) |
 
 Row count: 19.
 
@@ -213,14 +213,14 @@ Row count: 19.
 ## P-15 Query-time hosting of structuring and embedding
 
 - **Proposal says:** 3.7: submitted documents are structured by an LLM call, then relabeled and embedded.
-- **Now (draft, web-app, ADR-15; answers Q-1 pending approval):** the app is one user-run local process (`webapp serve`) that reads the user's own `.env` through the CLI only and builds the structuring client (`make_client`) and the embedding client (`make_embedding_client`) lazily. Query kinds degrade: a corpus document needs neither model, a form needs only the embedding model (nothing for B1+), free text needs both. New documents are labeled lookup-only (unseen skills go to Other), not with the LLM relabeler. Nothing from a query is stored or logged.
+- **Now (built, web-app, ADR-15; answers Q-1):** the app is one user-run local process (`webapp serve`) that reads the user's own `.env` through the CLI only and builds the structuring client (`make_client`) and the embedding client (`make_embedding_client`) lazily. Query kinds degrade: a corpus document needs neither model, a form needs only the embedding model (nothing for B1+), free text needs both. New documents are labeled lookup-only (unseen skills go to Other), not with the LLM relabeler. Nothing from a query is stored or logged.
 - **Reason recorded:** CC-10 forbids agents holding the key and Voyager models may be retired; Sol is a batch cluster; the 12 GB card cannot hold a local LLM server and the embedding model together.
 - **Impact:** A live demo needs a configured team machine. The proposal's "relabeled" step at query time is lookup-only unless the LLM relabeler is wired in later.
-- **Status:** draft.
+- **Status:** built (web-app, 2026-11-11).
 - **Proposal text change:** One paragraph in 3.7 describing the local, optional, lazy model use and the lookup-only labeling of new documents.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft (Q-1 answered in ADR-15, awaiting user approval)
+- **Resolution:** built; Q-1 answered in ADR-15; the proposal paragraph in 3.7 is still to be written
 
 ## P-16 Alias table construction and display spelling
 
@@ -241,38 +241,38 @@ Row count: 19.
 ## P-17 Web app scope and presentation
 
 - **Proposal says:** Application row and 3.7: "FastAPI backend, React frontend allows users to submit a resume or job", view top-k, chat with the agent, and label pairs blind (presentation slide: "React app: submit a resume or posting, view top-k, chat, and label pairs blind").
-- **Now (draft, web-app, ADR-16 to ADR-18):** FastAPI and React as stated. The explanation shown with each match is deterministic evidence (shared, related by cluster, missing skills) plus a rule-based `TemplateExplainer` behind an `Explainer` protocol; the LangGraph agent (`match-agent`) plugs into that seam later, and chat follow-ups go with it. Blind labeling becomes its own feature (`labeling-ui`) after `eval-sampling-pooling`. Added: a demo mode on built-in data, a corpus-document query kind, and a UI theme built from the public ASU brand-guide values (text wordmark, no ASU marks, no ASU repository code).
+- **Now (built, web-app, ADR-16 to ADR-18, ADR-28):** FastAPI and React as stated. The explanation shown with each match is deterministic evidence (shared, related by cluster, missing skills) plus a rule-based `TemplateExplainer` behind an `Explainer` protocol; the LangGraph agent (`match-agent`) plugs into that seam later, and chat follow-ups go with it. Blind labeling becomes its own feature (`labeling-ui`) after `eval-sampling-pooling`. Added: a demo mode on built-in data, a corpus-document query kind, and a UI theme built from the public ASU brand-guide values (text wordmark, no ASU marks, no ASU repository code).
 - **Reason recorded:** the agent and the labeling inputs do not exist yet; a faithful, testable explanation can ship now and doubles as a baseline for the agent's hallucination rate.
 - **Impact:** Methods text for the application; the report must not claim the shipped UI explanations come from the agent.
-- **Status:** draft.
+- **Status:** built (web-app, 2026-11-11). Addition: the artifacts location is changeable (`--artifacts-dir`, `WEBAPP_ARTIFACTS_DIR`) and may be a folder of `vN` runs (ADR-28).
 - **Proposal text change:** One scope sentence in 3.7.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft
+- **Resolution:** built; the scope sentence in the proposal is still to be written
 
 ## P-18 Agent implementation: protocol, verification, failure behavior
 
 - **Proposal says:** A LangGraph agent with tools (similarity search, cluster lookup, skill comparison) explains each match, reached through ASU CreateAI; explanations are rated 1 to 5 for faithfulness and usefulness, and a hallucination is a skill named in neither document.
-- **Now (draft, match-agent, ADR-19, ADR-20, CC-19):** LangGraph is used as the state machine only (optional `agent` extra, imported lazily), kept because the proposal names it rather than because a four-node loop needs it. The model is called through the shared `LLMClient`, so tool use is a JSON action protocol, not native function calling. Four read-only tools: document skills, compare two results, cluster lookup (over skills already in the conversation), and similar documents. Every answer is a list of claims citing code-generated facts, and a deterministic verifier rejects any claim that names a skill outside the cited documents. If the model fails, times out (60 s), exhausts its budget (4 tool steps, 6 model calls) or stays unverified after two retries, the user sees a short plain-language error with a suggestion (HTTP 502, error code `assistant_failed`) and no explanation text; there is no automatic fallback to the rules-based explainer, which runs only when the server is started without the agent. Chat is stateless and not streamed.
+- **Now (built, match-agent, ADR-19, ADR-20, CC-19, ADR-27):** LangGraph is used as the state machine only (optional `agent` extra, imported lazily), kept because the proposal names it rather than because a four-node loop needs it. The model is called through the shared `LLMClient`, so tool use is a JSON action protocol, not native function calling. Four read-only tools: document skills, compare two results, cluster lookup (over skills already in the conversation), and similar documents. Every answer is a list of claims citing code-generated facts, and a deterministic verifier rejects any claim that names a skill outside the cited documents. If the model fails, times out (60 s), exhausts its budget (4 tool steps, 6 model calls) or stays unverified after two retries, the user sees a short plain-language error with a suggestion (HTTP 502, error code `assistant_failed`) and no explanation text; there is no automatic fallback to the rules-based explainer, which runs only when the server is started without the agent. Chat is stateless and not streamed. As built: the call budget (6) caps decisions and parse attempts but not the shared client's transient-error retries (up to 5 calls per request), and on an unexpected bug the web-app 500 handler logs the exception text locally (ADR-27).
 - **Reason recorded:** `LLMClient` has no tool-call support and local servers differ; verified output is what makes the hallucination rate meaningful and keeps the demo safe; the user chose visible errors over a silent change of explanation type.
-- **Impact:** Methods text for step 8. Because the verifier rejects ungrounded skills before they are shown, the automatic hallucination rate on accepted answers is near zero by construction; the report must also state the verifier intervention rate, the error share by failure reason, and the human or judge faithfulness ratings, and must say the vocabulary scan cannot see skills outside the taxonomy and alias table. The agent model must differ from both judge models (ADR-10); this is a configuration rule, not enforced in code.
-- **Status:** draft.
+- **Impact:** Methods text for step 8. Because the verifier rejects ungrounded skills before they are shown, the automatic hallucination rate on accepted answers is near zero by construction; the report must also state the verifier intervention rate, the error share by failure reason, and the human or judge faithfulness ratings, and must say the vocabulary scan cannot see skills outside the taxonomy and alias table, nor skills spelled with a hyphen or slash (Front-end, scikit-learn, CI/CD; ADR-27). The agent model must differ from both judge models (ADR-10); this is a configuration rule, not enforced in code.
+- **Status:** built (match-agent, reviewed 2026-11-11).
 - **Proposal text change:** One paragraph in 3.7.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft
+- **Resolution:** built; report sentences and the proposal paragraph in 3.7 still to be written
 
 ## P-19 Agent model hosting: Voyager instead of CreateAI
 
 - **Proposal says:** The explanation agent runs on LangGraph and its model is reached through ASU CreateAI (ADR-10).
-- **Now (draft, match-agent, ADR-21):** The agent uses the same Voyager backend and model as structuring by default. `--agent-backend local` (with `LOCAL_LLM_BASE_URL`) still reaches any OpenAI-compatible server, CreateAI included. Only where the API is served changes; the agent design, tools and the rule that the agent model differs from both judge models are unchanged.
+- **Now (built, match-agent, ADR-21):** The agent uses the same Voyager backend and model as structuring by default. `--agent-backend local` (with `LOCAL_LLM_BASE_URL`) still reaches any OpenAI-compatible server, CreateAI included. Only where the API is served changes; the agent design, tools and the rule that the agent model differs from both judge models are unchanged.
 - **Reason recorded:** the user chose to serve the agent where the project's other LLM calls already go; the shared client has no CreateAI backend and its endpoint and authentication were not confirmed.
 - **Impact:** Methods text that names CreateAI; the report must name the model and host the agent actually used.
-- **Status:** draft.
+- **Status:** built (match-agent, reviewed 2026-11-11).
 - **Proposal text change:** One clause in 3.7.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** draft
+- **Resolution:** built; the report must name the model and host actually used
 
 ## Gap-fillers and additions (not disagreements)
 

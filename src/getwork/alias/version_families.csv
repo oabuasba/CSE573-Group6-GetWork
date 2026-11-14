@@ -1,0 +1,62 @@
+base,canonical,map_bare
+# Products whose version, release or year suffix never makes a different skill. Add reviewed rows below.
+# map_bare=no: the bare base means something else (sql is SQL, server is not a skill), so only versioned forms fold.
+windows,Windows,yes
+microsoft windows,Windows,yes
+ms windows,Windows,yes
+win,Windows,no
+windows server,Windows,yes
+microsoft windows server,Windows,yes
+microsoft server,Windows,no
+server,Windows,no
+sql server,SQL Server,yes
+ms sql server,SQL Server,yes
+microsoft sql server,SQL Server,yes
+sql,SQL Server,no
+oracle,Oracle,yes
+oracle database,Oracle Database,yes
+mysql,MySQL,yes
+postgresql,PostgreSQL,yes
+postgres,PostgreSQL,yes
+html,HTML,yes
+css,CSS,yes
+angular,Angular,yes
+react,React,yes
+node.js,Node.js,yes
+jquery,jQuery,yes
+bootstrap,Bootstrap,yes
+java,Java,yes
+jdk,JDK,yes
+python,Python,yes
+php,PHP,yes
+django,Django,yes
+spring,Spring,yes
+hibernate,Hibernate,yes
+struts,Struts,yes
+ejb,EJB,yes
+jsp,JSP,yes
+asp.net,ASP.NET,yes
+asp.net mvc,ASP.NET MVC,yes
+mvc,MVC,yes
+.net,.NET,yes
+.net framework,.NET Framework,yes
+visual studio,Visual Studio,yes
+visual basic,Visual Basic,yes
+vb,VB,yes
+eclipse,Eclipse,yes
+tomcat,Tomcat,yes
+apache tomcat,Apache Tomcat,yes
+weblogic,WebLogic,yes
+jboss,JBoss,yes
+iis,IIS,yes
+sharepoint,SharePoint,yes
+exchange,Exchange,yes
+microsoft exchange,Microsoft Exchange,yes
+microsoft office,Microsoft Office,yes
+office,Microsoft Office,no
+vmware,VMware,yes
+itil,ITIL,yes
+sublime text,Sublime Text,yes
+android,Android,yes
+ubuntu,Ubuntu,yes
+tensorflow,TensorFlow,yes

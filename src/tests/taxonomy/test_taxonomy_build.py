@@ -44,6 +44,17 @@ def test_name_status() -> None:
     )
 
 
+def test_name_status_member_list() -> None:
+    names = {0: "A / B / C", 1: "Cloud", 2: "cloud", 3: "Data", 4: "X / Y"}
+    members = {0: ["A", "B", "C"], 1: ["a1"], 2: ["a2"], 3: ["Data"], 4: ["X", "Y"]}
+    assert build.name_status(names, members) == {
+        0: "member_list", 1: "duplicate", 2: "duplicate", 3: "ok", 4: "member_list"}
+    assert build.name_status(names) == build.name_status(names, None)
+    assert build.name_status({0: "A / B"}, {}) == {0: "ok"}
+    assert build.name_status({0: "Cloud", 1: "cloud"}, {0: ["Cloud"]}) == {
+        0: "duplicate", 1: "duplicate"}
+
+
 def test_build_taxonomy_from_labels() -> None:
     skills = ["Python", "Java", "AWS", "Excel", "Go", "Azure"]
     labels = np.array([0, 0, 1, -1, 0, 1])

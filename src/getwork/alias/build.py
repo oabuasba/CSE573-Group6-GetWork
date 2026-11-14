@@ -9,6 +9,7 @@ from pathlib import Path
 from getwork.alias import normalize
 from getwork.alias import table as alias_table
 from getwork.alias.table import AliasTable
+from getwork.alias.versions import VersionFamily, fold_version
 
 CURATED_PATH: Path = Path(__file__).parent / "alias_curated.csv"
 CURATED_HEADER = ["alias", "canonical"]
@@ -81,19 +82,50 @@ def _check_pair(entries: Mapping[str, str], pair: CuratedPair) -> None:
         )
 
 
-def build_table(forms: Mapping[str, int], curated: Sequence[CuratedPair]) -> AliasTable:
+def _check_family(entries: Mapping[str, str], family: VersionFamily) -> None:
+    canonical = normalize.clean_surface(family.canonical)
+    keys = [normalize.normalize_key(family.canonical)]
+    if family.map_bare:
+        keys.append(normalize.normalize_key(family.base))
+    if any(entries[key] != canonical for key in keys):
+        raise ValueError(
+            f"conflicting version family: {family.base!r} -> {family.canonical!r} "
+            "(the canonical is itself folded or aliased to something else)"
+        )
+
+
+def _apply_families(entries: dict[str, str], families: Sequence[VersionFamily]) -> None:
+    for family in families:
+        canonical = normalize.clean_surface(family.canonical)
+        entries[normalize.normalize_key(family.canonical)] = canonical
+        if family.map_bare:
+            entries[normalize.normalize_key(family.base)] = canonical
+    for key in list(entries):
+        folded = fold_version(key, families)
+        if folded is not None:
+            entries[key] = folded
+
+
+def build_table(
+    forms: Mapping[str, int],
+    curated: Sequence[CuratedPair],
+    families: Sequence[VersionFamily] = (),
+) -> AliasTable:
     groups: dict[str, dict[str, int]] = defaultdict(dict)
     for form, count in forms.items():
         key = normalize.normalize_key(form)
         if key:
             groups[key][form] = count
     entries = {key: pick_display(group) for key, group in groups.items()}
+    _apply_families(entries, families)
     for pair in curated:
         canonical = normalize.clean_surface(pair.canonical)
         entries[normalize.normalize_key(pair.canonical)] = canonical
         entries[normalize.normalize_key(pair.alias)] = canonical
     for pair in curated:
         _check_pair(entries, pair)
+    for family in families:
+        _check_family(entries, family)
     return alias_table.make_table(entries)
 
 

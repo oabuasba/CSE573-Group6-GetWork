@@ -2,6 +2,8 @@
 
 GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engineering and adjacent fields. Given a resume it returns the top-k job postings; given a posting it returns the top-k candidates. The full design builds a skill taxonomy from the corpus so that related skills (React and Vue) earn partial credit, then has an agent explain each match. See `docs/proposal.md` and `specs/architecture.html`.
 
+New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the single runbook from a fresh clone to the web UI.
+
 ## Status
 
 | Stage | State |
@@ -11,8 +13,8 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
 | Alias table, skill taxonomy, relabeling | Built |
 | Document embeddings (`doc-embed`) | Built |
 | Retrieval (B1+, B2, Full) | Built |
-| FastAPI backend and React UI (`webapp`, `src/web`) | Demo mode built; artifact mode and final checks pending |
-| LLM explanation agent (only the template explainer exists) | Planned |
+| Web app (FastAPI backend, React UI, deterministic explainer; try `webapp serve --demo`) | Built |
+| LLM explanation agent (`webapp serve --explainer agent`, `src/getwork/agent`) | Built |
 | Evaluation | Planned |
 
 ## Architecture
@@ -45,7 +47,7 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
                                    |
                                    v
    [BUILT, demo data] FastAPI backend + React UI + template explainer
-   [PLANNED] LLM explanation agent
+   [BUILT, optional extra] LLM explanation agent + chat (webapp serve --explainer agent)
 ```
 
 ## Prerequisites
@@ -78,6 +80,8 @@ It is needed only for the default local embedding backend. With `--embed-backend
 
 Secrets: copy `.env.example` to `.env` and fill in `VOYAGER_API_KEY`, `VOYAGER_BASE_URL` and `VOYAGER_MODEL` (and `VOYAGER_EMBED_MODEL` if you use Voyager embeddings). Tests and offline steps do not need it.
 
+## Run the web app
+
 Web frontend (optional; Node >= 20.11):
 
 ```
@@ -86,7 +90,24 @@ npm --prefix src/web run build      # writes src/web/dist, which `webapp serve` 
 uv run webapp serve --demo          # http://127.0.0.1:8000, API docs at /docs
 ```
 
-`webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Only `--demo` works for now. Frontend tests: `npm --prefix src/web test`.
+`webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Frontend tests: `npm --prefix src/web test`.
+
+Run it on your artifacts (the folder is your choice: `--artifacts-dir`, else the environment variable `WEBAPP_ARTIFACTS_DIR`, else `artifacts_trial`; a folder of `vN` runs resolves to its highest complete run, or pass a run such as `artifacts_trial/v5`):
+
+```
+uv run webapp check --artifacts-dir artifacts_trial
+uv run webapp serve --artifacts-dir artifacts_trial
+```
+
+See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
+
+The default explainer is the rules-based template. To use the explanation agent and the per-match chat, install the extra and add the agent flags (the model call is made by you, with your own key; see `src/getwork/agent/README.md`):
+
+```
+uv sync --extra agent
+uv run webapp serve --demo --explainer agent --backend voyager --model MODEL
+# optional: --agent-backend voyager|local, --agent-model MODEL, --agent-timeout SECONDS (default 60)
+```
 
 ## Preprocess and structure
 
@@ -110,7 +131,7 @@ The full command list, exit codes and output files are in [`src/getwork/structur
 `scripts/run_pipeline.sh` runs every step after structuring, in order, stopping at the first failure (`set -euo pipefail`). It does not run preprocessing, the structurer, or the web app. Each step is echoed as `==> <command>`.
 
 ```
-[STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] bash scripts/run_pipeline.sh [CONFIG_ID]
+[STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] [CLUSTER_CONFIG_ID=...] bash scripts/run_pipeline.sh [CONFIG_ID]
 ```
 
 Before the first run on the full data (4k resumes, 1k postings), `preprocess` and `structure` must already have produced `STRUCTURED_DIR` for both sources. The structurer writes to `data/structured/<source>` by default. If your structured output is still in the trial folder, move it yourself (the script never moves data):
@@ -126,10 +147,13 @@ Environment variables (all optional):
 | `STRUCTURED_DIR` | `data/structured` | `alias-table build` and `apply` only (`--structured-dir`) |
 | `ARTIFACTS_DIR` | `artifacts` (a fresh tree, separate from `artifacts_trial/`) | every step (`--artifacts-dir`) |
 | `PROCESSED_DIR` | `data/processed` | `relabel` and `doc-embed build` (`--processed-dir`) |
+| `NAME_METHOD` | `llm` | `taxonomy name --method` (`heuristic` is offline-only and adds `--allow-member-names` to `taxonomy build`) |
+| `NAME_WORKERS` | `4` | `taxonomy name --workers` |
+| `NAME_OVERLAP_ROUNDS` | `2` | `taxonomy name --overlap-rounds` (`0` disables) |
 
-- `CONFIG_ID` (optional, for example `kmeans-04`): if given, `taxonomy select --config-id CONFIG_ID` runs right after `taxonomy grid`. Without it, `grid` overwrites `selection.json` with its own pick (the previous file is archived, see below) and that pick is used. Pick the id from `$ARTIFACTS_DIR/taxonomy/grid_results.csv`.
-- The script changes into the repo root itself, so it can be run from anywhere, but relative `STRUCTURED_DIR`, `ARTIFACTS_DIR` and `PROCESSED_DIR` resolve against the repo root, not your current directory (use absolute paths to avoid surprises). The embed steps need `.env` (you provide it; not in git) with `VOYAGER_API_KEY` and `VOYAGER_BASE_URL`. `VOYAGER_EMBED_MODEL` is commented out in `.env.example` and is not needed here, because the script passes `--embed-backend voyager --embed-model qwen3-embedding-8b`.
-- Inputs per step: steps 1-2 read `STRUCTURED_DIR`; steps 3-8 and 12 read only `ARTIFACTS_DIR`; step 9 (`relabel`) also reads `PROCESSED_DIR` (the clean parquet per source); step 10 (`doc-embed build`) also reads `PROCESSED_DIR/postings/postings_clean.parquet` for listed experience levels (if it is missing, posting levels are derived from years of experience and a note is printed); step 11 reads `ARTIFACTS_DIR` only.
+- `CONFIG_ID` (optional first argument, for example `kmeans-04`) or the environment variable `CLUSTER_CONFIG_ID`: the configuration that `taxonomy select --config-id` picks right after `taxonomy grid`. The default is `kmeans-01` (k=10, so exactly 10 clusters and no noise); the argument wins over the variable. `grid`'s own pick in `selection.json` is always overridden (the previous file is archived, see below). Pick other ids from `$ARTIFACTS_DIR/taxonomy/grid_results.csv`.
+- The script changes into the repo root itself, so it can be run from anywhere, but relative `STRUCTURED_DIR`, `ARTIFACTS_DIR` and `PROCESSED_DIR` resolve against the repo root, not your current directory (use absolute paths to avoid surprises). The embed steps need `.env` (you provide it; not in git) with `VOYAGER_API_KEY` and `VOYAGER_BASE_URL`. With the default `NAME_METHOD=llm`, step 7 also needs `VOYAGER_MODEL` (or `LLM_BACKEND=local` with `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL`), because the script cannot pass `--model`; without it the run fails at step 7 after the billed `taxonomy embed`. `NAME_METHOD=heuristic` needs no LLM variables. `VOYAGER_EMBED_MODEL` is commented out in `.env.example` and is not needed here, because the script passes `--embed-backend voyager --embed-model qwen3-embedding-8b`.
+- Inputs per step: steps 1-2 read `STRUCTURED_DIR`; steps 3-9 and 13 read only `ARTIFACTS_DIR`; step 10 (`relabel`) also reads `PROCESSED_DIR` (the clean parquet per source); step 11 (`doc-embed build`) also reads `PROCESSED_DIR/postings/postings_clean.parquet` for listed experience levels (if it is missing, posting levels are derived from years of experience and a note is printed); step 12 reads `ARTIFACTS_DIR` only.
 - Archive behavior: `taxonomy name --force` overwrites `cluster_names.csv`, and `taxonomy grid` and `select` overwrite `selection.json`. Before those steps the script copies an existing file to `$ARTIFACTS_DIR/taxonomy/archive/<name>_<UTC timestamp>.<ext>` (for example `cluster_names_20261109T060353Z.csv`), and skips quietly if the file does not exist.
 
 | Step | Command | Main output under `$ARTIFACTS_DIR/` |
@@ -139,22 +163,22 @@ Environment variables (all optional):
 | 3 | `taxonomy counts` | `skills/skill_counts.parquet` |
 | 4 | `taxonomy embed` (Voyager call) | `skills/skill_vectors.npy` |
 | 5 | `taxonomy grid` | `taxonomy/grid_results.csv`, `taxonomy/selection.json` |
-| 6 | `taxonomy select` (only with `CONFIG_ID`) | `taxonomy/selection.json` |
-| 7 | `taxonomy name --method heuristic --force` | `taxonomy/cluster_names.csv` |
+| 6 | `taxonomy select` (always; default `kmeans-01`) | `taxonomy/selection.json` |
+| 7 | `taxonomy name --method $NAME_METHOD --workers $NAME_WORKERS --overlap-rounds $NAME_OVERLAP_ROUNDS --force` (default `llm`, real LLM calls) | `taxonomy/cluster_names.csv` |
 | 8 | `taxonomy build` | `taxonomy/taxonomy.json` |
-| 9 | `relabel` (lookup-only mode) | `relabeled/<source>/` |
-| 10 | `doc-embed build` | `documents/<source>/<source>_documents.{jsonl,parquet}`, `<source>_documents_summary.json` |
-| 11 | `doc-embed embed` (Voyager call) | `documents/<source>/<source>_full.npy`, `<source>_full_ids.json`, `<source>_full_meta.json`, and the same three for `b2` |
-| 12 | `retrieve run` | `retrieval/topk_*.parquet`, `retrieval_summary.json` |
+| 9 | `taxonomy plot` (offline) | `taxonomy/plots/` (`index.html`, `cluster_map.png`, `cluster_sizes.png`, ...) |
+| 10 | `relabel` (lookup-only mode) | `relabeled/<source>/` |
+| 11 | `doc-embed build` | `documents/<source>/<source>_documents.{jsonl,parquet}`, `<source>_documents_summary.json` |
+| 12 | `doc-embed embed` (Voyager call) | `documents/<source>/<source>_full.npy`, `<source>_full_ids.json`, `<source>_full_meta.json`, and the same three for `b2` |
+| 13 | `retrieve run` | `retrieval/topk_*.parquet`, `retrieval_summary.json` |
 
 Warnings:
 
-- Steps 4 and 11 make real Voyager calls.
-- Step 7 uses `--force`, so it overwrites `cluster_names.csv`, including hand edits; the previous copy is archived as described above. If you edit names, restore from the archive or run steps individually instead (see [`src/getwork/taxonomy/README.md`](src/getwork/taxonomy/README.md)).
+- Steps 4, 7 (with the default `NAME_METHOD=llm`) and 12 make real Voyager calls. Step 7 uses `--force`, so it overwrites `cluster_names.csv`, including hand edits; the previous copy is archived as described above. If you edit names, restore from the archive or run steps individually instead (see [`src/getwork/taxonomy/README.md`](src/getwork/taxonomy/README.md)).
 - `taxonomy grid` exits 2 when no configuration is eligible, which stops the script.
 - `embed-preflight` and `structurer --preflight` exit 3 when the model is not found or the preflight request fails.
 
-Embed caching (steps 4 and 11):
+Embed caching (steps 4 and 12):
 
 - Texts are embedded in chunks of 256 (`--chunk-size`), and each chunk is saved under an `_embed_cache` folder: `$ARTIFACTS_DIR/skills/_embed_cache` for `taxonomy embed`, `$ARTIFACTS_DIR/documents/<source>/_embed_cache` for `doc-embed embed`. `doc-embed embed --no-cache` turns it off (the script does not pass it).
 - A chunk's key is its index, its texts, and the backend/model info. An identical rerun, or a rerun after an interrupted run, embeds no cached chunk. Each Voyager embed step still sends one probe request at start-up, when the client is built.
@@ -163,12 +187,20 @@ Embed caching (steps 4 and 11):
 Examples:
 
 ```
-bash scripts/run_pipeline.sh                       # full data, use the configuration grid picked
+bash scripts/run_pipeline.sh                       # full data, 10 clusters (kmeans-01)
 bash scripts/run_pipeline.sh kmeans-04             # force a specific configuration
 STRUCTURED_DIR=data/structured_trial ARTIFACTS_DIR=artifacts_trial bash scripts/run_pipeline.sh   # trial tree
 ```
 
 After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir "$ARTIFACTS_DIR"` (without the flag it reads `artifacts_trial/`). Per-stage options are in the READMEs: [`alias`](src/getwork/alias/README.md), [`taxonomy`](src/getwork/taxonomy/README.md), [`relabel`](src/getwork/relabel/README.md), [`docembed`](src/getwork/docembed/README.md), [`retrieval`](src/getwork/retrieval/README.md).
+
+### Try a random resume
+
+`scripts/match_random.sh` picks a random resume id from `$ARTIFACTS_DIR/documents/resumes/resumes_documents.parquet` and runs `retrieve show` (direction `resume_to_posting`) for B1+, B2 and Full. It uses stored vectors, so it makes no API calls.
+
+```bash
+[ARTIFACTS_DIR=...] [K=5] bash scripts/match_random.sh [RESUME_ID]
+```
 
 ## Development workflow (multi-agent)
 

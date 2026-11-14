@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -30,6 +31,26 @@ def check_name(name: str) -> str:
     if name.casefold() == OTHER.casefold():
         raise ValueError(f"cluster name must not be {OTHER!r}")
     return name
+
+
+_LIST_SEPARATORS = re.compile(r"\s*(?:/|\||&|\+|\band\b)\s*", re.IGNORECASE)
+
+
+def member_list_reason(name: str, members: Sequence[str]) -> str | None:
+    """Rule N-1: a reason (containing "member skills") when over half the name's parts are members."""
+    keys = {normalize.normalize_key(m) for m in members}
+    parts = [p for p in _LIST_SEPARATORS.split(name) if p.strip()]
+    if len(parts) < 2:
+        parts = name.split()
+    if len(parts) < 2:
+        return None
+    hits = sum(1 for p in parts if normalize.normalize_key(p) in keys)
+    if 2 * hits <= len(parts):
+        return None
+    return (
+        f"{name!r} lists member skills; give one concept label "
+        "(for example Unit Testing for JUnit, Selenium, Mockito), not skills joined together"
+    )
 
 
 @dataclass(frozen=True)

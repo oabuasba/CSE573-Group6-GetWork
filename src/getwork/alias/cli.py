@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from getwork import fileio, paths
-from getwork.alias import apply, build, propose
+from getwork.alias import apply, build, propose, versions
 from getwork.alias import table as alias_table
 from getwork.llm import factory
 from getwork.llm.client import FatalLLMError, LLMClient, describe_exception
@@ -21,6 +21,7 @@ EXIT_USAGE = 2
 EXIT_FATAL_LLM = 3
 TABLE_FILE = "alias_table.json"
 REPORT_FILE = "alias_build_report.json"
+VERSION_REPORT_FILE = "alias_version_report.json"
 DRAFT_FILE = "alias_draft.csv"
 DRAFT_SUMMARY_FILE = "alias_draft_summary.json"
 DRAFT_COLUMNS = (
@@ -54,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--artifacts-dir", type=Path, default=paths.DEFAULT_ARTIFACTS_DIR)
         if name == "build":
             p.add_argument("--curated", type=Path, default=build.CURATED_PATH)
+            p.add_argument("--families", type=Path, default=versions.FAMILIES_PATH)
         if name == "propose":
             factory.add_llm_args(p)
             p.add_argument("--batch-size", type=_positive_int, default=100)
@@ -108,17 +110,23 @@ def _load_saved_table(artifacts_dir: Path) -> alias_table.AliasTable:
 
 
 def _run_build(args: argparse.Namespace) -> int:
-    records = _read_structured(args.structured_dir)
     curated = build.load_curated(args.curated)
+    families = versions.load_families(args.families)
+    records = _read_structured(args.structured_dir)
     forms = _surface_forms(records)
-    table = build.build_table(forms, curated)
+    table = build.build_table(forms, curated, families)
     report = build.build_report(forms, table, len(curated))
     meta = {
         "n_curated_pairs": len(curated),
+        "n_version_families": len(families),
         "n_records": {source: len(recs) for source, recs in records.items()},
     }
     alias_table.save_table(_table_path(args.artifacts_dir), table, meta)
-    fileio.write_json_atomic(paths.alias_dir(args.artifacts_dir) / REPORT_FILE, report)
+    alias_dir = paths.alias_dir(args.artifacts_dir)
+    fileio.write_json_atomic(alias_dir / REPORT_FILE, report)
+    fileio.write_json_atomic(
+        alias_dir / VERSION_REPORT_FILE, versions.version_report(forms, families, table)
+    )
     print(json.dumps(report))
     return EXIT_OK
 

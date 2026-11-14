@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { expect, test, vi } from "vitest";
 import ExplainPanel from "./ExplainPanel.jsx";
 import contract from "../fixtures/contract.json";
+import agent from "../fixtures/contract_agent.json";
 
 const query = contract.match.query;
 const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data });
@@ -49,4 +50,31 @@ test("shows an error and retries", async () => {
   expect(await screen.findByText(contract.explain.summary)).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(fetchImpl).toHaveBeenCalledTimes(2);
+});
+
+test("renders agent claims", async () => {
+  renderPanel(vi.fn().mockResolvedValue(reply(agent.explain_agent)));
+  for (const claim of agent.explain_agent.claims) {
+    expect(await screen.findByText(claim.text)).toBeInTheDocument();
+  }
+  expect(screen.getAllByRole("button", { name: "Show evidence" })).toHaveLength(2);
+  expect(screen.queryByText(agent.explain_agent.summary)).not.toBeInTheDocument();
+  expect(screen.getByText("Explained by demo-model")).toBeInTheDocument();
+});
+
+test("shows the assistant error with retry", async () => {
+  const user = userEvent.setup();
+  const { message, hint } = agent.chat_error.error;
+  const fetchImpl = vi
+    .fn()
+    .mockResolvedValueOnce(reply(agent.chat_error, 502))
+    .mockResolvedValue(reply(agent.explain_agent));
+  renderPanel(fetchImpl);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("The assistant could not answer");
+  expect(alert).toHaveTextContent(message);
+  expect(alert).toHaveTextContent(hint);
+  expect(screen.queryByText(agent.explain_agent.summary)).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText(agent.explain_agent.claims[0].text)).toBeInTheDocument();
 });

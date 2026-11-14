@@ -11,7 +11,7 @@ from getwork.llm.client import LLMClient, LLMRequest, PermanentLLMError
 from getwork.llm.retry import CallStats, RetriesExhausted, RetryConfig, Throttle
 from getwork.llm.validated import ValidationExhausted, complete_validated, parse_json_object
 
-ALIAS_PROMPT_VERSION: str = "alias_v1"
+ALIAS_PROMPT_VERSION: str = "alias_v2"
 MAX_SKILL_CHARS_IN_ERROR = 60
 
 

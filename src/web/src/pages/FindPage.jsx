@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { describeError, NETWORK_ERROR_CODE, postMatch } from "../api.js";
+import ChatPanel from "../components/ChatPanel.jsx";
 import ExplainPanel from "../components/ExplainPanel.jsx";
 import GroupedSkills from "../components/GroupedSkills.jsx";
 import MatchCard from "../components/MatchCard.jsx";
@@ -49,8 +50,9 @@ function ErrorAlert({ error }) {
   );
 }
 
-function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl }) {
+function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, chatEnabled }) {
   const { matches, notes, query, system, direction } = response;
+  const chatMatches = matches.map((m) => ({ id: m.id, rank: m.rank, score: m.score }));
   return (
     <section>
       <h2 tabIndex={-1} ref={headingRef}>Results</h2>
@@ -76,6 +78,17 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl }
               >
                 <GroupedSkills skills={match.document.skills} />
                 <ExplainPanel direction={direction} query={query} matchId={match.id} fetchImpl={fetchImpl} />
+                {chatEnabled && (
+                  <ChatPanel
+                    key={match.id}
+                    direction={direction}
+                    query={query}
+                    focusId={match.id}
+                    matches={chatMatches}
+                    system={system}
+                    fetchImpl={fetchImpl}
+                  />
+                )}
               </MatchCard>
             </li>
           ))}
@@ -125,6 +138,7 @@ export default function FindPage({ direction, health, fetchImpl }) {
       {state.status === "done" && (
         <Results
           response={state.response} copy={copy} headingRef={headingRef} fetchImpl={fetchImpl}
+          chatEnabled={health?.explainer?.kind === "agent"}
           expandedId={expandedId} onToggle={(id) => setExpandedId(expandedId === id ? null : id)}
         />
       )}
