@@ -39,15 +39,7 @@ export function useChat({
       };
       postChat(body, fetchImpl).then(
         (data) => {
-          const turn = {
-            role: "assistant",
-            reply: data.reply,
-            claims: data.claims,
-            facts: data.facts,
-            suggested_questions: data.suggested_questions,
-            off_topic: data.off_topic,
-            ...(data.note ? { note: data.note } : {}),
-          };
+          const turn = { role: "assistant", reply: data.reply };
           turnsRef.current = [...turnsRef.current, turn];
           setTurns(turnsRef.current);
           busy.current = false;

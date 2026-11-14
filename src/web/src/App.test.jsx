@@ -8,6 +8,7 @@ import agent from "./fixtures/contract_agent.json";
 
 const okReply = (health) => ({ ok: true, status: 200, json: async () => health });
 const liveHealth = { ...contract.health, mode: "live" };
+const HOME_TITLE = "Match resumes to jobs, and jobs to resumes";
 
 beforeEach(() => {
   window.location.hash = "";
@@ -38,8 +39,12 @@ test("routing and one h1 per route", async () => {
   const user = userEvent.setup();
   await renderApp();
   const nav = screen.getByRole("navigation");
-  expect(within(nav).getByRole("link", { name: "Find jobs" })).toHaveAttribute("aria-current", "page");
-  for (const [name, hash] of [["Find candidates", "#/candidates"], ["About", "#/about"], ["Find jobs", "#/jobs"]]) {
+  expect(within(nav).getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+    ["Home", "#/home"], ["Find jobs", "#/jobs"], ["Find candidates", "#/candidates"], ["About", "#/about"],
+  ]);
+  expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  const steps = [["Find jobs", "#/jobs"], ["Find candidates", "#/candidates"], ["About", "#/about"], ["Home", "#/home"]];
+  for (const [name, hash] of steps) {
     await user.click(within(nav).getByRole("link", { name }));
     expect(window.location.hash).toBe(hash);
     expect(await within(nav).findByRole("link", { name })).toHaveAttribute("aria-current", "page");
@@ -49,7 +54,66 @@ test("routing and one h1 per route", async () => {
   await act(async () => {
     window.location.hash = "#/bogus";
   });
-  expect(screen.getAllByRole("heading", { level: 1 })[0]).toHaveTextContent("Find jobs");
+  expect(screen.getAllByRole("heading", { level: 1 })[0]).toHaveTextContent(HOME_TITLE);
+  expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+});
+
+test("wordmark links home", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/about";
+  await renderApp();
+  const wordmark = within(screen.getByRole("banner")).getByRole("link", { name: "GetWork" });
+  expect(wordmark).toHaveAttribute("href", "#/home");
+  expect(within(screen.getByRole("navigation")).queryByRole("link", { name: "GetWork" })).toBeNull();
+  await user.click(wordmark);
+  expect(await screen.findByRole("heading", { level: 1, name: HOME_TITLE })).toBeInTheDocument();
+});
+
+test("home is the default route", async () => {
+  for (const hash of ["", "#/home"]) {
+    window.location.hash = hash;
+    const { unmount } = render(<App fetchImpl={vi.fn().mockResolvedValue(okReply(liveHealth))} />);
+    expect(await screen.findByRole("heading", { level: 1, name: HOME_TITLE })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    unmount();
+  }
+});
+
+test("the home route shows its title while health is loading", () => {
+  render(<App fetchImpl={vi.fn(() => new Promise(() => {}))} />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("GetWork");
+  expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+});
+
+test.each([
+  ["Find jobs for my resume", "#/jobs", "Find jobs for your resume", "Find jobs"],
+  ["Find candidates for a posting", "#/candidates", "Find candidates for your posting", "Find candidates"],
+  ["Try it with your resume", "#/jobs", "Find jobs for your resume", "Find jobs"],
+  ["Try it with a job posting", "#/candidates", "Find candidates for your posting", "Find candidates"],
+  ["About page", "#/about", "About GetWork", "About"],
+])("home links reach the find and about pages: %s", async (link, hash, title, navName) => {
+  const user = userEvent.setup();
+  await renderApp();
+  await user.click(screen.getAllByRole("link", { name: link })[0]);
+  expect(window.location.hash).toBe(hash);
+  expect(await screen.findByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation")).getByRole("link", { name: navName })).toHaveAttribute(
+    "aria-current", "page",
+  );
+});
+
+test("route changes scroll to the top", async () => {
+  await renderApp();
+  vi.mocked(window.scrollTo).mockClear();
+  window.location.hash = "#/jobs";
+  await vi.waitFor(() => expect(window.scrollTo).toHaveBeenCalledWith(0, 0));
+  window.location.hash = "#/chat/a";
+  await vi.waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Chat about"));
+  vi.mocked(window.scrollTo).mockClear();
+  window.location.hash = "#/chat/b";
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(window.location.hash).toBe("#/chat/b");
+  expect(window.scrollTo).not.toHaveBeenCalled();
 });
 
 test("health failure and retry", async () => {
@@ -70,7 +134,7 @@ test("health failure and retry", async () => {
 test("demo banner", async () => {
   const user = userEvent.setup();
   await renderApp(contract.health);
-  for (const name of ["Find jobs", "Find candidates", "About"]) {
+  for (const name of ["Home", "Find jobs", "Find candidates", "About"]) {
     await user.click(within(screen.getByRole("navigation")).getByRole("link", { name }));
     expect(screen.getByText("Demo mode.")).toBeInTheDocument();
   }
@@ -110,7 +174,7 @@ test("real App with no props keeps network calls small across routes", async () 
   render(<App />);
   await screen.findByRole("navigation");
   const nav = screen.getByRole("navigation");
-  for (const name of ["Find candidates", "About", "Find jobs"]) {
+  for (const name of ["Find candidates", "About", "Home"]) {
     await user.click(within(nav).getByRole("link", { name }));
   }
   await new Promise((resolve) => setTimeout(resolve, 50));
@@ -118,7 +182,7 @@ test("real App with no props keeps network calls small across routes", async () 
 });
 
 test("the shell keeps the footer last", async () => {
-  for (const hash of ["#/jobs", "#/about", "#/chat/x"]) {
+  for (const hash of ["#/home", "#/jobs", "#/about", "#/chat/x"]) {
     window.location.hash = hash;
     const { container, unmount } = render(
       <App fetchImpl={vi.fn().mockResolvedValue(okReply(liveHealth))} />,
@@ -168,6 +232,7 @@ function chatFetch() {
 }
 
 async function searchAndOpenChat(user, fetchImpl) {
+  window.location.hash = "#/jobs";
   render(<App fetchImpl={fetchImpl} />);
   await user.click(await screen.findByRole("button", { name: "Fill in a form" }));
   await user.type(screen.getByLabelText("Skills"), "Vue");
@@ -212,7 +277,7 @@ test("reload on the chat route uses the stored snapshot", async () => {
   await searchAndOpenChat(user, fetchImpl);
   await user.type(await screen.findByLabelText("Your question"), "Why?");
   await user.click(screen.getByRole("button", { name: "Send" }));
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(/It also asks for React/);
   cleanup();
 
   const reloaded = chatFetch();

@@ -6,15 +6,14 @@ import GroupedSkills from "../components/GroupedSkills.jsx";
 import MatchCard from "../components/MatchCard.jsx";
 import Notice from "../components/Notice.jsx";
 import { loadConversation, saveConversation } from "../conversationStore.js";
+import { loadPanelOpen, savePanelOpen } from "../chatPanelPref.js";
 import { loadResults, setReturning } from "../resultsSession.js";
 import { hrefFor, ROUTE_BY_DIRECTION } from "../routes.js";
 import { useChat } from "../useChat.js";
 import "../theme/chat.css";
+import "../theme/chat-split.css";
 
-export const STARTERS = {
-  resume_to_posting: ["Why is this posting ranked here?", "Which skills am I missing?"],
-  posting_to_resume: ["Why is this candidate ranked here?", "Which required skills does this candidate lack?"],
-};
+export const PANEL_ID = "chat-suggestion-panel";
 
 const TITLE = "Chat about this suggestion";
 const UNAVAILABLE = "Chat is not available on this server.";
@@ -60,11 +59,11 @@ function NoSession() {
   );
 }
 
-function FocusMatch({ snapshot, match, fetchImpl }) {
+function FocusMatch({ snapshot, match, fetchImpl, open }) {
   const [expanded, setExpanded] = useState(false);
   const { direction, response } = snapshot;
   return (
-    <section aria-label="The suggestion">
+    <section id={PANEL_ID} className="chat-suggestion-panel" aria-label="The suggestion" hidden={!open}>
       <h2>This suggestion</h2>
       <MatchCard match={match} system={response.system} expanded={expanded} onToggle={() => setExpanded(!expanded)}>
         <GroupedSkills skills={match.document.skills} />
@@ -96,6 +95,7 @@ function useConversation({ snapshot, match, fetchImpl }) {
 function ChatSession({ snapshot, match, fetchImpl }) {
   const { turns, status, error, send, retry, reset } = useConversation({ snapshot, match, fetchImpl });
   const inputRef = useRef(null);
+  const [panelOpen, setPanelOpen] = useState(loadPanelOpen);
   const last = turns[turns.length - 1];
 
   useEffect(() => {
@@ -112,24 +112,43 @@ function ChatSession({ snapshot, match, fetchImpl }) {
     inputRef.current?.focus();
   }
 
+  function togglePanel() {
+    const next = !panelOpen;
+    setPanelOpen(next);
+    savePanelOpen(next);
+  }
+
   return (
     <div className="chat-page">
-      <a className="link" href={hrefFor(ROUTE_BY_DIRECTION[snapshot.direction])}>Back to results</a>
-      <h1>{TITLE}</h1>
-      <FocusMatch snapshot={snapshot} match={match} fetchImpl={fetchImpl} />
-      <section>
-        <h2 className="sr-only">Conversation</h2>
-        <ChatThread
-          turns={turns} status={status} error={error} onRetry={retry} onAsk={send}
-          starters={STARTERS[snapshot.direction]}
-        />
-        {turns.length > 0 && (
-          <button type="button" className="btn btn-secondary" disabled={status === "thinking"} onClick={startOver}>
-            Start over
+      <div className="chat-header">
+        <a className="link" href={hrefFor(ROUTE_BY_DIRECTION[snapshot.direction])}>Back to results</a>
+        <div className="chat-title-row">
+          <h1>{TITLE}</h1>
+          <button
+            type="button" className="btn btn-secondary chat-panel-toggle"
+            aria-expanded={panelOpen} aria-controls={PANEL_ID} onClick={togglePanel}
+          >
+            {panelOpen ? "Hide suggestion" : "Show suggestion"}
           </button>
-        )}
-      </section>
-      <ChatComposer onSend={send} disabled={status === "thinking"} inputRef={inputRef} />
+        </div>
+      </div>
+      <div className={panelOpen ? "chat-split" : "chat-split chat-split-solo"}>
+        <div className="chat-column">
+          <section className="chat-scroll">
+            <h2 className="sr-only">Conversation</h2>
+            <ChatThread
+              turns={turns} status={status} error={error} onRetry={retry}
+            />
+            {turns.length > 0 && (
+              <button type="button" className="btn btn-secondary" disabled={status === "thinking"} onClick={startOver}>
+                Start over
+              </button>
+            )}
+          </section>
+          <ChatComposer onSend={send} disabled={status === "thinking"} inputRef={inputRef} />
+        </div>
+        <FocusMatch snapshot={snapshot} match={match} fetchImpl={fetchImpl} open={panelOpen} />
+      </div>
     </div>
   );
 }

@@ -1,28 +1,22 @@
 import { useEffect, useRef } from "react";
 import { describeError } from "../api.js";
 import "../theme/chat.css";
-import ClaimList from "./ClaimList.jsx";
 import Notice from "./Notice.jsx";
 
-const EMPTY_PROMPT = "Ask anything about why this suggestion fits, or what is missing.";
+export const GREETING =
+  "Hi! Ask me anything about this suggestion: why it fits, what is missing, or how to improve it.";
 
 function Bubble({ turn }) {
   const isUser = turn.role === "user";
   return (
     <div className={`chat-bubble ${isUser ? "chat-bubble-user" : "chat-bubble-assistant"}`}>
       <span className="sr-only">{isUser ? "You: " : "Assistant: "}</span>
-      {isUser ? <p className="measure">{turn.content}</p> : <AssistantBody turn={turn} />}
+      {isUser ? (
+        <p className="measure">{turn.content}</p>
+      ) : (
+        <p className="measure chat-reply">{turn.reply}</p>
+      )}
     </div>
-  );
-}
-
-function AssistantBody({ turn }) {
-  if (turn.off_topic) return <p className="measure">{turn.reply}</p>;
-  return (
-    <>
-      <ClaimList claims={turn.claims} facts={turn.facts} />
-      {turn.note && <p className="measure chat-note">{turn.note}</p>}
-    </>
   );
 }
 
@@ -38,39 +32,22 @@ function ChatError({ error, onRetry }) {
   );
 }
 
-function Suggestions({ questions, disabled, onAsk }) {
-  if (questions.length === 0) return null;
-  return (
-    <div className="chat-suggestions">
-      {questions.map((question, index) => (
-        <button
-          key={`${index}-${question}`}
-          type="button"
-          className="btn btn-secondary"
-          disabled={disabled}
-          onClick={() => onAsk(question)}
-        >
-          {question}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export default function ChatThread({ turns, status, error, onRetry, onAsk, starters = [] }) {
+export default function ChatThread({ turns, status, error, onRetry }) {
   const endRef = useRef(null);
   const thinking = status === "thinking";
-  const last = turns[turns.length - 1];
-  const suggestions =
-    turns.length === 0 ? starters : last.role === "assistant" ? last.suggested_questions ?? [] : [];
 
   useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: "end" });
+    const scroller = endRef.current?.closest(".chat-scroll");
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    else endRef.current?.scrollIntoView?.({ block: "end" });
   }, [turns, status]);
 
   return (
     <div className="chat-thread">
-      {turns.length === 0 && <p>{EMPTY_PROMPT}</p>}
+      <div className="chat-bubble chat-bubble-assistant chat-greeting">
+        <span className="sr-only">Assistant: </span>
+        <p className="measure">{GREETING}</p>
+      </div>
       <div className="chat-turns" role="log" aria-live="polite">
         {turns.map((turn, i) => (
           <Bubble key={i} turn={turn} />
@@ -82,7 +59,6 @@ export default function ChatThread({ turns, status, error, onRetry, onAsk, start
         </div>
       )}
       {status === "error" && <ChatError error={error} onRetry={onRetry} />}
-      <Suggestions questions={suggestions} disabled={thinking} onAsk={onAsk} />
       <div ref={endRef} />
     </div>
   );

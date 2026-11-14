@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import Layout from "./Layout.jsx";
 import Notice from "./components/Notice.jsx";
 import { describeError, getHealth } from "./api.js";
 import AboutPage from "./pages/AboutPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import FindPage from "./pages/FindPage.jsx";
+import HomePage from "./pages/HomePage.jsx";
 import { chatIdFromHash, DIRECTION_BY_ROUTE, parseRoute } from "./routes.js";
 
 const ROUTE_TITLES = {
-  jobs: "Find jobs", candidates: "Find candidates", about: "About GetWork",
+  home: "GetWork", jobs: "Find jobs", candidates: "Find candidates", about: "About GetWork",
   chat: "Chat about this suggestion",
 };
 
@@ -60,8 +61,13 @@ export default function App({ fetchImpl = defaultFetch }) {
   const chatId = chatIdFromHash(hash);
   const [{ status, health, error }, retry] = useHealth(fetchImpl);
 
+  useLayoutEffect(() => {
+    window.scrollTo?.(0, 0);
+  }, [route]);
+
   return (
     <Layout route={route} health={health}>
+      {status === "ready" && route === "home" && <HomePage />}
       {status === "ready" && route === "about" && <AboutPage health={health} />}
       {status === "ready" && route === "chat" && (
         <ChatPage key={chatId} matchId={chatId} health={health} fetchImpl={fetchImpl} />

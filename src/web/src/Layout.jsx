@@ -2,6 +2,7 @@ import Notice from "./components/Notice.jsx";
 import { hrefFor } from "./routes.js";
 
 const NAV_LINKS = [
+  { route: "home", label: "Home" },
   { route: "jobs", label: "Find jobs" },
   { route: "candidates", label: "Find candidates" },
   { route: "about", label: "About" },
@@ -23,7 +24,9 @@ export default function Layout({ route, health, children }) {
         </div>
         <div className="header-main">
           <div className="container">
-            <span className="wordmark">GetWork</span>
+            <a className="wordmark" href={hrefFor("home")}>
+              GetWork
+            </a>
             <nav className="site-nav" aria-label="Main">
               {NAV_LINKS.map(({ route: target, label }) => (
                 <a key={target} href={hrefFor(target)} aria-current={target === route ? "page" : undefined}>

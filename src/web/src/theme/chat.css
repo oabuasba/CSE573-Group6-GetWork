@@ -1,33 +1,83 @@
-.chat-suggestions {
+.chat-composer {
+  padding: var(--space-2);
+}
+
+.chat-composer-box {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-1);
-  margin-bottom: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius-card) * 3);
+  padding: var(--space-2);
+}
+
+.chat-composer-box:focus-within {
+  outline: var(--focus-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.chat-composer-box textarea {
+  width: 100%;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-stack);
+  font-size: var(--text-base);
+  line-height: var(--line-height);
+  max-height: 9rem;
+  overflow-y: auto;
+}
+
+.chat-composer-box textarea:focus-visible {
+  outline: none;
+}
+
+.chat-composer-box textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.chat-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
 }
 
 .chat-counter {
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
-.chat-composer {
-  position: sticky;
-  bottom: 0;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: var(--space-2) 0;
+.chat-counter-near {
+  color: var(--text-secondary);
+  font-weight: bold;
 }
 
-.chat-composer-row {
-  display: flex;
-  gap: var(--space-1);
-  align-items: flex-end;
+.chat-disclaimer {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
 }
 
-.chat-composer textarea {
-  flex: 1;
-  min-width: 0;
-  resize: none;
+.chat-composer .chat-send {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 50%;
+  flex: none;
+}
+
+.chat-send svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .chat-page {
@@ -50,21 +100,31 @@
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background: var(--surface);
+  overflow-wrap: anywhere;
 }
 
 .chat-bubble-user {
   align-self: flex-end;
   background: var(--bg);
-  border-color: var(--border-strong);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-card) * 2);
 }
 
 .chat-bubble-assistant {
   align-self: flex-start;
+  border: 0;
+  background: transparent;
+  padding-left: 0;
 }
 
-.chat-note {
-  color: var(--text-muted);
-  font-size: var(--text-small);
+.chat-greeting {
+  margin-bottom: var(--space-2);
+}
+
+.chat-reply {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .chat-turns {

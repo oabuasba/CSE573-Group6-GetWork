@@ -6,7 +6,7 @@ import { loadResults, saveResults } from "./resultsSession.js";
 
 const turns = [
   { role: "user", content: "Why?" },
-  { role: "assistant", reply: "Because.", claims: [], facts: [], suggested_questions: ["More?"], off_topic: false },
+  { role: "assistant", reply: "Because." },
 ];
 
 afterEach(() => vi.restoreAllMocks());
@@ -24,19 +24,33 @@ test("round trip per match", () => {
   expect(loadConversation("j-2")).toEqual([]);
 });
 
+test("old stored turns load as plain replies", () => {
+  const old = {
+    role: "assistant",
+    reply: "Because.",
+    claims: [{ text: "c", fact_ids: ["f1"] }],
+    facts: [{ id: "f1", text: "t" }],
+    suggested_questions: ["More?"],
+    off_topic: false,
+    note: "Part of the answer was left out.",
+  };
+  window.sessionStorage.setItem(`${CONVERSATION_PREFIX}j-1`, JSON.stringify([turns[0], old]));
+  expect(loadConversation("j-1")).toEqual(turns);
+});
+
 test("invalid data and clear all", () => {
   for (const raw of ["nope{", "{}", "[1]", '[{"role":"system"}]', "null"]) {
     window.sessionStorage.setItem(`${CONVERSATION_PREFIX}bad`, raw);
     expect(loadConversation("bad")).toEqual([]);
   }
-  const partial = { role: "assistant", reply: "x", claims: [], facts: [], suggested_questions: [], off_topic: false };
   for (const bad of [
-    { ...partial, claims: undefined },
-    { ...partial, facts: "no" },
-    { ...partial, suggested_questions: null },
-    { ...partial, off_topic: "false" },
+    { role: "assistant" },
+    { role: "assistant", reply: 5 },
+    { role: "user", content: 5 },
+    { role: "system", reply: "x" },
+    null,
   ]) {
-    window.sessionStorage.setItem(`${CONVERSATION_PREFIX}bad`, JSON.stringify([bad]));
+    window.sessionStorage.setItem(`${CONVERSATION_PREFIX}bad`, JSON.stringify([turns[0], bad]));
     expect(loadConversation("bad")).toEqual([]);
   }
   saveResults({

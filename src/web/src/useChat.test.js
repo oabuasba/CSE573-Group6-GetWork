@@ -30,14 +30,16 @@ test("send posts a chat request and appends the reply", async () => {
     history: [],
     message: "Why?",
   });
-  expect(result.current.turns[1]).toEqual({
-    role: "assistant",
-    reply: agent.chat.reply,
-    claims: agent.chat.claims,
-    facts: agent.chat.facts,
-    suggested_questions: agent.chat.suggested_questions,
-    off_topic: false,
-  });
+  expect(result.current.turns[1]).toEqual({ role: "assistant", reply: agent.chat.reply });
+});
+
+test("stores plain assistant turns", async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(reply({ ...agent.chat, claims: [], note: "x" }));
+  const { result } = renderHook(() => useChat(props(fetchImpl)));
+  act(() => result.current.send("Why?"));
+  await waitFor(() => expect(result.current.status).toBe("idle"));
+  expect(result.current.turns[1]).toEqual({ role: "assistant", reply: agent.chat.reply });
+  expect(Object.keys(result.current.turns[1])).toEqual(["role", "reply"]);
 });
 
 test("failure keeps the user turn and exposes the error", async () => {
@@ -112,7 +114,7 @@ test("a second send while thinking is ignored", async () => {
 
 const earlier = [
   { role: "user", content: "Why?" },
-  { ...agent.chat, role: "assistant" },
+  { role: "assistant", reply: agent.chat.reply },
 ];
 
 test("initial turns and history", async () => {

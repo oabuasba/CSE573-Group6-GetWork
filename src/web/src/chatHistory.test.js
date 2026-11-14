@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { MAX_CONTENT, MAX_HISTORY, toHistory } from "./chatHistory.js";
 
 const user = (content) => ({ role: "user", content });
-const bot = (reply) => ({ role: "assistant", reply, claims: [], facts: [] });
+const bot = (reply) => ({ role: "assistant", reply });
 
 test("toHistory trims and maps", () => {
   expect(toHistory([user("hi"), bot("hello")])).toEqual([

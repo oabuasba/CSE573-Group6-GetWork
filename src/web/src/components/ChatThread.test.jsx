@@ -1,19 +1,17 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { ApiError } from "../api.js";
 import agent from "../fixtures/contract_agent.json";
-import ChatThread from "./ChatThread.jsx";
+import ChatThread, { GREETING } from "./ChatThread.jsx";
 
-const assistant = { ...agent.chat, role: "assistant" };
+const assistant = { role: "assistant", reply: agent.chat.reply };
 const asked = { role: "user", content: "Why is j-1 first?" };
-const STARTERS = ["Why is this ranked here?", "Which skills am I missing?"];
-const EMPTY = "Ask anything about why this suggestion fits, or what is missing.";
 
 function setup(props = {}) {
-  const handlers = { onRetry: vi.fn(), onAsk: vi.fn() };
+  const handlers = { onRetry: vi.fn() };
   const view = render(
-    <ChatThread turns={[]} status="idle" error={null} starters={STARTERS} {...handlers} {...props} />,
+    <ChatThread turns={[]} status="idle" error={null} {...handlers} {...props} />,
   );
   return { ...handlers, ...view };
 }
@@ -22,8 +20,7 @@ afterEach(() => {
   delete Element.prototype.scrollIntoView;
 });
 
-test("renders user and assistant bubbles", async () => {
-  const user = userEvent.setup();
+test("renders user and assistant bubbles as plain text", () => {
   const { container } = setup({ turns: [asked, assistant] });
   const log = screen.getByRole("log");
   expect(log).toHaveAttribute("aria-live", "polite");
@@ -33,19 +30,38 @@ test("renders user and assistant bubbles", async () => {
   expect(bubbles[0]).toHaveTextContent("You: Why is j-1 first?");
   expect(bubbles[1]).toHaveClass("chat-bubble-assistant");
   expect(bubbles[1]).toHaveTextContent("Assistant: ");
-  expect(within(bubbles[1]).getByText(agent.chat.claims[0].text)).toBeInTheDocument();
-  const buttons = within(bubbles[1]).getAllByRole("button", { name: "Show evidence" });
-  expect(buttons).toHaveLength(2);
-  await user.click(buttons[0]);
-  expect(within(bubbles[1]).getByText("Shared skills: JavaScript, CSS.")).toBeInTheDocument();
+  const body = bubbles[1].querySelector("p.measure.chat-reply");
+  expect(body.textContent).toBe(agent.chat.reply);
+  expect(bubbles[1].querySelector("button, ul, ol, a")).toBeNull();
   expect(container.querySelector(".chat-note")).toBeNull();
 });
 
-test("shows the note under the claims of an assistant turn", () => {
-  setup({ turns: [asked, { ...assistant, note: "Part of the answer was left out." }] });
-  const note = screen.getByText("Part of the answer was left out.");
-  expect(note).toHaveClass("chat-note");
-  expect(screen.getByRole("log")).toContainElement(note);
+test("assistant text with markup is escaped", () => {
+  const reply = "<b>x</b> https://example.com";
+  setup({ turns: [asked, { role: "assistant", reply }] });
+  const bubble = screen.getByRole("log").querySelector(".chat-bubble-assistant");
+  expect(bubble.querySelector(".chat-reply").textContent).toBe(reply);
+  expect(bubble.querySelector("b, a")).toBeNull();
+});
+
+test("has no suggestion buttons", () => {
+  const { container } = setup({ turns: [asked, assistant] });
+  expect(screen.queryByRole("button")).toBeNull();
+  expect(container.querySelector(".chat-suggestions")).toBeNull();
+  expect(setup().container.querySelector(".chat-suggestions")).toBeNull();
+});
+
+test("greeting is shown outside the log", () => {
+  for (const turns of [[], [asked, assistant]]) {
+    const { container, unmount } = setup({ turns });
+    const greeting = container.querySelector(".chat-greeting");
+    expect(greeting).toHaveClass("chat-bubble", "chat-bubble-assistant");
+    expect(greeting).toHaveTextContent(`Assistant: ${GREETING}`);
+    expect(screen.getByRole("log")).not.toContainElement(greeting);
+    expect(container.querySelector(".chat-thread").firstElementChild).toBe(greeting);
+    unmount();
+  }
+  expect(setup().container.querySelectorAll(".chat-turns .chat-bubble")).toHaveLength(0);
 });
 
 test("pending bubble while thinking", () => {
@@ -57,35 +73,6 @@ test("pending bubble while thinking", () => {
   expect(screen.getByRole("log")).toHaveTextContent("Why is j-1 first?");
 });
 
-test("suggestions and starters send", async () => {
-  const user = userEvent.setup();
-  const first = setup();
-  expect(screen.getByText(EMPTY)).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: STARTERS[1] }));
-  expect(first.onAsk).toHaveBeenCalledWith(STARTERS[1]);
-  first.unmount();
-
-  const older = { ...assistant, suggested_questions: ["Old question?"] };
-  const second = setup({ turns: [asked, older, asked, assistant] });
-  expect(screen.queryByText(EMPTY)).toBeNull();
-  expect(screen.queryByRole("button", { name: STARTERS[0] })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Old question?" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "What is j-1 missing?" }));
-  expect(second.onAsk).toHaveBeenCalledWith("What is j-1 missing?");
-});
-
-test("suggestions are disabled while thinking", () => {
-  setup({ status: "thinking" });
-  expect(screen.getByRole("button", { name: STARTERS[0] })).toBeDisabled();
-});
-
-test("off-topic reply is plain text", () => {
-  const offTopic = { ...assistant, off_topic: true, reply: "I can only talk about this match." };
-  setup({ turns: [asked, offTopic] });
-  expect(screen.getByText(offTopic.reply)).toHaveClass("measure");
-  expect(screen.queryByRole("button", { name: "Show evidence" })).toBeNull();
-});
-
 test("error alert with retry", async () => {
   const user = userEvent.setup();
   const error = new ApiError({ status: 502, code: "assistant_failed", ...agent.chat_error.error });
@@ -95,7 +82,7 @@ test("error alert with retry", async () => {
   expect(alert).toHaveTextContent(agent.chat_error.error.message);
   expect(alert).toHaveTextContent(agent.chat_error.error.hint);
   expect(screen.getByRole("log")).not.toContainElement(alert);
-  expect(container.querySelectorAll(".chat-bubble-assistant")).toHaveLength(0);
+  expect(container.querySelectorAll(".chat-turns .chat-bubble-assistant")).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(onRetry).toHaveBeenCalledOnce();
 });
@@ -103,7 +90,7 @@ test("error alert with retry", async () => {
 test("scrolls the newest item into view", () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
-  const base = { error: null, onRetry: vi.fn(), onAsk: vi.fn(), starters: [] };
+  const base = { error: null, onRetry: vi.fn() };
   const { rerender } = render(<ChatThread {...base} turns={[]} status="idle" />);
   scrollIntoView.mockClear();
   rerender(<ChatThread {...base} turns={[asked]} status="idle" />);
@@ -119,4 +106,27 @@ test("works without scrollIntoView", () => {
   expect(Element.prototype.scrollIntoView).toBeUndefined();
   const { rerender } = setup();
   expect(() => rerender(<ChatThread turns={[asked]} status="thinking" error={null} />)).not.toThrow();
+});
+
+test("scrolls the chat-scroll ancestor instead of the page", () => {
+  const scrollIntoView = vi.fn();
+  Element.prototype.scrollIntoView = scrollIntoView;
+  const setTop = vi.fn();
+  const props = { status: "idle", error: null, onRetry: vi.fn() };
+  const { container, rerender } = render(
+    <section className="chat-scroll">
+      <ChatThread turns={[]} {...props} />
+    </section>,
+  );
+  const scroller = container.querySelector(".chat-scroll");
+  Object.defineProperty(scroller, "scrollHeight", { configurable: true, value: 500 });
+  Object.defineProperty(scroller, "scrollTop", { configurable: true, get: () => 0, set: setTop });
+  scrollIntoView.mockClear();
+  rerender(
+    <section className="chat-scroll">
+      <ChatThread turns={[asked]} {...props} />
+    </section>,
+  );
+  expect(setTop).toHaveBeenCalledWith(500);
+  expect(scrollIntoView).not.toHaveBeenCalled();
 });

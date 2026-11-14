@@ -23,6 +23,7 @@ export const TEXT_PAIRS = [
   ["--chip-related-fg", "--chip-related-bg", TEXT],
   ["--chip-gap-fg", "--chip-gap-bg", TEXT],
   ["--chip-other-fg", "--chip-other-bg", TEXT],
+  ["--hero-fg", "--hero-bg", TEXT],
   ["--text", "--surface", TEXT], // alert text: Gray 1 on the white alert surface
 ];
 
@@ -31,6 +32,9 @@ export const NON_TEXT_PAIRS = [
   ["--focus-ring", "--surface", NON_TEXT],
   ["--focus-ring", "--bg", NON_TEXT],
   ["--focus-ring-on-dark", "--footer-bg", NON_TEXT],
+  ["--focus-ring-on-dark", "--hero-bg", NON_TEXT],
+  ["--btn-cta-bg", "--hero-bg", NON_TEXT],
+  ["--btn-secondary-bg", "--hero-bg", NON_TEXT],
 ];
 
 // Combinations the brand guide forbids, as [foreground, background] color tokens.

@@ -41,6 +41,8 @@
   --footer-bg: var(--color-gray-1);
   --footer-fg: var(--color-white);
   --footer-link: var(--color-gold);
+  --hero-bg: var(--color-maroon);
+  --hero-fg: var(--color-white);
   --btn-primary-bg: var(--color-maroon);
   --btn-primary-fg: var(--color-white);
   --btn-primary-hover-bg: var(--color-maroon-hover);
@@ -74,6 +76,8 @@
   --text-h1: 2rem;
   --text-h2: 1.5rem;
   --text-h3: 1.25rem;
+  --text-hero: 2.5rem;
+  --text-lead: 1.25rem;
   --line-height: 1.5;
   --measure: 43.75rem;
 

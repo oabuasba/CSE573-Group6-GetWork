@@ -80,14 +80,17 @@ uv run webapp serve --demo
 
 Pass: `http://127.0.0.1:8000/` shows the app and `/docs` shows the API. For frontend development run
 `npm --prefix src/web run dev` (a mock API by default; set `GETWORK_REAL_API=1` to proxy to the real server, and
-`GETWORK_API_HOST` / `GETWORK_API_PORT` to change its address, default 127.0.0.1 and 8000). Tests: `npm --prefix src/web test`.
+`GETWORK_API_HOST` / `GETWORK_API_PORT` to change its address, default 127.0.0.1 and 8000). Tests: `npm --prefix src/web test`. The app opens on a Home page (`#/home`) that explains GetWork and makes no API call of its own; Find jobs and Find candidates are at `#/jobs` and `#/candidates`, and the About page is at `#/about`.
 
 "Chat about this suggestion" is a link in an expanded result card that opens a separate chat page (`#/chat/<id>`). The last
 results and the conversations are kept only in the browser tab (`sessionStorage`) and are lost when the tab closes; a new search
 clears the conversations and "Start over" clears one. "Back to results" restores the results with the same card open. To try the
 chat page run `uv run webapp serve` with chat enabled; the `npm run dev` mock server has no `/api/chat` endpoint. The footer follows
-the content (at the bottom of short pages, after it on long ones). Layout (sticky footer, one-row controls, the composer staying at
-the bottom of a long conversation, Back and Forward) cannot be checked in jsdom and is a visual check you run yourself.
+the content (at the bottom of short pages, after it on long ones). The chat page shows the conversation on the left and the suggestion on the right; the right pane can be
+hidden with "Hide suggestion" (and restored with "Show suggestion"), the choice is kept in `sessionStorage` for the tab, and on
+narrow screens the suggestion stacks below the chat. Layout (sticky footer, one-row controls, the split layout, each pane
+scrolling on its own, the composer staying at the bottom of a long conversation and growing with its text, Enter during IME
+composition not sending, Back and Forward) cannot be checked in jsdom and is a visual check you run yourself.
 
 ## WA-6 troubleshooting
 

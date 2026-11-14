@@ -2,25 +2,21 @@ export const CONVERSATION_PREFIX = "getwork.chat.v1:";
 
 const keyFor = (matchId) => `${CONVERSATION_PREFIX}${matchId}`;
 
-function isTurn(turn) {
-  if (turn === null || typeof turn !== "object") return false;
-  if (turn.role === "user") return typeof turn.content === "string";
-  return (
-    turn.role === "assistant" &&
-    typeof turn.reply === "string" &&
-    Array.isArray(turn.claims) &&
-    Array.isArray(turn.facts) &&
-    Array.isArray(turn.suggested_questions) &&
-    typeof turn.off_topic === "boolean"
-  );
+function toTurn(turn) {
+  if (turn === null || typeof turn !== "object") return null;
+  if (turn.role === "user" && typeof turn.content === "string") return { role: "user", content: turn.content };
+  if (turn.role === "assistant" && typeof turn.reply === "string") return { role: "assistant", reply: turn.reply };
+  return null;
 }
 
 export function loadConversation(matchId) {
   try {
     const raw = window.sessionStorage.getItem(keyFor(matchId));
     if (raw === null) return [];
-    const turns = JSON.parse(raw);
-    return Array.isArray(turns) && turns.every(isTurn) ? turns : [];
+    const stored = JSON.parse(raw);
+    if (!Array.isArray(stored)) return [];
+    const turns = stored.map(toTurn);
+    return turns.every((turn) => turn !== null) ? turns : [];
   } catch {
     return [];
   }

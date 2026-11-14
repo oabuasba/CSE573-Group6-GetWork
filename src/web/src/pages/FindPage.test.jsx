@@ -168,7 +168,7 @@ test("real FindPage without injected props makes a small number of network calls
 
 const agentHealth = { ...health, chat: { enabled: true, model: "demo-model" } };
 
-function agentFetch({ explain = reply(agent.explain_agent) } = {}) {
+function agentFetch({ explain = reply(contract.explain) } = {}) {
   return vi.fn(async (path) => {
     if (path.startsWith("/api/match")) return reply(contract.match);
     if (path.startsWith("/api/explain")) return explain;
@@ -391,4 +391,29 @@ test("understood card resets to closed when new results arrive", async () => {
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
   await screen.findByRole("heading", { level: 2, name: "Results" });
   expect(toggle("Show details")).toHaveAttribute("aria-expanded", "false");
+});
+
+test("example from the random group can be submitted", async () => {
+  const items = Array.from({ length: 10 }, (_, i) => ({ ...contract.examples.items[0], id: `r-${i + 1}`, title: `Resume ${i + 1}` }));
+  const fetchImpl = vi.fn(async (path) => {
+    if (path.startsWith("/api/examples")) return reply({ items });
+    if (path.startsWith("/api/match")) return reply(contract.match);
+    throw new Error(`unexpected ${path}`);
+  });
+  const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
+  try {
+    vi.stubGlobal("fetch", fetchImpl);
+    const user = userEvent.setup();
+    render(<FindPage direction="resume_to_posting" health={health} />);
+    await user.click(screen.getByRole("button", { name: "Pick an example" }));
+    const select = await screen.findByRole("combobox", { name: /Example/ });
+    const groups = select.querySelectorAll("optgroup");
+    expect(groups).toHaveLength(2);
+    await user.selectOptions(select, groups[1].querySelector("option").value);
+    await user.click(screen.getByRole("button", { name: "Find jobs" }));
+    await screen.findByRole("heading", { name: "Results" });
+    expect(matchBodies(fetchImpl)[0].query).toEqual({ kind: "corpus", id: "r-4" });
+  } finally {
+    randomSpy.mockRestore();
+  }
 });

@@ -31,6 +31,31 @@ function setup({ direction = RESUME, health = liveHealth, busy = false } = {}) {
   return { onSubmit, fetchImpl, user };
 }
 
+function makeExamples(n, side = "resume") {
+  const prefix = side === "resume" ? "r" : "p";
+  return Array.from({ length: n }, (_, i) => ({
+    id: `${prefix}-${i + 1}`, side, title: `${side === "resume" ? "Resume" : "Posting"} ${i + 1}`,
+    level: "Associate", level_source: "years", years_experience: 3, incomplete_reason: null,
+    skills: [{ skill: "Python", cluster: "Data", via: "taxonomy" }],
+  }));
+}
+const seq = (...v) => {
+  let i = 0;
+  return vi.fn(() => v[Math.min(i++, v.length - 1)]);
+};
+function setupWith(items, { direction = RESUME, random = () => 0 } = {}) {
+  const onSubmit = vi.fn();
+  const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ items }) });
+  const user = userEvent.setup();
+  const view = render(
+    <QueryForm direction={direction} health={liveHealth} onSubmit={onSubmit} fetchImpl={fetchImpl} random={random} />,
+  );
+  return { onSubmit, fetchImpl, user, view };
+}
+const groupValues = (select) =>
+  [...select.querySelectorAll("optgroup")].map((g) => [...g.querySelectorAll("option")].map((o) => o.value));
+const optionValues = (select) => [...select.querySelectorAll("option")].map((o) => o.value);
+
 const choose = (user, name) => user.click(screen.getByRole("button", { name }));
 test("builds requests for each method", async () => {
   const { onSubmit, fetchImpl, user } = setup();
@@ -55,7 +80,7 @@ test("builds requests for each method", async () => {
   await choose(user, "Pick an example");
   await user.selectOptions(await screen.findByRole("combobox", { name: /Example/ }), "r-2");
   await user.click(screen.getByRole("button", { name: "Find jobs" }));
-  expect(fetchImpl.mock.calls[0][0]).toBe("/api/examples?side=resume&limit=6");
+  expect(fetchImpl.mock.calls[0][0]).toBe("/api/examples?side=resume&limit=20");
   expect(onSubmit).toHaveBeenLastCalledWith({
     direction: RESUME, k: 20, system: "B2", query: { kind: "corpus", id: "r-2" },
   });
@@ -256,4 +281,131 @@ test("the row holds two controls without the example method", async () => {
     const cells = [...document.querySelector("div.control-row").children];
     expect(cells.map((c) => c.querySelector("label").textContent)).toEqual(["Number of results", "Ranking method"]);
   }
+});
+
+test("example picker asks for the pool size on both sides", async () => {
+  for (const [direction, side] of [[RESUME, "resume"], [POSTING, "posting"]]) {
+    const { fetchImpl, user, view } = setupWith(makeExamples(10, side), { direction });
+    await choose(user, "Pick an example");
+    await screen.findByRole("combobox", { name: /Example/ });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0][0]).toBe(`/api/examples?side=${side}&limit=20`);
+    view.unmount();
+  }
+});
+
+test("example picker shows the fixed three then three random ones in labelled groups", async () => {
+  const items = makeExamples(10);
+  const low = setupWith(items, { random: () => 0 });
+  await choose(low.user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(select).toHaveAccessibleName(/Example resume/);
+  const groups = select.querySelectorAll("optgroup");
+  expect([...groups].map((g) => g.getAttribute("label"))).toEqual(["Suggested examples", "More examples, shuffled"]);
+  expect(select.firstElementChild).toHaveValue("");
+  expect(select.firstElementChild).toHaveTextContent("Choose an example");
+  expect(optionValues(select)).toEqual(["", "r-1", "r-2", "r-3", "r-4", "r-5", "r-6"]);
+  expect(groupValues(select)).toEqual([["r-1", "r-2", "r-3"], ["r-4", "r-5", "r-6"]]);
+  expect(select.querySelectorAll("option")).toHaveLength(7);
+  low.view.unmount();
+
+  const high = setupWith(items, { random: () => 0.99 });
+  await choose(high.user, "Pick an example");
+  const highSelect = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(optionValues(highSelect)).toEqual(["", "r-1", "r-2", "r-3", "r-10", "r-4", "r-5"]);
+});
+
+test("example mix is stable while shown and redrawn when shown again", async () => {
+  const random = seq(0, 0, 0, 0.99, 0.99, 0.99);
+  const { fetchImpl, user } = setupWith(makeExamples(10), { random });
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(random).toHaveBeenCalledTimes(3);
+  const before = optionValues(select);
+  expect(before.slice(4)).toEqual(["r-4", "r-5", "r-6"]);
+
+  await user.selectOptions(select, "r-2");
+  await user.selectOptions(screen.getByLabelText("Number of results"), "20");
+  await user.selectOptions(screen.getByLabelText("Ranking method"), "B2");
+  expect(optionValues(select)).toEqual(before);
+  expect(random).toHaveBeenCalledTimes(3);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+  await choose(user, "Paste text");
+  await choose(user, "Pick an example");
+  const again = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(random).toHaveBeenCalledTimes(6);
+  expect(groupValues(again)[1]).toEqual(["r-10", "r-4", "r-5"]);
+});
+
+test("a chosen example survives the redraw", async () => {
+  const random = vi.fn(() => 0);
+  const { user } = setupWith(makeExamples(10), { random });
+  await choose(user, "Pick an example");
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example resume/ }), "r-5");
+  expect(random).toHaveBeenCalledTimes(3);
+
+  await choose(user, "Paste text");
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(groupValues(select)[1]).toEqual(["r-5", "r-4", "r-6"]);
+  expect(random).toHaveBeenCalledTimes(5);
+  expect(select).toHaveValue("r-5");
+});
+
+test("a direction change draws again", async () => {
+  const random = vi.fn(() => 0);
+  const onSubmit = vi.fn();
+  const resumes = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ items: makeExamples(10) }) });
+  const postings = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ items: makeExamples(10, "posting") }) });
+  const user = userEvent.setup();
+  const view = render(
+    <QueryForm key={RESUME} direction={RESUME} health={liveHealth} onSubmit={onSubmit} fetchImpl={resumes} random={random} />,
+  );
+  await choose(user, "Pick an example");
+  await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(random).toHaveBeenCalledTimes(3);
+  view.rerender(
+    <QueryForm key={POSTING} direction={POSTING} health={liveHealth} onSubmit={onSubmit} fetchImpl={postings} random={random} />,
+  );
+  await choose(user, "Pick an example");
+  await screen.findByRole("combobox", { name: /Example posting/ });
+  expect(random).toHaveBeenCalledTimes(6);
+});
+
+test("short example lists show a flat list or a partly filled second group", async () => {
+  const cases = [[2, null], [4, [3, 1]], [5, [3, 2]]];
+  for (const [count, expected] of cases) {
+    const { user, view } = setupWith(makeExamples(count));
+    await choose(user, "Pick an example");
+    const select = await screen.findByRole("combobox", { name: /Example resume/ });
+    if (expected === null) {
+      expect(select.querySelectorAll("optgroup")).toHaveLength(0);
+      expect(select.querySelectorAll("option")).toHaveLength(count + 1);
+    } else {
+      expect(groupValues(select).map((g) => g.length)).toEqual(expected);
+    }
+    view.unmount();
+  }
+  const { user } = setupWith(contract.examples.items);
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example resume/ });
+  expect(select.querySelectorAll("optgroup")).toHaveLength(0);
+});
+
+test("choosing an example from the random group sends a corpus query", async () => {
+  const { onSubmit, user } = setupWith(makeExamples(10));
+  await choose(user, "Pick an example");
+  await user.selectOptions(await screen.findByRole("combobox", { name: /Example resume/ }), "r-5");
+  await user.click(screen.getByRole("button", { name: "Find jobs" }));
+  expect(onSubmit).toHaveBeenCalledWith({ direction: RESUME, k: 10, system: "Full", query: { kind: "corpus", id: "r-5" } });
+});
+
+test("posting side gets the same mix", async () => {
+  const { fetchImpl, user } = setupWith(makeExamples(10, "posting"), { direction: POSTING });
+  await choose(user, "Pick an example");
+  const select = await screen.findByRole("combobox", { name: /Example posting/ });
+  expect(groupValues(select)).toEqual([["p-1", "p-2", "p-3"], ["p-4", "p-5", "p-6"]]);
+  expect(fetchImpl.mock.calls[0][0]).toContain("side=posting");
 });

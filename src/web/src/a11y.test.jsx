@@ -34,12 +34,34 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-test.each(["#/jobs", "#/candidates", "#/about"])("no axe violations on each route %s", async (hash) => {
+test.each(["#/home", "#/jobs", "#/candidates", "#/about"])("no axe violations on each route %s", async (hash) => {
   window.location.hash = hash;
   const { container } = render(<App fetchImpl={fakeFetch(reply(contract.match))} />);
   await screen.findByRole("heading", { level: 1 });
   await vi.waitFor(() => expect(screen.getByRole("main")).not.toHaveTextContent("Loading"));
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("home page structure", async () => {
+  window.location.hash = "#/home";
+  render(<App fetchImpl={fakeFetch(reply(contract.match))} />);
+  await screen.findByRole("heading", { level: 1, name: "Match resumes to jobs, and jobs to resumes" });
+  const main = screen.getByRole("main");
+  const levels = [...main.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((h) => Number(h.tagName[1]));
+  expect(levels).toEqual([1, 2, 3, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 2, 2]);
+  const sections = [...main.querySelectorAll("section")];
+  expect(sections.length).toBeGreaterThan(0);
+  for (const section of sections) {
+    const labelId = section.getAttribute("aria-labelledby");
+    expect(labelId).toBeTruthy();
+    expect(document.getElementById(labelId)).not.toBeNull();
+  }
+  const buttons = [...main.querySelectorAll(".btn")];
+  expect(buttons.length).toBeGreaterThan(0);
+  for (const el of buttons) {
+    expect(el.tagName).toBe("A");
+    expect(el).toHaveAttribute("href");
+  }
 });
 
 async function searchAndAxe(matchReply, expand = false) {
@@ -103,19 +125,6 @@ async function openAgentCard(explainReply) {
   return { user, ...view };
 }
 
-test("no axe violations with the summary only", async () => {
-  const { container } = await openAgentCard(reply(agent.explain_agent));
-  await screen.findByText(agent.explain_agent.claims[0].text);
-  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
-});
-
-test("no axe violations with all points expanded", async () => {
-  const { container, user } = await openAgentCard(reply(agent.explain_agent));
-  await user.click(await screen.findByRole("button", { name: /^Show all \d+ points$/ }));
-  await user.click(screen.getAllByRole("button", { name: "Show evidence" })[0]);
-  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
-});
-
 test("no axe violations on the find page with the example select", async () => {
   const user = userEvent.setup();
   const { container } = render(
@@ -126,8 +135,24 @@ test("no axe violations on the find page with the example select", async () => {
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
 
+test("no axe violations on the find page with grouped examples", async () => {
+  const items = Array.from({ length: 10 }, (_, i) => ({ ...contract.examples.items[0], id: `r-${i + 1}`, title: `Resume ${i + 1}` }));
+  const fetchImpl = vi.fn(async (path) => {
+    if (path.startsWith("/api/examples")) return reply({ items });
+    return reply(contract.match);
+  });
+  const user = userEvent.setup();
+  const { container } = render(<FindPage direction="resume_to_posting" health={health} fetchImpl={fetchImpl} />);
+  await user.click(screen.getByRole("button", { name: "Pick an example" }));
+  const select = await screen.findByRole("combobox", { name: /Example/ });
+  const groups = [...select.querySelectorAll("optgroup")];
+  expect(groups).toHaveLength(2);
+  for (const group of groups) expect(group.getAttribute("label")?.trim()).toBeTruthy();
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
 test("no axe violations with the chat link", async () => {
-  const { container, user } = await openAgentCard(reply(agent.explain_agent));
+  const { container, user } = await openAgentCard(reply(contract.explain));
   await screen.findByRole("link", { name: "Chat about this suggestion" });
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
   expect(user).toBeDefined();
@@ -156,13 +181,25 @@ const headingLevels = () => screen.getAllByRole("heading").map((h) => Number(h.t
 test("no axe violations on the chat page empty", async () => {
   const { container } = renderChat({ chat: () => reply(agent.chat) });
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
-  expect(headingLevels()).toEqual([1, 2, 3, 2]);
+  expect(headingLevels()).toEqual([1, 2, 2, 3]);
+});
+
+test("no axe violations on the chat page with the suggestion hidden", async () => {
+  const { container, user } = renderChat({ chat: () => reply(agent.chat) });
+  await user.click(screen.getByRole("button", { name: "Hide suggestion" }));
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});
+
+test("no axe violations on the chat page with text in the composer", async () => {
+  const { container, user } = renderChat({ chat: () => reply(agent.chat) });
+  await user.type(screen.getByLabelText("Your question"), "Why is this ranked here?");
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
 
 test("no axe violations on the chat page with turns", async () => {
   const { container, user } = renderChat({ chat: () => reply(agent.chat) });
   await sendMessage(user);
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText((_, el) => el?.textContent === agent.chat.reply && el.classList.contains("chat-reply"));
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
 

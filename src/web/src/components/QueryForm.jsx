@@ -1,6 +1,7 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { SYSTEM_LABELS, describeError, getExamples } from "../api.js";
 import { canRun, parseSkills } from "../capabilities.js";
+import { EXAMPLE_POOL_LIMIT, pickExamples } from "../examplePick.js";
 import Notice from "./Notice.jsx";
 
 const METHODS = [
@@ -49,13 +50,42 @@ function readFileText(file) {
   });
 }
 
-function ExamplePicker({ side, fetchImpl, chosen, onChoose }) {
-  const [state, setState] = useState({ items: null, error: null });
+function ExampleOption({ item }) {
+  return (
+    <option value={item.id}>
+      {item.title || "Untitled"}, {item.level}, {item.skills.length} skills
+    </option>
+  );
+}
+
+function ExampleOptions({ picked }) {
+  const options = (items) => items.map((item) => <ExampleOption key={item.id} item={item} />);
+  if (picked.random.length === 0) return options(picked.defaults);
+  return (
+    <>
+      <optgroup label="Suggested examples">{options(picked.defaults)}</optgroup>
+      <optgroup label="More examples, shuffled">{options(picked.random)}</optgroup>
+    </>
+  );
+}
+
+function ExamplePicker({ side, fetchImpl, chosen, onChoose, random }) {
+  const [state, setState] = useState({ items: null, picked: null, error: null });
+  const randomRef = useRef(random);
+  const chosenRef = useRef(chosen);
+  randomRef.current = random;
+  chosenRef.current = chosen;
   useEffect(() => {
     let live = true;
-    getExamples(side, 6, fetchImpl).then(
-      (data) => live && setState({ items: data.items, error: null }),
-      (error) => live && setState({ items: null, error }),
+    getExamples(side, EXAMPLE_POOL_LIMIT, fetchImpl).then(
+      (data) =>
+        live &&
+        setState({
+          items: data.items,
+          picked: pickExamples(data.items, { random: randomRef.current, chosenId: chosenRef.current }),
+          error: null,
+        }),
+      (error) => live && setState({ items: null, picked: null, error }),
     );
     return () => {
       live = false;
@@ -81,11 +111,7 @@ function ExamplePicker({ side, fetchImpl, chosen, onChoose }) {
       {(id) => (
         <select id={id} value={chosen ?? ""} onChange={(event) => onChoose(event.target.value || null)}>
           <option value="">Choose an example</option>
-          {state.items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.title || "Untitled"}, {item.level}, {item.skills.length} skills
-            </option>
-          ))}
+          <ExampleOptions picked={state.picked} />
         </select>
       )}
     </Field>
@@ -186,7 +212,7 @@ const INITIAL_FIELDS = { text: "", pasteTitle: "", title: "", years: "", level: 
 const EXAMPLE_METHOD = METHODS[2];
 const ERROR_ID = "query-form-error";
 
-export default function QueryForm({ direction, health, busy, onSubmit, fetchImpl }) {
+export default function QueryForm({ direction, health, busy, onSubmit, fetchImpl, random = Math.random }) {
   const isResume = direction === "resume_to_posting";
   const side = isResume ? "resume" : "posting";
   const { capabilities, levels } = health;
@@ -248,7 +274,7 @@ export default function QueryForm({ direction, health, busy, onSubmit, fetchImpl
       <div className="control-row">
         {methodId === "example" && (
           <ExamplePicker
-            side={side} fetchImpl={fetchImpl} chosen={fields.example}
+            side={side} fetchImpl={fetchImpl} chosen={fields.example} random={random}
             onChoose={(example) => update({ example })}
           />
         )}

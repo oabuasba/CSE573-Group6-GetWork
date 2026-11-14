@@ -3,14 +3,14 @@ import {
   DIRECTION_BY_ROUTE, ROUTES, ROUTE_BY_DIRECTION, chatHref, chatIdFromHash, hrefFor, parseRoute,
 } from "./routes.js";
 
-test("parseRoute keeps old behavior", () => {
+test("parseRoute defaults to home", () => {
+  expect(ROUTES).toEqual(["home", "jobs", "candidates", "about", "chat"]);
+  for (const hash of ["", undefined, "#/", "#/home", "#/nope", "#/home/x"]) expect(parseRoute(hash)).toBe("home");
   expect(parseRoute("#/candidates")).toBe("candidates");
   expect(parseRoute("#/about")).toBe("about");
   expect(parseRoute("#/jobs")).toBe("jobs");
-  expect(parseRoute("")).toBe("jobs");
-  expect(parseRoute(undefined)).toBe("jobs");
-  expect(parseRoute("#/nope")).toBe("jobs");
   for (const route of ROUTES) expect(parseRoute(hrefFor(route))).toBe(route);
+  expect(hrefFor("home")).toBe("#/home");
   expect(hrefFor("jobs")).toBe("#/jobs");
   expect(DIRECTION_BY_ROUTE).toEqual({ jobs: "resume_to_posting", candidates: "posting_to_resume" });
   expect(ROUTE_BY_DIRECTION).toEqual({ resume_to_posting: "jobs", posting_to_resume: "candidates" });

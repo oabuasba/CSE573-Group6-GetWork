@@ -1,0 +1,77 @@
+/* Split layout of the chat page: conversation left, suggestion right. */
+.chat-header {
+  margin-bottom: var(--space-2);
+}
+
+.chat-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.chat-title-row h1 {
+  margin: 0;
+}
+
+.chat-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--space-3);
+  height: clamp(28rem, calc(100vh - 22rem), 52rem);
+  height: clamp(28rem, calc(100dvh - 22rem), 52rem);
+}
+
+.chat-split-solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chat-split-solo .chat-column {
+  max-width: 52rem;
+  width: 100%;
+  justify-self: center;
+}
+
+.chat-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.chat-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+/* No display here: it would override the hidden attribute. */
+.chat-suggestion-panel {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.chat-suggestion-panel[hidden] {
+  display: none;
+}
+
+@media (max-width: 48rem) {
+  .chat-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    height: auto;
+  }
+
+  .chat-column {
+    height: clamp(24rem, 70dvh, 40rem);
+  }
+
+  .chat-suggestion-panel {
+    overflow-y: visible;
+  }
+}

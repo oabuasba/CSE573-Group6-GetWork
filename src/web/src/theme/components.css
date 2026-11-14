@@ -224,6 +224,12 @@ a.skip-link:focus {
   transform: none;
 }
 
+/* Links styled as buttons, and the wordmark link, are not underlined */
+a.btn,
+a.wordmark {
+  text-decoration: none;
+}
+
 /* Forms */
 .field {
   display: flex;

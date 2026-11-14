@@ -1,10 +1,13 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import ChatPage, { STARTERS } from "./ChatPage.jsx";
+import ChatPage from "./ChatPage.jsx";
+import { AI_DISCLAIMER } from "../components/ChatComposer.jsx";
+import { GREETING } from "../components/ChatThread.jsx";
 import { CONVERSATION_PREFIX, loadConversation } from "../conversationStore.js";
 import contract from "../fixtures/contract.json";
 import agent from "../fixtures/contract_agent.json";
+import { PANEL_KEY } from "../chatPanelPref.js";
 import { saveResults } from "../resultsSession.js";
 
 const reply = (data, status = 200) => ({ ok: status < 400, status, json: async () => data });
@@ -38,6 +41,7 @@ function setup({ id = first.id, fetchImpl = routedFetch(), chatHealth = health }
   return { user, fetchImpl, ...view };
 }
 
+const replyText = (_, el) => el?.classList.contains("chat-reply") && el.textContent === agent.chat.reply;
 const box = () => screen.getByLabelText("Your question");
 async function ask(user, text) {
   await user.type(box(), text);
@@ -59,16 +63,13 @@ test("shows only the focus match", () => {
   expect(screen.queryByText(/found$/)).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Why this match?" })).toHaveAttribute("aria-expanded", "false");
   const order = [...document.querySelectorAll("a.link, h1, section, form")].map((el) => el.tagName);
-  expect(order[0]).toBe("A");
-  expect(order[1]).toBe("H1");
-  expect(order.at(-1)).toBe("FORM");
+  expect(order).toEqual(["A", "H1", "SECTION", "FORM", "SECTION"]);
 });
 
 test("back link follows the searched direction", () => {
   seed("posting_to_resume");
   render(<ChatPage matchId={first.id} health={health} fetchImpl={routedFetch()} />);
   expect(screen.getByRole("link", { name: "Back to results" })).toHaveAttribute("href", "#/candidates");
-  expect(screen.getByRole("button", { name: STARTERS.posting_to_resume[0] })).toBeInTheDocument();
 });
 
 test("why this match opens on demand", async () => {
@@ -98,7 +99,7 @@ test("send, pending, reply and focus", async () => {
   expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   expect(box()).toBeEnabled();
   release();
-  expect(await screen.findByText(agent.chat.claims[0].text)).toBeInTheDocument();
+  expect(await screen.findByText(replyText)).toBeInTheDocument();
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
   await waitFor(() => expect(box()).toHaveFocus());
 });
@@ -114,7 +115,7 @@ test("start over is shown only with turns and sits outside the composer form", a
 test("chat request body matches the contract", async () => {
   const { user, fetchImpl } = setup();
   await ask(user, "  Why?  ");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   const sent = bodies(fetchImpl, "/api/chat");
   expect(sent).toHaveLength(1);
   expect(Object.keys(sent[0]).sort()).toEqual(
@@ -134,7 +135,7 @@ test("chat request body matches the contract", async () => {
 test("history carries completed turns", async () => {
   const { user, fetchImpl } = setup();
   await ask(user, "Why?");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   await ask(user, "More?");
   await waitFor(() => expect(bodies(fetchImpl, "/api/chat")).toHaveLength(2));
   const { history, message } = bodies(fetchImpl, "/api/chat")[1];
@@ -154,7 +155,7 @@ test("failed request can be retried once", async () => {
   expect(screen.getAllByText("Why?")).toHaveLength(1);
   fail = false;
   await user.click(screen.getByRole("button", { name: "Try again" }));
-  expect(await screen.findByText(agent.chat.claims[0].text)).toBeInTheDocument();
+  expect(await screen.findByText(replyText)).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(screen.getAllByText("Why?")).toHaveLength(1);
   const sent = bodies(fetchImpl, "/api/chat");
@@ -217,12 +218,12 @@ test("unknown id and corrupt snapshot", () => {
 test("conversation survives a remount", async () => {
   const { user, fetchImpl, unmount } = setup();
   await ask(user, "Why?");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   expect(loadConversation(first.id)).toHaveLength(2);
   unmount();
   render(<ChatPage matchId={first.id} health={health} fetchImpl={fetchImpl} />);
   expect(screen.getByRole("log")).toHaveTextContent("You: Why?");
-  expect(screen.getByText(agent.chat.claims[0].text)).toBeInTheDocument();
+  expect(screen.getByText(replyText)).toBeInTheDocument();
   await ask(user, "More?");
   await waitFor(() => expect(bodies(fetchImpl, "/api/chat")).toHaveLength(2));
   expect(bodies(fetchImpl, "/api/chat")[1].history).toHaveLength(2);
@@ -231,7 +232,7 @@ test("conversation survives a remount", async () => {
 test("start over clears the stored conversation", async () => {
   const { user } = setup();
   await ask(user, "Why?");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   await user.click(screen.getByRole("button", { name: "Start over" }));
   expect(screen.getByRole("log")).toBeEmptyDOMElement();
   expect(window.sessionStorage.getItem(`${CONVERSATION_PREFIX}${first.id}`)).toBeNull();
@@ -242,7 +243,7 @@ test("start over clears the stored conversation", async () => {
 test("conversations are per match", async () => {
   const { user, unmount } = setup();
   await ask(user, "Why?");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   unmount();
   render(<ChatPage matchId={second.id} health={health} fetchImpl={routedFetch()} />);
   expect(screen.getByRole("log")).toBeEmptyDOMElement();
@@ -256,7 +257,7 @@ test("chat works when storage writes fail", async () => {
     throw new Error("full");
   });
   await ask(user, "Why?");
-  expect(await screen.findByText(agent.chat.claims[0].text)).toBeInTheDocument();
+  expect(await screen.findByText(replyText)).toBeInTheDocument();
 });
 
 test("back to results from the disabled state marks returning", async () => {
@@ -284,7 +285,7 @@ test("a failed user turn is not stored and is absent from the next history", asy
   expect(loadConversation(first.id)).toEqual([]);
   fail = false;
   await ask(user, "Second?");
-  await screen.findByText(agent.chat.claims[0].text);
+  await screen.findByText(replyText);
   const sent = bodies(fetchImpl, "/api/chat");
   expect(sent.map((b) => b.message)).toEqual(["First?", "Second?"]);
   expect(sent[1].history).toEqual([]);
@@ -295,4 +296,141 @@ test("the focus match card shows its evidence chips", () => {
   const card = screen.getByRole("region", { name: "The suggestion" }).querySelector("article");
   expect(first.evidence).toBeTruthy();
   expect(card.querySelectorAll(".chip").length).toBeGreaterThan(0);
+});
+
+const toggle = (name) => screen.getByRole("button", { name });
+
+test("chat column comes first and the composer sits outside the scrolling conversation", () => {
+  const { container } = setup();
+  const split = container.querySelector(".chat-split");
+  expect([...split.children].map((el) => el.className)).toEqual(["chat-column", "chat-suggestion-panel"]);
+  expect(split.children[1]).toBe(screen.getByRole("region", { name: "The suggestion" }));
+  const [scroll, form] = split.children[0].children;
+  expect(scroll).toHaveClass("chat-scroll");
+  expect(within(scroll).getByRole("heading", { name: "Conversation" })).toBeInTheDocument();
+  expect(within(scroll).getByRole("log")).toBeInTheDocument();
+  expect(form.tagName).toBe("FORM");
+  expect(scroll.contains(form)).toBe(false);
+  const header = container.querySelector(".chat-header");
+  expect(within(header).getByRole("link", { name: "Back to results" })).toBeInTheDocument();
+  expect(within(header).getAllByRole("heading")).toHaveLength(1);
+  expect(within(header).getByRole("button", { name: "Hide suggestion" })).toBeInTheDocument();
+});
+
+test("the toggle hides and shows the suggestion panel", async () => {
+  const { user, container } = setup();
+  const button = toggle("Hide suggestion");
+  expect(button).toHaveAttribute("aria-expanded", "true");
+  expect(button).toHaveAttribute("aria-controls", "chat-suggestion-panel");
+  expect(document.getElementById("chat-suggestion-panel")).not.toBeNull();
+  await user.click(button);
+  expect(button).toHaveTextContent("Show suggestion");
+  expect(button).toHaveAttribute("aria-expanded", "false");
+  expect(document.getElementById("chat-suggestion-panel")).toHaveAttribute("hidden");
+  expect(screen.queryByRole("region", { name: "The suggestion" })).not.toBeInTheDocument();
+  expect(container.querySelector(".chat-split")).toHaveClass("chat-split-solo");
+  expect(button).toHaveFocus();
+  await user.click(button);
+  expect(button).toHaveTextContent("Hide suggestion");
+  expect(screen.getByRole("region", { name: "The suggestion" })).toBeInTheDocument();
+  expect(container.querySelector(".chat-split")).not.toHaveClass("chat-split-solo");
+  expect(button).toHaveFocus();
+});
+
+test("the toggle is absent when chat is unavailable or there is no session", () => {
+  setup({ chatHealth: { ...health, chat: { enabled: false } } });
+  expect(screen.queryByRole("button", { name: /suggestion$/ })).not.toBeInTheDocument();
+});
+
+test("the toggle is absent without a session", () => {
+  window.sessionStorage.clear();
+  render(<ChatPage matchId="missing" health={health} fetchImpl={routedFetch()} />);
+  expect(screen.queryByRole("button", { name: /suggestion$/ })).not.toBeInTheDocument();
+});
+
+test("hiding the panel keeps the explanation and makes no request", async () => {
+  const { user, fetchImpl } = setup();
+  await user.click(screen.getByRole("button", { name: "Why this match?" }));
+  expect(await screen.findByText(contract.explain.summary)).toBeInTheDocument();
+  await user.click(toggle("Hide suggestion"));
+  await user.click(toggle("Show suggestion"));
+  expect(screen.getByText(contract.explain.summary)).toBeVisible();
+  expect(screen.getByRole("button", { name: "Why this match?" })).toHaveAttribute("aria-expanded", "true");
+  expect(bodies(fetchImpl, "/api/explain")).toHaveLength(1);
+  expect(fetchImpl.mock.calls.filter(([p]) => p.startsWith("/api/explain"))).toHaveLength(1);
+});
+
+test("the panel choice survives a remount", async () => {
+  const { user, unmount } = setup();
+  await user.click(toggle("Hide suggestion"));
+  expect(window.sessionStorage.getItem(PANEL_KEY)).toBe("closed");
+  unmount();
+  render(<ChatPage matchId={second.id} health={health} fetchImpl={routedFetch()} />);
+  expect(toggle("Show suggestion")).toHaveAttribute("aria-expanded", "false");
+  expect(document.getElementById("chat-suggestion-panel")).toHaveAttribute("hidden");
+});
+
+test("an unusable panel preference is ignored", async () => {
+  window.sessionStorage.setItem(PANEL_KEY, "garbage");
+  const { user, unmount } = setup();
+  expect(toggle("Hide suggestion")).toHaveAttribute("aria-expanded", "true");
+  unmount();
+  window.sessionStorage.removeItem(PANEL_KEY);
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("full");
+  });
+  render(<ChatPage matchId={first.id} health={health} fetchImpl={routedFetch()} />);
+  expect(toggle("Hide suggestion")).toHaveAttribute("aria-expanded", "true");
+  await user.click(toggle("Hide suggestion"));
+  expect(toggle("Show suggestion")).toHaveAttribute("aria-expanded", "false");
+});
+
+test("the chat page offers no suggested prompts", async () => {
+  const { user, container } = setup();
+  const names = () => screen.getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"));
+  expect(container.querySelector(".chat-suggestions")).toBeNull();
+  expect(names().sort()).toEqual(["Hide suggestion", "Send", "Why this match?"].sort());
+  await ask(user, "Why?");
+  await screen.findByText(replyText);
+  expect(container.querySelector(".chat-suggestions")).toBeNull();
+  expect(names().sort()).toEqual(["Hide suggestion", "Send", "Start over", "Why this match?"].sort());
+});
+
+test("the greeting is not stored or sent", async () => {
+  const { user, fetchImpl } = setup();
+  expect(screen.getByText(GREETING)).toBeInTheDocument();
+  await ask(user, "Why?");
+  await screen.findByText(replyText);
+  const stored = JSON.parse(window.sessionStorage.getItem(`${CONVERSATION_PREFIX}${first.id}`));
+  expect(stored).toHaveLength(2);
+  expect(JSON.stringify(stored)).not.toContain(GREETING);
+  await ask(user, "And then?");
+  await waitFor(() => expect(bodies(fetchImpl, "/api/chat")).toHaveLength(2));
+  for (const body of bodies(fetchImpl, "/api/chat")) {
+    expect(JSON.stringify(body.history)).not.toContain(GREETING);
+  }
+});
+
+test("the disclaimer is always visible", async () => {
+  let release;
+  const fetchImpl = routedFetch({ chat: () => new Promise((resolve) => (release = () => resolve(reply(agent.chat)))) });
+  const { user } = setup({ fetchImpl });
+  const shown = () => {
+    const note = document.querySelector("form.chat-composer p#chat-disclaimer");
+    expect(note).toHaveTextContent(AI_DISCLAIMER);
+  };
+  shown();
+  await ask(user, "Why?");
+  await screen.findByRole("status");
+  shown();
+  release();
+  await screen.findByText(replyText);
+  shown();
+});
+
+test("the disclaimer stays visible after an error", async () => {
+  const { user } = setup({ fetchImpl: routedFetch({ chat: () => reply(agent.chat_error, 502) }) });
+  await ask(user, "Why?");
+  await screen.findByRole("alert");
+  expect(document.getElementById("chat-disclaimer")).toHaveTextContent(AI_DISCLAIMER);
 });
