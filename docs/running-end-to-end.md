@@ -397,6 +397,8 @@ GETWORK_REAL_API=1 npm --prefix src/web run dev    # proxy /api to a running `we
 # GETWORK_API_HOST (default 127.0.0.1) and GETWORK_API_PORT (default 8000) change the proxy target
 ```
 
+The app opens on a Home page (`#/home`) that explains GetWork and makes no API call of its own; Find jobs and Find candidates are at `#/jobs` and `#/candidates`, and the About page is at `#/about`.
+
 ### 8.2 Demo mode (no key, no data)
 
 ```
@@ -449,8 +451,8 @@ The full runbook is [`src/getwork/webapp/README.md`](../src/getwork/webapp/READM
 ## 9. The match agent
 
 Match explanations (`POST /api/explain`, "Why this match?") are always rules-based and never call a model. The LangGraph agent is the
-per-match chat only (`--explainer auto` by default): it answers follow-up questions with claims verified against the two
-documents (the "Chat about this suggestion" button). It makes real model calls with your key,
+per-match chat only (`--explainer auto` by default): it answers follow-up questions in plain text, with no verifier and an on-page disclaimer
+(the "Chat about this suggestion" button). It makes real model calls with your key,
 using the model in `VOYAGER_MODEL`, the same as the structurer (so `--model` is not needed). If `VOYAGER_API_KEY`, `VOYAGER_BASE_URL`
 or `VOYAGER_MODEL` (or `LOCAL_LLM_*` with `LLM_BACKEND=local`) is missing, or `langgraph` is not installed, the server prints one
 `chat agent disabled: ...` notice naming the variables and starts with chat off; `/api/health` then shows `chat.enabled: false` and `chat.reason`.
@@ -476,7 +478,7 @@ conversations, and "Start over" clears one. "Back to results" restores the resul
 shows its unavailable state there. The page layout (footer at the bottom of short pages, one-row controls, the composer staying at the
 bottom of a long conversation, Back and Forward) cannot be checked in jsdom and needs a visual check by you in a real browser. The footer follows the content.
 
-Failure behaviour: if the model is unreachable, rejects the request, times out, or its answer cannot be verified, the chat shows a short
+Failure behaviour: if the model is unreachable, rejects the request, times out, or its reply is empty or malformed, the chat shows a short
 plain-language message; the match explanation is separate and always rules-based. Restart with `--explainer template` to
 remove the chat. Only structured fields (titles, levels, skills, clusters, ranks, scores, the conversation) go to the model,
 never raw resume or posting text. Full runbook (MA-1 to MA-6): [`src/getwork/agent/README.md`](../src/getwork/agent/README.md).
@@ -497,7 +499,7 @@ Pass: both suites exit 0 with no key, model or network.
 | `langgraph is not installed; run: uv sync --extra agent` | install the agent extra (also installed by plain `uv sync` through the dev group) |
 | `missing required setting(s): VOYAGER_API_KEY, ...` | `.env` lacks those names (the message lists names, never values); check `--env-file` and `--backend` |
 | No "Chat about this suggestion" button | the server started with chat off: read the `chat agent disabled: ...` stderr notice, or `chat.reason` in `uv run webapp check`; set the named variables (`VOYAGER_API_KEY`, `VOYAGER_BASE_URL`, `VOYAGER_MODEL`) or install langgraph. Not shown either with `--explainer template` |
-| `POST /api/chat` returns 502 | read the one `agent failed: reason=<r> detail=<...>` line on the server console (the 502 JSON also has `error.reason`): `model_rejected` means the service refused the request (see the status and message in `detail`: 401/403/404 key, URL or model; 400/422 an unsupported option such as `--extra-body`), `llm_unavailable` means it could not be reached, `invalid_reply` means the model's answer was unusable, and `unverified` means no claim could be checked against the two documents (answers where only some claims fail are shown without them, with a note). Keys, bearer tokens and URLs are redacted. See `src/getwork/agent/README.md` |
+| `POST /api/chat` returns 502 | read the one `agent failed: reason=<r> detail=<...>` line on the server console (the 502 JSON also has `error.reason`): `model_rejected` means the service refused the request (see the status and message in `detail`: 401/403/404 key, URL or model; 400/422 an unsupported option such as `--extra-body`), `llm_unavailable` means it could not be reached, `invalid_reply` means the reply was empty or a malformed tool request after the retries (a reply that names skills outside the two documents is shown, with one INFO log line). The five reasons are `llm_unavailable`, `model_rejected`, `invalid_reply`, `timeout` and `budget_exhausted`. Keys, bearer tokens and URLs are redacted. See `src/getwork/agent/README.md` |
 | `/` shows "Frontend not built" | run `npm --prefix src/web ci` then `npm --prefix src/web run build` |
 | `artifacts directory not found` / `is not a complete artifacts run: missing folders ...` | pass the run folder itself (for example `artifacts_trial/v5`) or build the missing stages (`alias-table build`, `taxonomy build`, `doc-embed build`); the web app needs `alias/`, `documents/`, `taxonomy/` |
 | `webapp check` exits 2 naming `doc-embed build` or `doc-embed embed` | the chosen (highest complete) `vN` lacks that stage; run it, or pass an older complete run explicitly |

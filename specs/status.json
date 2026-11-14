@@ -2501,6 +2501,404 @@
           "fix_rounds": 0
         }
       }
+    },
+    "home-landing-page": {
+      "spec": "specs/features/home-landing-page.html",
+      "phase": "done",
+      "planner_agent": "aed0086295776a8ba",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "notes": "Reviewer pass. Non-blocking: test name nested in describe (home-css.test.js:33).",
+          "batch": "T-1-T-2",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "notes": "Reviewer pass. Non-blocking: AC-5/6/7 tests assert fragments, not full I-6 paragraph text (HomePage.test.jsx:42-82).",
+          "batch": "T-1-T-2",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "notes": "large (file count only): user approved running whole, batch T-3-T-4 (2026-11-14) | Dev deviations: setup.js scrollTo guarded by typeof window (node-env tests). SPEC: AC-20 git diff lists src/getwork/webapp/README.md which T-4 itself edits (contradiction). | Reviewer pass. Non-blocking: App.test.jsx 301 lines (split home tests).",
+          "batch": "T-3-T-4",
+          "large": true,
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "notes": "Reviewer pass. AC-21 manual user check pending. SPEC: AC-20 git diff command always lists src/getwork/webapp/README.md (T-4 edits it); exclude it or restrict to *.py.",
+          "batch": "T-3-T-4",
+          "worktree": ".",
+          "fix_rounds": 0
+        }
+      },
+      "batches": {
+        "T-1-T-2": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "aa31560af44955de6",
+          "fix_rounds": 0
+        },
+        "T-3-T-4": {
+          "tasks": [
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "a0297a4fd0e8f56df",
+          "fix_rounds": 0
+        }
+      },
+      "notes": "User approved build 2026-11-14 (said 'send a developer'). In place on dev, no commits. T-3 flagged large (file count only): ask user before dispatching T-3-T-4. chat-split-layout planning runs in parallel (chat page files); avoid overlap."
+    },
+    "chat-split-layout": {
+      "spec": "specs/features/chat-split-layout.html",
+      "phase": "done",
+      "planner_agent": "a05f9aaea2515d0c2",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "A",
+          "notes": "Reviewer pass. Non-blocking: merged-ref behavior not directly tested.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "A",
+          "notes": "Reviewer pass. Non-blocking: chat-css.test.js helper drops @media context (spec said copy style-rules helper).",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "B",
+          "notes": "Reviewer pass.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "B",
+          "notes": "Reviewer pass.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "B",
+          "notes": "Reviewer pass; base/media split judged fine. Non-blocking: bodyOf splits at first @media (comment the assumption).",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2",
+            "T-3",
+            "T-4",
+            "T-5"
+          ],
+          "batch": "C",
+          "notes": "Reviewer pass. Non-blocking: ChatSession ~60 lines (extract ChatHeader); ChatPage.test.jsx 384 lines; duplicate explain-count assertion. One flaky App.test.jsx nav-lookup failure in 1 of 4 full runs (not reproduced).",
+          "large": true,
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "C",
+          "notes": "Reviewer pass. Non-blocking: README wrap.",
+          "worktree": ".",
+          "fix_rounds": 0
+        }
+      },
+      "notes": "User approved build 2026-11-14 (\"build out the new chat window\"). In place on dev, no commits. home-landing-page landed, so no a11y.test.jsx collision. A and B in parallel, then C. T-6 large: ask user whole vs split (T-6b) before dispatching C. | Batches A,B merged. C dispatched; T-6 run whole. | Done. AC-22 manual user check pending. SPEC for planner: AC-15 single test split into three; chat-css/chat-split-css test helpers (base/media split; style-rules helper tags only first @media rule); merged-ref untested; ChatSession/ChatPage.test.jsx size targets.",
+      "batches": {
+        "A": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "a4564c22bc0affb17",
+          "fix_rounds": 0
+        },
+        "B": {
+          "tasks": [
+            "T-3",
+            "T-4",
+            "T-5"
+          ],
+          "developer_agent": "aa03fabeac92fe2a5",
+          "fix_rounds": 0
+        },
+        "C": {
+          "tasks": [
+            "T-6",
+            "T-7"
+          ],
+          "developer_agent": "aa217b7418cf42ca6",
+          "fix_rounds": 0
+        }
+      }
+    },
+    "example-picker-mix": {
+      "spec": "specs/features/example-picker-mix.html",
+      "phase": "done",
+      "planner_agent": "acda6eaf0fb3572ea",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "A",
+          "notes": "Reviewer pass.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "A",
+          "notes": "Dev deviations: redraw test picks default r-2 (pinned case covered separately); extra \"direction change draws again\" test; local ExampleOption/ExampleOptions components. Reviewer pass; no blocking findings.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-2"
+          ],
+          "batch": "B",
+          "notes": "Reviewer pass. Non-blocking: optgroup label assertion passes when attribute missing (use ?.trim() truthy) - follow-up sent to dev. Manual keyboard check is user-run.",
+          "worktree": ".",
+          "fix_rounds": 0
+        }
+      },
+      "notes": "User approved 2026-11-14 (first-20 pool accepted by implication). In place on dev, no commits. T-3 edits a11y.test.jsx: hold until chat-split-layout batch C lands (T-6 edits it too).",
+      "batches": {
+        "A": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "a26f88042673f78f3",
+          "fix_rounds": 0
+        },
+        "B": {
+          "tasks": [
+            "T-3"
+          ],
+          "developer_agent": null,
+          "fix_rounds": 0
+        }
+      }
+    },
+    "chat-conversational": {
+      "spec": "specs/features/chat-conversational.html",
+      "phase": "done",
+      "planner_agent": "a05f9aaea2515d0c2",
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "merged",
+          "deps": [],
+          "batch": "A",
+          "notes": "Reviewer pass. Non-blocking: blank line test_agent_prompt.py:10; move NOT_A_TOOL_HINT/ELLIPSIS to top of prompt.py; 4000-char boundary case. SPEC: clip is 3,999+ellipsis = 4,000 exactly.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-2": {
+          "phase": "merged",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "A",
+          "notes": "Reviewer pass. Non-blocking: comment in ungrounded_skills that cluster exclusion lives in skill_mentions.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-3": {
+          "phase": "merged",
+          "deps": [
+            "T-1",
+            "T-2"
+          ],
+          "batch": "B",
+          "notes": "Passed after fix round 1 (strengthened feedback assertions, mutation-checked).",
+          "large": true,
+          "worktree": ".",
+          "fix_rounds": 1
+        },
+        "T-4": {
+          "phase": "merged",
+          "deps": [
+            "T-3"
+          ],
+          "batch": "B",
+          "notes": "Reviewer pass. Non-blocking: trailing blank line explainer.py:82; test_scripted_failures_are_502_envelopes leftover one-element loop + vacuous \"not json\" assertion; api.py:21 docstring wording. SPEC (planner list): AC-9 demo match r-1/j-1 has no gap fact (drop \"gap\" or use j-2); llm/validated.py:53 appends \"Return only the corrected JSON object.\" to retry feedback, wrong for plain-text protocol (shared code, planner decide).",
+          "large": true,
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-5": {
+          "phase": "merged",
+          "deps": [
+            "T-4"
+          ],
+          "batch": "C",
+          "notes": "Reviewer pass. Non-blocking: stray blank line test_agent_cli.py:9-11.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-6": {
+          "phase": "merged",
+          "deps": [
+            "T-5"
+          ],
+          "batch": "C",
+          "notes": "Reviewer pass. Non-blocking: contract test does not detect stale extra keys inside chat/usage (follow-up sent: assert key sets); duplicate FAILURE_COPY assertion. Python suite 1341 passed. Web tests red (29) due to fixture shape, owned by T-7..T-11.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-7": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "D",
+          "notes": "Reviewer pass. Non-blocking: chatHistory.test.js:5 old-shape fixture leftover.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-8": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "D",
+          "notes": "Reviewer pass. Note: App.test.jsx/FindPage.test.jsx diffs also hold home-landing-page and example-picker-mix hunks; commit separately.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-9": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "D",
+          "notes": "Reviewer pass. ClaimList.jsx/test removed via git rm (staged).",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-10": {
+          "phase": "merged",
+          "deps": [
+            "T-7"
+          ],
+          "batch": "E",
+          "notes": "Reviewer pass.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-11": {
+          "phase": "merged",
+          "deps": [
+            "T-7",
+            "T-8",
+            "T-9",
+            "T-10"
+          ],
+          "batch": "E",
+          "notes": "Reviewer pass (mutation-checked evidence-removal test). Non-blocking: ChatPage.test.jsx 436 lines.",
+          "worktree": ".",
+          "fix_rounds": 0
+        },
+        "T-12": {
+          "phase": "merged",
+          "deps": [
+            "T-6"
+          ],
+          "batch": "E",
+          "notes": "Reviewer pass. Non-blocking: docs/deviations.md:256 needs a superseded note (planner).",
+          "worktree": ".",
+          "fix_rounds": 0
+        }
+      },
+      "notes": "User approved build 2026-11-14 (\"once the spec is done just send off the developer\"). In place on dev, no commits. T-3/T-4 large: run whole (no split answer given; user prior pattern). Chain: A, B, C sequential; D after C; E after D. Full Python suite green only after T-6. | Done 2026-11-14. AC-26 (real-model check) user-run. Spec list sent to planner.",
+      "batches": {
+        "A": {
+          "tasks": [
+            "T-1",
+            "T-2"
+          ],
+          "developer_agent": "ae74503852a179524",
+          "fix_rounds": 0
+        },
+        "B": {
+          "tasks": [
+            "T-3",
+            "T-4"
+          ],
+          "developer_agent": "a6f729704a3b68bb5",
+          "fix_rounds": 1
+        },
+        "C": {
+          "tasks": [
+            "T-5",
+            "T-6"
+          ],
+          "developer_agent": "a484bdae544feb352",
+          "fix_rounds": 0
+        },
+        "D": {
+          "tasks": [
+            "T-7",
+            "T-8",
+            "T-9"
+          ],
+          "developer_agent": "a45d2a3f6f120bd22",
+          "fix_rounds": 0
+        },
+        "E": {
+          "tasks": [
+            "T-10",
+            "T-11",
+            "T-12"
+          ],
+          "developer_agent": "aa48ad278294fec90",
+          "fix_rounds": 0
+        }
+      }
     }
   },
   "adhoc": {
