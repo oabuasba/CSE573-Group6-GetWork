@@ -19,6 +19,7 @@ needs the local embedding model (`uv sync --extra embed`). Cost and run-time fig
 8. [Running the web UI](#8-running-the-web-ui)
 9. [The match agent](#9-the-match-agent)
 10. [Verification and troubleshooting](#10-verification-and-troubleshooting)
+11. [Evaluation](#11-evaluation)
 
 ## 1. Quick start: the minimum path to see the UI
 
@@ -511,3 +512,24 @@ Pass: both suites exit 0 with no key, model or network.
 | `ProvenanceMismatchError`, `RelabelProvenanceError` or "alias table version" errors | records from different models, backends or table versions were mixed; rerun the stage into a fresh `vN`, or `--allow-mixed` (not for reported data) |
 | Structurer exit 3 / preflight not found | wrong `VOYAGER_MODEL` or base URL (must end in `/v1`); a 404 `{"detail":"Not Found"}` means a legacy key to rotate |
 | Public host warning | `--host` other than 127.0.0.1 has no authentication; keep the default |
+
+## 11. Evaluation
+
+Evaluation is a separate flow that you run yourself after `retrieve run`. It samples dev, test and
+human query sets from software and adjacent IT postings and the cleaned resumes, pools the top
+results of B1+, B2 and Full, has two LLM judges label the pooled pairs, and then computes nDCG@10,
+P@10, MRR, judge and human agreement, the cluster ARI and a report.
+
+- Everything is written under one folder, `eval_out` by default (`--out-dir`); nothing under
+  `data/` or `artifacts_trial/` changes. The folder is not git-ignored because the authors' label
+  files are irreplaceable.
+- Only `evaluate judge` makes real Voyager calls (it reads `.env`). Those runs are user-run only.
+- `bash scripts/run_evaluation.sh STAGE` runs one stage; judge stages need `USER_RUN_JUDGE=1`.
+
+```
+uv run evaluate sample --artifacts-dir artifacts_trial/v6 --out-dir eval_out/v6
+uv run evaluate judge --preflight
+```
+
+The full run order, the judges, cost control and the manual checklist are in
+[the evaluation README](../src/getwork/evaluation/README.md).

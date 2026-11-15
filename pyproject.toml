@@ -28,6 +28,7 @@ embed-preflight = "getwork.embed.cli:main"
 webapp = "getwork.webapp.cli:main"
 taxonomy = "getwork.taxonomy.cli:main"
 relabel = "getwork.relabel.cli:main"
+evaluate = "getwork.evaluation.cli:main"
 doc-embed = "getwork.docembed.cli:main"
 retrieve = "getwork.retrieval.cli:main"
 
@@ -61,6 +62,7 @@ include = ["getwork*"]
 "getwork.agent" = ["prompts/*.md"]
 "getwork.taxonomy" = ["prompts/*.md"]
 "getwork.relabel" = ["prompts/*.md"]
+"getwork.evaluation" = ["prompts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]
