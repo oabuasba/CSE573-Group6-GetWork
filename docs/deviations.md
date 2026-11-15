@@ -26,8 +26,8 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-6 | Preprocessing | Domain filter widened from software to six families | Departure | built | Yes |
 | P-7 | Preprocessing | Exact duplicates became normalized near-duplicates | Clarification | built | Yes (one clause) |
 | P-8 | Retrieval | B1 replaced by B1+; SciPy added | Superseded-by-presentation | specced | Yes |
-| P-9 | Evaluation | Labeling and validation protocol replaced | Superseded-by-presentation | specced | Yes |
-| P-10 | Evaluation | Comparisons and metrics restated | Superseded-by-presentation | specced | Yes (fold into P-9) |
+| P-9 | Evaluation | Labeling and validation protocol replaced | Superseded-by-presentation | built (harness; labeling UI not built) | Yes |
+| P-10 | Evaluation | Comparisons and metrics restated | Superseded-by-presentation | built | Yes (fold into P-9) |
 | P-11 | Timeline | Weeks 1, 4, 6 shifted; unplanned stages added | Superseded-by-presentation | specced | Yes |
 | P-12 | Embedding | Experience-level derivation | Clarification | draft | Yes |
 | P-13 | Relabeling | LLM-free default; add-only re-extraction | Departure | draft | Yes |
@@ -37,8 +37,10 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-17 | Web app | Deterministic explainer ships before the agent; chat and blind labeling deferred; demo mode and ASU-brand theming added | Addition | built | Yes (scope sentence) |
 | P-18 | Agent | Agent uses a JSON action protocol (not native tool calls), a claim verifier, plain-language errors on failure with a logged redacted cause, partly verified answers with a note, stateless non-streamed chat served only by the agent (rules-based explanations; `--explainer auto` default) | Clarification | built | Yes (one paragraph in 3.7) |
 | P-19 | Agent | Agent model is served by Voyager by default, not ASU CreateAI | Clarification | built | Yes (one clause in 3.7) |
+| P-20 | Evaluation | Judges: two named Voyager models, independence and the seniority cap enforced in code, judges read cleaned text | Clarification | built | Yes (Methods and 5.1) |
+| P-21 | Evaluation | Harness choices the proposal leaves open: sampling, pool, pairs, statistics, tuning, ARI | Clarification | built | Yes (5.1 to 5.3) |
 
-Row count: 19.
+Row count: 21.
 
 ---
 
@@ -108,11 +110,12 @@ Row count: 19.
 - **Now (posting-preprocessing, done):** families software, database, sysadmin, network, security, project_manager (incl. program manager, scrum master). Title-first with exclusions (sales, recruiter, real estate, etc.). Industry is used only for project managers (they need a tech title word or tech industry), because 2,204 software-titled postings sit in non-tech industries.
 - **Reason recorded:** The ten resume occupations include DBAs, sysadmins, network admins, security analysts and PMs.
 - **Impact:** Built result 8,423 kept: software 5,260; sysadmin 1,105; PM 933; security 680; network 323; database 231 (multi-family postings counted in each). Affects Step 1 wording and the presentation "SWE postings"/"Pool" line. The 5,000-posting evaluation cap binds. Answers the proposal's "size of each software engineering subset" sentence.
-- **Status:** built; the spec has a "Please confirm" for assumption 1.
+- **Evaluation use (2026-11-14):** the evaluation pool is this table, capped at 5,000 by a seeded sample (a no-op on the 1,000-posting `v5` build, active on `v6`). The evaluation README and report call it "software and adjacent IT postings" and never "SWE postings". The user confirmed this wording and the six-family pool through the coordinator; the row stays open until the user confirms the posting pool for the written report.
+- **Status:** built; the evaluation spec records the pool as assumption A-5 (confirmed).
 - **Proposal text change:** Yes (Step 1, 3.1).
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** open (awaiting confirmation of assumption 1)
+- **Resolution:** open (awaiting the user's confirmation of the posting pool; do not close before then)
 
 ## P-7 "Exact duplicates" became normalized near-duplicates
 
@@ -144,11 +147,12 @@ Row count: 19.
 - **Now (ADR-1 / ADR-9):** dev 10 resumes + 10 postings; test 100 + 100; human check 10+10 from the test set; ~400 pooled top-10 pairs labeled independently with no adjudication; judge as third annotator. Reported: author-author kappa, each judge vs each author, Kendall tau, metric gaps. Rubric frozen after dev with a one-time revise-on-half fallback; judge-count and lower-label rules unchanged.
 - **Reason recorded:** Presentation revision.
 - **Impact:** 5.1, 5.2, 5.6, Table 4 weeks 4-6, hours estimate (~7 h per author).
-- **Status:** specced (ADR-9); evaluation features proposed with no spec; Q-5 (judge models/access) open.
+- **Built (evaluation, 2026-11-14; ADR-36 to ADR-39, CC-20):** the offline harness: sampling (dev 10 + 10, test 100 + 100, human 10 + 10), blind pooled pairs keyed by (resume, posting), two LLM judges, the lower-label rule, the rubric freeze, the ADR-9 fallback rule as a pure function, `evaluate agreement` (author-author kappa, each judge against each author, Kendall tau). Q-5 is answered (P-20). Not built: the labeling UI (`labeling-ui`) the authors need, and the probes (`evaluation-probes`). No agent has run the judges or the human check; all tests use fakes.
+- **Status:** harness built and reviewed; labeling UI, probes and every real run still open.
 - **Proposal text change:** Yes.
 - **Report sentence:** TBD
 - **Owner:** TBD
-- **Resolution:** open
+- **Resolution:** open (harness built; the real run and the human check are user-run)
 
 ## P-10 Evaluation comparisons and metrics restated
 
@@ -156,7 +160,8 @@ Row count: 19.
 - **Now (ADR-1):** B1+, B2, Full; per-direction metrics; results under judge labels and under each author's labels, with "Full > B2 > B1+ under both authors" expected; randomization test on per-query scores using judge labels.
 - **Reason recorded:** Presentation revision.
 - **Impact:** Table 3, 5.3. Fold text changes into P-9.
-- **Status:** specced.
+- **Built as (evaluation, ADR-39):** the metrics are P@5, P@10, MRR (only label 2 counts) and nDCG@10 (linear gain, ideal ranking pooled over the three systems' top-10s), per direction. Intervals are 95% percentile bootstrap over queries (10,000 resamples); gaps (`B2-B1+`, `Full-B2`, `Full-B1+`) get a paired interval and a two-sided paired sign-flip randomization test (10,000 flips) on per-query differences; no multiplicity correction (the report says so). Agreement: unweighted kappa is the headline, quadratic-weighted and percent agreement secondary; Kendall tau-b of the three-system order is always shown with the gaps because three systems give only the values 1, 1/3, -1/3 and -1. The report does not call the pool "SWE postings" (P-6).
+- **Status:** built.
 - **Proposal text change:** Yes (with P-9).
 - **Report sentence:** TBD
 - **Owner:** TBD
@@ -275,6 +280,42 @@ Row count: 19.
 - **Owner:** TBD
 - **Resolution:** built; the report must name the model and host actually used
 
+## P-20 Evaluation judges: models, independence, input text
+
+- **Proposal says:** Two LLM judges from different families, neither a pipeline or agent model, reading the raw resume and posting text (ADR-9 keeps this); the models were left open (Q-5).
+- **Now (built, evaluation D-7, D-8, D-16, ADR-38):** the defaults are `gemma4-31b-it` (family `google`) and `llama4-maverick-17b` (family `meta`), the two models the user checked in Voyager's `/v1/models` (context 131,072, `supports_response_schema` true), both through the Voyager backend. Independence is checked in code: ids and user-declared families must differ, and neither model may equal a model recorded in the canonical records, the relabel summaries, `--also-used-model` or the always-checked `qwen38-27b` (structuring, relabel and chat agent). Families are declarative; the harness cannot verify them. The seniority cap (label at most 1 when a judge flags a seniority mismatch) and the lower-label rule are applied by code, not by the prompt. Judges read `text_clean`, not `text_raw` (assumption A-1, confirmed by the user), cut at 20,000 characters with the cut recorded per pair. `llama4-maverick-17b` has no reasoning control, so nothing is sent; `gemma4-31b-it` gets `reasoning_effort` none; a strict-schema rejection falls back to plain JSON.
+- **Reason recorded:** the user chose the models; code-enforced checks make the rules of ADR-9 verifiable.
+- **Impact:** Methods (models per step), 5.1, the "Implied or undocumented" item 6 on judge independence is answered for the evaluation (the agent model is checked only if it is `qwen38-27b` or passed with `--also-used-model`).
+- **Status:** built; real judge runs (EV-1 to EV-6 of the evaluation README) are user-run and not verified by any agent.
+- **Proposal text change:** Yes (Methods, 5.1).
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** open (until the first real run)
+
+## P-21 Evaluation harness choices the proposal leaves open
+
+- **Proposal says:** "Balanced" sampling over the occupation labels; B1+ weights tuned on the dev set; a taxonomy-validity ARI over per-resume cluster-count profiles; a fallback when kappa is below 0.6.
+- **Now (built, evaluation D-3 to D-6, D-13, D-14, A-2, A-4, A-7 to A-9, A-12, A-13):** equal allocation per first occupation label (the processed data has 9 distinct labels, not 10, so quotas are 11 or 12; shortfalls are redistributed); unlabeled resumes (745) are never sampled as resume queries; posting queries are uniform from the pool; rankings are recomputed inside the seeded pool with the retrieval code (ADR-37), not read from `retrieve run`; a pair is (resume, posting) judged once whatever the direction or system. B1+ tuning is a two-step offline flow (`tune plan`, judge the `tune` stage, `tune pick`), step 0.1 (66 candidates), objective mean nDCG@10 over the 20 dev queries; `pick` must be given the same `--step` and `--k` as `plan` (not recorded or checked; a mismatch is a missing-labels error). The ADR-9 fallback is a pure function over the author and judge kappas, diagnosed on the first half of the human ids and re-checked on the untouched second half. The ARI runs over every labeled resume (not only the 100 test resumes) with 5 seeds, raw-skill dimensions being the 1,000 selected skills.
+- **Reason recorded:** the proposal does not fix these; each is an assumption the user can reverse (evaluation, Open questions).
+- **Impact:** 5.1 to 5.3 wording; the report lists labels, seeds, weights and their source.
+- **Status:** built.
+- **Proposal text change:** Yes (5.1 to 5.3), one sentence each.
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** open
+
+### Build-versus-spec refinements (evaluation, recorded 2026-11-14)
+
+The built code and the spec differed on these points; the spec now states the built behavior unless marked.
+
+- Truncated counts in the report are derived by `evaluate report` from `judges/<id>.jsonl` (ok rows with `truncated` true, one row per pair id, rubric hash from `rubric_frozen.json` else from `run.json`, `n/a` otherwise) and passed to `render_report`; the report does not print the pool size (`run.json` holds only the cap).
+- `evaluate judge` reads pairs and texts before recording judges in `run.json` (a missing input leaves `run.json` untouched); a fatal error in `judge-a` stops before `judge-b`, prints the summary without `labeled_pairs` and exits 3; `--stage` accepts dev, test and tune only.
+- `MissingLabelsError.count` is the number of distinct pair ids; its tune hint names both `--stage dev` and `--stage tune`.
+- `scripts/run_evaluation.sh` exits 2 for the judge stages unless `USER_RUN_JUDGE=1` (stricter than the spec); the evaluation docs section is numbered 11 (section 10 was taken).
+- The judge-file writer repairs a missing trailing newline and replaces the file atomically (`fileio.atomic_write`).
+- Not yet in the code (follow-up tasks T-29 to T-31 of the evaluation spec): `agreement --scope human` errors when a judge file or the label table lacks a human pair (it silently used fewer pairs); `human.blind_pair_ids` is public (three copies existed); `args.positive_int` is the single definition (five copies existed).
+- Known code nits not specified (reviewer notes in `specs/status.json`): `scoring.py` pools every system in the table rather than only the three; `tune.py` drops a query with no rows and can divide by zero; `kendall_tau` is O(n^2) (fine for three systems).
+
 ## Gap-fillers and additions (not disagreements)
 
 - `project-foundation` (repo layout and shared config) was cancelled by the user: the layout grew feature by feature, and the CC-1 models, id scheme and model client came with `structurer`, `alias-table` and `local-llm-backend`. The proposed repo conventions in the architecture (Q-6) stay unconfirmed.
@@ -307,7 +348,7 @@ Row count: 19.
 3. `.gitignore` excludes `data/job_postings/` and `data/resume_corpus/`, while architecture (Q-7) says raw data is committed because the instructor requires it. The repo contradicts the stated convention.
 4. Built resume ids are `r-<file stem>` (e.g. `r-09272`); the architecture convention says `r-<row>`.
 5. No downstream policy for documents that fail structuring (P-3).
-6. Judge independence: the proposal says neither judge is a pipeline or agent model; the pipeline now has several LLM steps, each possibly on a different model, and ADR-11 only addresses structuring. Q-5 open.
+6. Judge independence: the proposal says neither judge is a pipeline or agent model; the pipeline now has several LLM steps, each possibly on a different model, and ADR-11 only addresses structuring. Answered for the evaluation by P-20 (models chosen, `qwen38-27b` always checked); a changed agent model must be passed by hand.
 7. ADR-13 and ADR-14 lack a "proposal wording that no longer matches" list like ADR-11's.
 8. Prompt versions, quantization and server version for local runs are not captured in records (L-8 says record in project notes).
 9. The `evaluations/` directory is empty with an undefined purpose.
@@ -320,12 +361,14 @@ Row count: 19.
 - [ ] ADR-11 wording list (P-1)
 - [ ] P-6 domain filter
 - [ ] P-8 B1+ and SciPy
-- [ ] P-9 / P-10 evaluation protocol and comparisons
+- [ ] P-9 / P-10 / P-20 / P-21 evaluation protocol, judges and harness choices
 - [ ] P-11 timeline
 - [ ] P-12 experience level
 - [ ] P-16 alias table method
 
 ## Could not verify
+
+- The real judge runs and the human check of the evaluation (evaluation AC-51, EV-1 to EV-6): whether `gemma4-31b-it` and `llama4-maverick-17b` return valid verdicts under the strict schema, how often the schema fallback fires, how often documents are truncated, the judges' kappa and the final rankings. User-run; every test uses fakes.
 
 - Whether the fit review (ADR-26) finds the weak names it was designed for on the real corpus: the user-run checklist step AV-7 was not run by any agent (tests use a fake client only).
 - Whether `qwen38-27b` is a 27B Qwen3-family model (inferred from the id) and whether it honors `reasoning_effort` none.

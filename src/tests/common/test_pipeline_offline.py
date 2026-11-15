@@ -9,7 +9,7 @@ TESTS_DIR = Path(__file__).resolve().parents[1]
 SRC_DIR = TESTS_DIR.parent
 PKG_DIR = SRC_DIR / "getwork"
 REQUIRED_LINE = 'pytestmark = pytest.mark.usefixtures("offline")'
-PREFIXES = ("pipeline", "alias", "embed", "taxonomy", "relabel", "docembed", "retrieval")
+PREFIXES = ("pipeline", "alias", "embed", "taxonomy", "relabel", "docembed", "retrieval", "evaluation")
 HEAVY_IMPORT = re.compile(
     r"^[ \t]*(?:import|from)[ \t]+(openai|httpx2?|sentence_transformers|torch)\b", re.MULTILINE
 )

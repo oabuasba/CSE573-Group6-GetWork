@@ -1,1 +1,8 @@
 id,stage,error_type,message,attempts
+j-3901376192,validation,OutputValidationError,"experience.2.role: Value error, must be at most 200 characters",3
+j-3901389271,validation,OutputValidationError,"experience.0.role: Value error, must be at most 200 characters",3
+j-3901941751,validation,OutputValidationError,"education.0.field: Value error, must be at most 200 characters; education.1.field: Value error, must be at most 200 characters",3
+j-3902333082,validation,OutputValidationError,"education.0.field: Value error, must be at most 200 characters",3
+j-3902850167,validation,OutputValidationError,"skills: Value error, each skill must be at most 100 characters",3
+j-3902862597,validation,OutputValidationError,"education.0.field: Value error, must be at most 200 characters",3
+j-3903844554,validation,OutputValidationError,"experience.5.role: Value error, must be at most 200 characters",3

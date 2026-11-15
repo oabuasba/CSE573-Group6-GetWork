@@ -37,15 +37,22 @@ _LIST_SEPARATORS = re.compile(r"\s*(?:/|\||&|\+|\band\b)\s*", re.IGNORECASE)
 
 
 def member_list_reason(name: str, members: Sequence[str]) -> str | None:
-    """Rule N-1: a reason (containing "member skills") when over half the name's parts are members."""
+    """Rule N-1: a reason (containing "member skills") when the name just lists member skills.
+
+    Separator-joined names (/ | & + and) are flagged when over half the parts are members. A name
+    with no separator is split on whitespace and flagged only when every word is a member, since
+    a concept phrase such as "Network Security Protocols" may reuse single-word member skills.
+    """
     keys = {normalize.normalize_key(m) for m in members}
     parts = [p for p in _LIST_SEPARATORS.split(name) if p.strip()]
-    if len(parts) < 2:
+    by_whitespace = len(parts) < 2
+    if by_whitespace:
         parts = name.split()
     if len(parts) < 2:
         return None
     hits = sum(1 for p in parts if normalize.normalize_key(p) in keys)
-    if 2 * hits <= len(parts):
+    is_list = hits == len(parts) if by_whitespace else 2 * hits > len(parts)
+    if not is_list:
         return None
     return (
         f"{name!r} lists member skills; give one concept label "

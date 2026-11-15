@@ -94,3 +94,16 @@ def test_refit_one_accepts_and_rejects() -> None:
     assert (failed.value, failed.reason) == (None, "replies rejected")
     with pytest.raises(FatalLLMError):
         fit.refit_one(_env(FakeLLMClient(script=[FatalLLMError("x")])), 1, V4, MEMBERS, WEAK)
+
+
+def test_refit_one_rejects_whitespace_member_list_and_retries() -> None:
+    members = {**MEMBERS, 1: ["Windows", "Excel", "SharePoint", "Active Directory"]}
+    good = "Office Productivity Suites"
+    client = FakeLLMClient(script=[_reply("Windows Excel SharePoint"), _reply(good)])
+    asked = fit.refit_one(_env(client, top_members=4), 1, V4, members, WEAK)
+    assert (asked.value, asked.reason) == (good, "")
+    assert len(asked.rejections) == 1 and "lists member skills" in asked.rejections[0]
+    assert "Your previous reply was rejected" in client.calls[1].user
+    stuck = FakeLLMClient(script=[_reply("Windows Excel SharePoint")] * 3)
+    failed = fit.refit_one(_env(stuck, top_members=4), 1, V4, members, WEAK)
+    assert (failed.value, failed.reason) == (None, "replies rejected")
