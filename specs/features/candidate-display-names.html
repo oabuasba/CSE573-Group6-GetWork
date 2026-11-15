@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GetWork — candidate-display-names</title>
+<style>
+/* ---------- Tokens: rebrand by overriding the "Brand" group only ---------- */
+:root {
+  /* Brand */
+  --brand: #8C1D40;
+  --brand-dark: #6B1530;
+  --highlight: #FFC627;
+  --highlight-soft: #FFF8E1;
+  --success: #78BE20;
+  --info: #00A3E0;
+  --caution: #FF7F32;
+  --platform: #232F3E;
+
+  /* Neutrals */
+  --gray-1: #191919;
+  --gray-2: #484848;
+  --gray-3: #747474;
+  --gray-4: #BFBFBF;
+  --gray-5: #D0D0D0;
+  --gray-6: #E8E8E8;
+  --gray-7: #FAFAFA;
+
+  /* Semantic roles (components only reference these) */
+  --bg: var(--gray-7);
+  --surface: #FFFFFF;
+  --text: var(--gray-1);
+  --text-2: var(--gray-2);
+  --text-muted: var(--gray-3);
+  --border: var(--gray-6);
+  --on-dark: #FFFFFF;
+  --accent-text: var(--brand);
+  --link: var(--brand);
+  --link-hover: var(--brand-dark);
+  --hover: var(--highlight-soft);
+  --rule: var(--highlight);
+  --code-inline-bg: var(--gray-6);
+  --code-block-bg: var(--gray-1);
+  --code-block-fg: #E8E8E8;
+  --table-head-bg: var(--gray-1);
+  --zone-outer-fill: var(--gray-7);
+  --zone-outer-stroke: var(--gray-4);
+  --zone-inner-fill: var(--highlight-soft);
+  --zone-inner-stroke: var(--highlight);
+  --edge: var(--gray-3);
+  --arrow: var(--gray-4);
+
+  --severity-blocking: var(--brand);
+  --severity-warning: var(--highlight);
+  --severity-safe: var(--success);
+
+  /* Type, space, shape */
+  --font-stack: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --max-width: 68rem;
+  --sidebar-width: 13rem;
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  color-scheme: light dark;
+}
+
+/* Dark tokens are duplicated so a data-theme attribute can force either mode. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121213;
+    --surface: #1C1C1E;
+    --text: #ECECEC;
+    --text-2: #C8C8C8;
+    --text-muted: #9A9A9A;
+    --border: #2E2E31;
+    --accent-text: #E98AA6;
+    --link: #E98AA6;
+    --link-hover: var(--highlight);
+    --hover: rgba(255,198,39,0.08);
+    --code-inline-bg: #2A2A2D;
+    --code-block-bg: #0B0B0C;
+    --table-head-bg: #2A2A2D;
+    --zone-outer-fill: #161618;
+    --zone-outer-stroke: #4A4A4E;
+    --zone-inner-fill: rgba(255,198,39,0.06);
+    --edge: #8A8A8E;
+    --arrow: #5A5A5E;
+    --platform: #3D5068;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121213;
+  --surface: #1C1C1E;
+  --text: #ECECEC;
+  --text-2: #C8C8C8;
+  --text-muted: #9A9A9A;
+  --border: #2E2E31;
+  --accent-text: #E98AA6;
+  --link: #E98AA6;
+  --link-hover: var(--highlight);
+  --hover: rgba(255,198,39,0.08);
+  --code-inline-bg: #2A2A2D;
+  --code-block-bg: #0B0B0C;
+  --table-head-bg: #2A2A2D;
+  --zone-outer-fill: #161618;
+  --zone-outer-stroke: #4A4A4E;
+  --zone-inner-fill: rgba(255,198,39,0.06);
+  --edge: #8A8A8E;
+  --arrow: #5A5A5E;
+  --platform: #3D5068;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.55);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-stack); font-size: 15px; line-height: 1.7; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+section { animation: fadeUp 0.4s ease-out both; scroll-margin-top: var(--space-lg); }
+section:nth-child(2) { animation-delay: 0.05s; }
+section:nth-child(3) { animation-delay: 0.1s; }
+section:nth-child(n+4) { animation-delay: 0.15s; }
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.25; }
+h2 { font-size: 1.4rem; font-weight: 900; color: var(--text); margin: var(--space-2xl) 0 var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 3px solid var(--rule); }
+h3 { font-size: 1rem; font-weight: 700; color: var(--text-2); margin: var(--space-xl) 0 var(--space-sm); }
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+/* ---------- Layout ---------- */
+.page { display: grid; grid-template-columns: var(--sidebar-width) 1fr; max-width: var(--max-width); margin: 0 auto; gap: var(--space-2xl); padding: var(--space-xl); }
+.main { min-width: 0; }
+.sidebar { position: sticky; top: var(--space-xl); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.sidebar-inner { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.sidebar-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent-text); margin-bottom: var(--space-md); }
+.sidebar a { display: block; padding: 0.35rem 0.6rem; margin: 0.15rem 0; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius); transition: all 0.15s; }
+.sidebar a:hover { color: var(--accent-text); background: var(--hover); }
+
+/* ---------- Hero ---------- */
+.hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); border-radius: var(--radius-lg); padding: var(--space-3xl) var(--space-2xl); margin-bottom: var(--space-2xl); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%; background: radial-gradient(ellipse, rgba(255,198,39,0.08) 0%, transparent 70%); pointer-events: none; }
+.hero h1 { font-size: 2.2rem; font-weight: 900; color: var(--on-dark); margin: 0 0 var(--space-sm); line-height: 1.1; }
+.hero .subtitle { font-size: 0.95rem; color: rgba(255,255,255,0.7); margin: 0; }
+.hero .product-badge { display: inline-block; margin-top: var(--space-lg); padding: 0.3em 0.8em; background: var(--highlight); color: var(--gray-1); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius); }
+.hero .meta { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-top: var(--space-lg); font-size: 0.78rem; color: rgba(255,255,255,0.75); }
+.hero .meta strong { color: var(--on-dark); }
+
+/* ---------- Content blocks ---------- */
+.card { background: var(--surface); border-radius: var(--radius-lg); padding: var(--space-xl); margin: var(--space-lg) 0; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.card-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.card-header h3 { margin: 0; }
+
+.constraints { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-lg) 0; }
+.constraint { padding: 0.5em 1em; background: var(--surface); border: 1px solid var(--border); border-radius: 2rem; font-size: 0.8rem; box-shadow: var(--shadow-sm); }
+.constraint strong { color: var(--accent-text); }
+
+.callout { margin: var(--space-lg) 0; padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--text-muted); border-radius: var(--radius); font-size: 0.9rem; box-shadow: var(--shadow-sm); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+.callout-title { display: block; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--space-xs); }
+.callout.note { border-left-color: var(--info); }
+.callout.warn { border-left-color: var(--highlight); }
+.callout.danger { border-left-color: var(--brand); }
+.callout.ok { border-left-color: var(--success); }
+
+.table-wrap { overflow-x: auto; margin: var(--space-md) 0; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--surface); }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 700; background: var(--table-head-bg); color: var(--on-dark); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--hover); }
+
+code, pre { font-family: var(--font-mono); font-size: 0.82em; }
+pre { background: var(--code-block-bg); color: var(--code-block-fg); border-radius: var(--radius); padding: var(--space-lg); overflow-x: auto; line-height: 1.5; box-shadow: var(--shadow-md); }
+code { background: var(--code-inline-bg); color: var(--accent-text); padding: 0.15em 0.4em; border-radius: 3px; font-weight: 700; }
+pre code { background: none; color: inherit; padding: 0; font-weight: 400; }
+
+details { margin: var(--space-sm) 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow 0.2s; }
+details[open] { box-shadow: var(--shadow-sm); }
+details summary { cursor: pointer; font-weight: 700; padding: 0.75rem 1rem; font-size: 0.9rem; transition: background 0.15s; }
+details summary:hover { background: var(--hover); }
+details > :not(summary) { padding: 0 1rem 1rem; }
+details > :is(pre, .tree) { margin: 0 1rem 1rem; padding: var(--space-lg); }
+details > .table-wrap { margin: 0 1rem 1rem; padding: 0; }
+
+.badge { display: inline-block; padding: 0.2em 0.6em; border-radius: var(--radius); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; vertical-align: 0.1em; }
+.badge-blocking { background: var(--severity-blocking); color: var(--on-dark); }
+.badge-warning { background: var(--severity-warning); color: var(--gray-1); }
+.badge-info { background: var(--code-inline-bg); color: var(--text-2); }
+.badge-safe { background: var(--severity-safe); color: var(--gray-1); }
+
+ol.steps { list-style: none; counter-reset: step; padding: 0; margin: var(--space-lg) 0; }
+ol.steps > li { counter-increment: step; position: relative; padding: 0 0 var(--space-lg) 2.75rem; border-left: 2px solid var(--border); margin-left: 0.9rem; }
+ol.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+ol.steps > li::before { content: counter(step); position: absolute; left: -0.95rem; top: -0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--brand); color: var(--on-dark); font-size: 0.8rem; font-weight: 700; display: grid; place-items: center; }
+ol.steps > li > strong:first-child { display: block; }
+
+/* ---------- Flow diagram (HTML, vertical) ---------- */
+.flow-diagram { display: flex; flex-direction: column; align-items: center; margin: var(--space-xl) 0; padding: var(--space-xl); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.flow-node { padding: 0.6rem 1.4rem; border-radius: var(--radius); font-weight: 700; font-size: 0.82rem; text-align: center; min-width: 240px; position: relative; cursor: default; color: var(--on-dark); transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s; }
+.flow-node:hover, .flow-node:focus-visible { transform: scale(1.04); box-shadow: var(--shadow-lg); outline: none; }
+.flow-node.platform { background: var(--platform); }
+.flow-node.external { background: var(--gray-2); }
+.flow-node.compute { background: var(--brand); }
+.flow-node.storage { background: var(--info); }
+.flow-arrow { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--gray-4), var(--gray-5)); position: relative; }
+.flow-arrow::after { content: '\25BE'; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); color: var(--arrow); font-size: 12px; }
+.flow-label { font-size: 0.68rem; color: var(--text-muted); margin: 2px 0; text-align: center; }
+.flow-split { display: flex; gap: var(--space-xl); align-items: flex-start; }
+.flow-branch { display: flex; flex-direction: column; align-items: center; }
+.tooltip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--gray-1); color: var(--on-dark); padding: 0.5rem 0.8rem; border-radius: var(--radius); font-size: 0.72rem; font-weight: 400; width: max-content; max-width: 22rem; z-index: 10; pointer-events: none; box-shadow: var(--shadow-lg); }
+.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--gray-1); }
+.flow-node:hover .tooltip, .flow-node:focus-visible .tooltip { display: block; animation: fadeUp 0.15s ease-out; }
+
+/* ---------- Architecture diagram (inline SVG) ---------- */
+.arch-diagram { margin: var(--space-xl) 0 var(--space-md); padding: var(--space-lg); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow-x: auto; }
+.arch-diagram svg { display: block; width: 100%; min-width: 640px; height: auto; font-family: var(--font-stack); }
+.arch-diagram .zone-outer { fill: var(--zone-outer-fill); stroke: var(--zone-outer-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-inner { fill: var(--zone-inner-fill); stroke: var(--zone-inner-stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.arch-diagram .zone-label { font-size: 13px; font-weight: 700; fill: var(--text-2); }
+.arch-diagram .platform { fill: var(--platform); }
+.arch-diagram .compute { fill: var(--brand); }
+.arch-diagram .storage { fill: var(--info); }
+.arch-diagram .external { fill: var(--gray-2); }
+.arch-diagram .t1 { font-size: 14px; font-weight: 700; fill: #FFFFFF; }
+.arch-diagram .t2 { font-size: 12px; fill: rgba(255,255,255,0.85); }
+.arch-diagram .edge { fill: none; stroke: var(--edge); stroke-width: 1.5; marker-end: url(#arch-arrow); }
+.arch-diagram .edge.two-way { marker-start: url(#arch-arrow); }
+.arch-diagram .edge.dashed { stroke-dasharray: 5 4; }
+.arch-diagram .edge-label { font-size: 12px; fill: var(--text-2); }
+.arch-diagram .arrow-head { fill: var(--edge); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0 0 var(--space-lg); font-size: 0.75rem; color: var(--text-muted); }
+.arch-legend span::before { content: ''; display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.35rem; border-radius: 3px; vertical-align: -0.1rem; background: var(--swatch); }
+
+/* ---------- File tree ---------- */
+.tree { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: var(--code-block-bg); color: #CCCCCC; padding: var(--space-lg); border-radius: var(--radius); white-space: pre; box-shadow: var(--shadow-md); overflow-x: auto; }
+.tree .dir { color: var(--highlight); font-weight: 700; }
+.tree .file { color: #AAAAAA; }
+.tree .comment { color: #6E6E6E; }
+
+/* ---------- Footer ---------- */
+.footer { margin-top: var(--space-3xl); padding-top: var(--space-lg); border-top: 3px solid var(--rule); font-size: 0.72rem; color: var(--text-muted); text-align: center; }
+
+/* ---------- Responsive, motion, print ---------- */
+@media (max-width: 800px) {
+  .page { grid-template-columns: 1fr; padding: var(--space-md); gap: var(--space-lg); }
+  .sidebar { position: static; max-height: none; }
+  .hero { padding: var(--space-2xl) var(--space-lg); }
+  .hero h1 { font-size: 1.7rem; }
+  .card { padding: var(--space-lg); }
+  .flow-split { flex-direction: column; align-items: center; gap: var(--space-md); width: 100%; }
+  .flow-branch { width: 100%; }
+  .flow-node { min-width: 0; width: 100%; max-width: 280px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  body { background: #FFFFFF; font-size: 12px; }
+  .page { display: block; max-width: none; padding: 0; }
+  .sidebar { display: none; }
+  section { animation: none; break-inside: avoid-page; }
+  .card, .flow-diagram, .arch-diagram, pre, .tree, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="sidebar" aria-label="Contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-title">Contents</div>
+      <a href="#goal">Goal</a>
+      <a href="#scope">Scope</a>
+      <a href="#design">Design</a>
+      <a href="#acceptance">Acceptance criteria</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#edge-cases">Edge cases &amp; risks</a>
+      <a href="#open-questions">Open questions</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <header class="hero">
+      <h1>Candidate display names</h1>
+      <p class="subtitle">Find Candidates cards show a deterministic placeholder name, clearly labeled, because the resume corpus has no names.</p>
+      <div class="meta"><span><strong>Status:</strong> draft</span><span><strong>Updated:</strong> 2026-11-14</span><span><strong>Pipeline step:</strong> app</span><span><strong>Master:</strong> <a href="../architecture.html">architecture.html</a></span></div>
+      <span class="product-badge">candidate-display-names</span>
+    </header>
+
+    <section id="goal">
+      <h2>Goal</h2>
+      <p>The Find Candidates page lists resumes as bare job titles and levels, which reads as an anonymous list. The resumes are Indeed scrapes with no candidate names (a name appears in about 0.6% of a ~2,000 sample), so the user decided to show a fake name per candidate, generated at display time, and to record that as a limitation (<a href="../architecture.html#ADR-40">ADR-40</a>). This feature adds a pure, offline generator keyed on the resume id, returns the name on <code>POST /api/match</code> responses only, renders it on candidate cards with a visible "Demo name" tag and one explanatory note, shows "Contact not available in dataset" instead of contact details, proves by tests that the name never reaches artifacts, embeddings, rankings, the chat agent or the evaluation (<a href="../architecture.html#CC-21">CC-21</a>), and documents the limitation. It serves the web app (app step) and changes no pipeline stage.</p>
+    </section>
+
+    <section id="scope">
+      <h2>Scope</h2>
+      <h3>In scope</h3>
+      <ul>
+        <li>New module <code>getwork.webapp.pseudonym</code> with <code>display_name(doc_id)</code> and two fixed name lists.</li>
+        <li>One new optional field, <code>Match.display_name</code>, filled by <code>api.py</code> for resume matches only.</li>
+        <li>Candidate cards (<code>MatchCard</code>, resume side): name heading, "Demo name" tag, job title, level, "Contact not available in dataset". One note per results list on the Find Candidates page. The same card on the chat page shows the name and tag (no second note).</li>
+        <li>Tests that enforce the isolation rules of CC-21 (source scan, prompt capture, ranking equality, schema checks).</li>
+        <li>The limitation recorded in <code>docs/deviations.md</code> (P-20) and the web app runbook. The architecture entries (ADR-40, CC-21, CC-18 addition, feature index row) are already written.</li>
+      </ul>
+      <h3>Out of scope</h3>
+      <ul>
+        <li>Any change to <code>ModelOutput</code> / the extraction schema (<a href="../architecture.html#CC-1">CC-1</a>), any re-run of the structurer or later stages, any change under <code>data/</code> or <code>artifacts_trial/</code>.</li>
+        <li>Real names, emails, phones, LinkedIn or other links extracted by regex from resume text. A possible follow-up only; it needs its own spec, a precision measurement and a privacy decision.</li>
+        <li>A location line (see Open questions, assumption A-1): no served artifact carries a location.</li>
+        <li>Names on Find Jobs cards, on the example picker, in the "What we understood" card, in <code>/api/explain</code> or in chat replies. The chat agent is not told the name.</li>
+        <li>Anything under <code>src/getwork/evaluation/</code> (mid-build); this feature only adds a test that scans it read-only.</li>
+        <li>Unique names. Two resumes may get the same name.</li>
+      </ul>
+    </section>
+
+    <section id="design">
+      <h2>Design</h2>
+      <p>The generator is a pure function of the document id and a fixed seed. <code>api.py</code> calls it while building each <code>Match</code> of a <code>/api/match</code> response, after the engine has already ranked, so the engine, the explainer, the agent and the evaluation never see a name. The React card renders it. Depends on <a href="../architecture.html#ADR-40">ADR-40</a>, <a href="../architecture.html#CC-21">CC-21</a>, <a href="../architecture.html#CC-18">CC-18</a> (the <code>Match</code> shape is extended additively), <a href="../architecture.html#CC-10">CC-10</a> (offline tests, import guards) and the existing front-end conventions (reuse <code>chip chip-other</code> and <code>Notice</code>; no new CSS).</p>
+
+      <h3>Interfaces</h3>
+      <p><strong>I-1 Generator</strong>, new file <code>src/getwork/webapp/pseudonym.py</code>. It imports only <code>hashlib</code> (and <code>__future__</code>); no file, network, clock, random or environment access.</p>
+<pre><code>NAME_SEED: str = "getwork-demo-names-v1"
+FIRST_NAMES: tuple[str, ...]   # at least 150 distinct entries, each matching ^[A-Z][a-z]+$
+LAST_NAMES: tuple[str, ...]    # at least 150 distinct entries, each matching ^[A-Z][a-z]+$
+
+def display_name(doc_id: str | None) -> str | None:
+    """Placeholder name "First Last" for a document id, or None when doc_id is None or blank.
+
+    Not blank means doc_id.strip() != "". The id is hashed exactly as given (no strip, no case fold):
+        digest = hashlib.sha256(f"{NAME_SEED}:{doc_id}".encode("utf-8")).digest()
+        first = FIRST_NAMES[int.from_bytes(digest[0:4], "big") % len(FIRST_NAMES)]
+        last = LAST_NAMES[int.from_bytes(digest[4:8], "big") % len(LAST_NAMES)]
+        return f"{first} {last}"
+    Never raises for a str; never reads anything but its argument and the module constants."""</code></pre>
+      <p>The lists are a mix of common given names and common surnames, ASCII letters only, written as plain tuple literals, no real-person combinations on purpose (the combination comes from the hash). Python's built-in <code>hash()</code> must not be used (it is salted per process).</p>
+
+      <p><strong>I-2 API model</strong>, <code>src/getwork/webapp/models.py</code>: add one field at the end of <code>Match</code>; nothing else in the file changes (in particular <code>DocumentView</code>, <code>ExamplesResponse</code>, <code>Explanation</code> and agent models stay as they are):</p>
+<pre><code>class Match(BaseModel):
+    rank: int  # 1-based
+    id: str
+    score: float
+    document: DocumentView
+    evidence: Evidence
+    display_name: str | None = None   # NEW: placeholder name, resume matches only (CC-21); None otherwise</code></pre>
+
+      <p><strong>I-3 API wiring</strong>, <code>src/getwork/webapp/api.py</code>, inside <code>match()</code> where <code>models.Match(...)</code> is built (add <code>pseudonym</code> to the <code>from getwork.webapp import ...</code> line):</p>
+<pre><code>display_name=pseudonym.display_name(document.id) if document.side == "resume" else None</code></pre>
+      <p>Resume matches occur exactly when <code>direction == "posting_to_resume"</code>, so job matches always carry <code>"display_name": null</code>. No other file in <code>src/getwork</code> may import <code>pseudonym</code> or mention <code>display_name</code> (AC-10).</p>
+
+      <p><strong>I-4 UI copy and card contract</strong>, new file <code>src/web/src/candidateCopy.js</code>:</p>
+<pre><code>export const DEMO_NAME_LABEL = "Demo name";
+export const CONTACT_UNAVAILABLE = "Contact not available in dataset";
+export const UNNAMED_CANDIDATE = "Unnamed candidate";
+export const NAMES_NOTE =
+  "Candidate names are placeholders. The resume dataset has no names, so each name is generated from the resume id and is the same every time.";</code></pre>
+      <p><code>MatchCard</code> keeps its props <code>{ match, system, expanded, onToggle, children }</code>. A card is a <strong>candidate card</strong> exactly when <code>match.document.side === "resume"</code>. Job cards (<code>side === "posting"</code>) are rendered exactly as today. A candidate card renders, in this order inside the existing <code>&lt;article className="card"&gt;</code> (add attribute <code>data-candidate</code>):</p>
+<pre><code>&lt;p&gt;Rank {match.rank}&lt;/p&gt;
+&lt;h3&gt;{name}&lt;/h3&gt;                                   // name = match.display_name when it is a non-blank string, else UNNAMED_CANDIDATE
+{hasName &amp;&amp; &lt;p&gt;&lt;span className="chip chip-other" data-demo-name&gt;{DEMO_NAME_LABEL}&lt;/span&gt;&lt;/p&gt;}
+&lt;p&gt;{match.document.title || "Untitled"}&lt;/p&gt;      // job title, a paragraph (the heading is the name)
+&lt;p&gt;{match.document.level}&lt;/p&gt;
+&lt;p&gt;{CONTACT_UNAVAILABLE}&lt;/p&gt;
+... score line, EvidenceChips, "Why this match?" button and region: unchanged</code></pre>
+      <p>The fallback (no usable <code>display_name</code>) shows <code>Unnamed candidate</code> with <strong>no</strong> tag, because nothing was generated and the tag labels a generated name. The contact line is always rendered on a candidate card and is a plain paragraph: no link, no <code>mailto:</code>, no <code>tel:</code>.</p>
+      <p><code>FindPage</code> <code>Results</code> renders, directly after the "N candidates found" paragraph and before the "What we understood" card, exactly one <code>&lt;Notice kind="warning" label="Note"&gt;{NAMES_NOTE}&lt;/Notice&gt;</code> when <code>response.direction === "posting_to_resume"</code> and <code>matches.length &gt; 0</code>; otherwise none. The chat page card (<code>FocusMatch</code> reuses <code>MatchCard</code>) therefore shows the name, tag and contact line but not the note.</p>
+
+      <h3>Data flow</h3>
+      <p>Request (<code>posting_to_resume</code>) &rarr; <code>engine.match</code> ranks resume ids (unchanged, never sees a name) &rarr; <code>api.match()</code> builds each <code>Match</code>, adding <code>display_name</code> from the resume id &rarr; JSON &rarr; <code>postMatch</code> &rarr; <code>FindPage</code> state and the <code>sessionStorage</code> results snapshot (so the name survives a round trip to the chat page; it is transient browser state, not an artifact) &rarr; <code>MatchCard</code>. The chat request built by <code>useChat</code> carries <code>query</code> (a <code>DocumentView</code>), <code>focus_id</code>, <code>matches</code> refs <code>{id, rank, score}</code>, history and message; none contains the name, and no change is needed there.</p>
+
+      <h3>Files</h3>
+<div class="tree"><span class="dir">src/getwork/webapp/</span>
+├── <span class="file">pseudonym.py</span>      <span class="comment"># new (T-1): generator and lists</span>
+├── <span class="file">models.py</span>         <span class="comment"># modify (T-2): Match.display_name</span>
+├── <span class="file">api.py</span>            <span class="comment"># modify (T-2): fill display_name</span>
+└── <span class="file">README.md</span>         <span class="comment"># modify (T-6): one paragraph</span>
+<span class="dir">src/web/src/</span>
+├── <span class="file">candidateCopy.js</span>  <span class="comment"># new (T-4)</span>
+├── <span class="dir">components/</span><span class="file">MatchCard.jsx</span> <span class="comment"># modify (T-4)</span>
+└── <span class="dir">pages/</span><span class="file">FindPage.jsx</span>      <span class="comment"># modify (T-5): the note</span>
+<span class="dir">src/tests/</span>
+├── <span class="dir">webapp/</span><span class="file">test_webapp_pseudonym.py</span>          <span class="comment"># new (T-1)</span>
+├── <span class="dir">webapp/</span><span class="file">test_webapp_display_names.py</span>      <span class="comment"># new (T-2)</span>
+├── <span class="file">test_display_name_isolation.py</span>              <span class="comment"># new (T-3): imports agent_helpers like the other root tests</span>
+├── <span class="file">test_webapp_docs.py</span>                         <span class="comment"># modify (T-6)</span>
+<span class="dir">src/web/src/</span> tests: components/MatchCard.test.jsx (T-4), pages/FindPage.test.jsx, pages/ChatPage.test.jsx, a11y.test.jsx (T-5)
+<span class="dir">docs/</span><span class="file">deviations.md</span>  <span class="comment"># modify (T-6): P-20</span></div>
+    </section>
+
+    <section id="acceptance">
+      <h2>Acceptance criteria</h2>
+      <p>Each criterion states an observable behavior and the test that proves it. Python tests run with <code>uv run --offline --frozen pytest -q</code> and use the demo engine and <code>FakeLLMClient</code> only (<a href="../architecture.html#CC-10">CC-10</a>); front-end tests run with <code>npm --prefix src/web test</code>.</p>
+      <ol>
+        <li id="AC-1"><strong>AC-1</strong>: Determinism. <code>display_name("r-123")</code> returns the same string on repeated calls, and two separate interpreter processes started with different <code>PYTHONHASHSEED</code> values print the same name for the same id. <em>Test:</em> <code>src/tests/webapp/test_webapp_pseudonym.py::test_same_id_same_name</code>, <code>::test_stable_across_processes</code> (subprocess).</li>
+        <li id="AC-2"><strong>AC-2</strong>: The mapping is pinned. The names for <code>r-1</code>, <code>r-2</code> and <code>r-30000</code> equal literals written in the test, so any change to the seed, the hash recipe or the lists fails the test and must be a deliberate update. <em>Test:</em> <code>test_webapp_pseudonym.py::test_golden_names</code>.</li>
+        <li id="AC-3"><strong>AC-3</strong>: Name shape and spread. Every name matches <code>^[A-Z][a-z]+ [A-Z][a-z]+$</code>; both lists have at least 150 entries and no duplicate within a list; over ids <code>r-1</code> to <code>r-2000</code> at least 1,800 distinct names occur. <em>Test:</em> <code>test_webapp_pseudonym.py::test_name_shape_and_spread</code>.</li>
+        <li id="AC-4"><strong>AC-4</strong>: Missing id fallback in the generator. <code>display_name(None)</code>, <code>display_name("")</code> and <code>display_name("   ")</code> return <code>None</code>; no exception. <em>Test:</em> <code>test_webapp_pseudonym.py::test_blank_id_gives_none</code>.</li>
+        <li id="AC-5"><strong>AC-5</strong>: Offline and pure. An AST scan of <code>pseudonym.py</code> finds imports only of <code>hashlib</code> and <code>__future__</code> and no call to <code>open</code>, <code>hash</code>, <code>random</code> or <code>os</code> functions. <em>Test:</em> <code>test_webapp_pseudonym.py::test_module_is_offline_and_pure</code>.</li>
+        <li id="AC-6"><strong>AC-6</strong>: Candidate matches carry names. For a demo-engine <code>posting_to_resume</code> request (corpus <code>j-1</code>, <code>k=6</code>), the response validates as <code>MatchResponse</code> and every match has <code>display_name == pseudonym.display_name(match.id)</code>, non-empty. <em>Test:</em> <code>src/tests/webapp/test_webapp_display_names.py::test_candidate_matches_have_names</code>.</li>
+        <li id="AC-7"><strong>AC-7</strong>: Job matches carry none. For <code>resume_to_posting</code> (corpus <code>r-1</code>) every match has <code>display_name</code> null and no resume id is hashed (the test patches <code>pseudonym.display_name</code> to raise and the request still succeeds). <em>Test:</em> <code>test_webapp_display_names.py::test_job_matches_have_no_name</code>.</li>
+        <li id="AC-8"><strong>AC-8</strong>: Only <code>Match</code> gained a field. <code>"display_name"</code> is in <code>models.Match.model_fields</code> and is not in the fields of <code>DocumentView</code>, <code>Evidence</code>, <code>Explanation</code>, <code>ExamplesResponse</code>, <code>agent.models.ChatRequest</code>, <code>ChatMatchRef</code>; a <code>posting_to_resume</code> response has the match keys exactly <code>{rank, id, score, document, evidence, display_name}</code> and its <code>document</code> keys equal <code>DocumentView.model_fields</code>; the bodies of <code>GET /api/examples?side=resume</code> and <code>POST /api/explain</code> contain no <code>display_name</code> and none of the generated names. <em>Test:</em> <code>test_webapp_display_names.py::test_name_only_on_match</code>.</li>
+        <li id="AC-9"><strong>AC-9</strong>: Rankings and scores are unaffected. For each system in <code>B1+</code>, <code>B2</code>, <code>Full</code>, the ordered ids and scores in the API response equal those of <code>demo.DemoEngine().match(request)</code> for the same request, and the response is identical when <code>pseudonym.display_name</code> is patched to return a constant (apart from the <code>display_name</code> values). <em>Test:</em> <code>test_webapp_display_names.py::test_rankings_unaffected</code>.</li>
+        <li id="AC-10"><strong>AC-10</strong>: Source isolation. Scanning every <code>*.py</code> under <code>src/getwork</code> (this includes <code>agent</code>, <code>evaluation</code>, <code>docembed</code>, <code>retrieval</code>, <code>structure</code>, <code>relabel</code>, <code>taxonomy</code>, <code>alias</code>, <code>embed</code>) with the case-insensitive pattern <code>pseudonym|display_name</code> yields hits only in <code>webapp/pseudonym.py</code>, <code>webapp/api.py</code> and <code>webapp/models.py</code>; the scan is read-only and reports offending paths in its failure message. <em>Test:</em> <code>src/tests/test_display_name_isolation.py::test_only_allowed_modules_mention_names</code>.</li>
+        <li id="AC-11"><strong>AC-11</strong>: The chat agent never sees a name. Using <code>agent_helpers.make_client</code> with a scripted <code>FakeLLMClient</code>, the test first collects the names from a <code>posting_to_resume</code> match response (corpus <code>j-1</code>, <code>k=6</code>), then posts a <code>/api/chat</code> request for that direction (focus <code>r-1</code>, refs <code>r-1</code>, <code>r-2</code>) and asserts the fake client received at least one call and no name appears in any recorded request's <code>system</code> or <code>user</code> text, nor in the reply. <em>Test:</em> <code>test_display_name_isolation.py::test_chat_prompts_contain_no_names</code>.</li>
+        <li id="AC-12"><strong>AC-12</strong>: Nothing is written. Running the AC-6 request with the working directory and temp directory set to an empty <code>tmp_path</code> (the <code>offline</code> fixture) leaves that directory empty, and <code>models.py</code> is the only module in the webapp that defines the field (AC-10). <em>Test:</em> <code>test_display_name_isolation.py::test_match_request_writes_no_files</code>.</li>
+        <li id="AC-13"><strong>AC-13</strong>: Candidate card content. A card with <code>document.side = "resume"</code>, <code>display_name = "Priya Nair"</code>, title "Java Developer", level "Associate" renders a level-3 heading "Priya Nair", an element with text "Demo name" and attribute <code>data-demo-name</code>, a paragraph "Java Developer", a paragraph "Associate", a paragraph "Contact not available in dataset", the score and the "Why this match?" button (toggle behavior unchanged). <em>Test:</em> <code>src/web/src/components/MatchCard.test.jsx</code> "candidate card shows name, tag, title, level and contact line".</li>
+        <li id="AC-14"><strong>AC-14</strong>: The label is always rendered. On the Find Candidates page, a <code>posting_to_resume</code> response of 10 resume matches, all with <code>display_name</code>, renders 10 <code>[data-candidate]</code> cards, each containing exactly one "Demo name" tag and one "Contact not available in dataset" line (counts: 10 tags, 10 contact lines). <em>Test:</em> <code>src/web/src/pages/FindPage.test.jsx</code> "every candidate card has the Demo name tag and contact line".</li>
+        <li id="AC-15"><strong>AC-15</strong>: Fallback. A resume-side match whose <code>display_name</code> is <code>null</code>, missing or <code>"  "</code> renders the heading "Unnamed candidate", no "Demo name" tag, still the title, level and contact line, and throws no error; a posting-side match is unchanged. <em>Test:</em> <code>MatchCard.test.jsx</code> "candidate card without a name falls back" (parametrized over null, undefined, blank).</li>
+        <li id="AC-16"><strong>AC-16</strong>: Job cards are unchanged. The existing <code>MatchCard.test.jsx</code> tests pass unmodified, and a posting-side card renders no "Demo name" and no "Contact not available in dataset" and no <code>data-candidate</code> attribute. <em>Test:</em> existing <code>MatchCard.test.jsx</code> tests plus new "job card has no candidate extras".</li>
+        <li id="AC-17"><strong>AC-17</strong>: One note. The page renders the note text exactly once, with label "Note", for a non-empty <code>posting_to_resume</code> response; renders it zero times for a <code>resume_to_posting</code> response, for an empty candidate result, and before any search. <em>Test:</em> <code>FindPage.test.jsx</code> "shows the placeholder-names note once for candidates only".</li>
+        <li id="AC-18"><strong>AC-18</strong>: Chat page card. With a saved <code>posting_to_resume</code> snapshot, the chat page's "This suggestion" card shows the name, the "Demo name" tag and the contact line, and does not render the note. <em>Test:</em> <code>src/web/src/pages/ChatPage.test.jsx</code> "candidate suggestion card shows the demo name, no note".</li>
+        <li id="AC-19"><strong>AC-19</strong>: The name is not sent to the chat endpoint. In that chat page test, after sending one message, the JSON body of the <code>POST /api/chat</code> call (stringified) does not contain the display name or the key <code>display_name</code>. <em>Test:</em> <code>ChatPage.test.jsx</code> "chat request body carries no display name".</li>
+        <li id="AC-20"><strong>AC-20</strong>: No contact details beside the fake name. A collapsed candidate card contains no <code>a</code> element at all (so no <code>mailto:</code>, <code>tel:</code> or other link; the "Chat about this suggestion" link is passed in as <code>children</code> and only appears in the expanded region, unchanged), and its text content matches neither an email pattern (<code>\S+@\S+\.\S+</code>) nor a phone pattern (<code>\d{3}[-. ]\d{3}[-. ]\d{4}</code>). <em>Test:</em> <code>MatchCard.test.jsx</code> "candidate card shows no contact details".</li>
+        <li id="AC-21"><strong>AC-21</strong>: Accessibility. <code>#/candidates</code> with a candidate result (note, tags, cards) has no axe violations (same options as the existing test). <em>Test:</em> <code>src/web/src/a11y.test.jsx</code> "no axe violations with candidate results".</li>
+        <li id="AC-22"><strong>AC-22</strong>: Limitation documented. <code>docs/deviations.md</code> has a summary row and a section <code>P-20</code> (type Addition, status specced) that say the names are generated placeholders, the corpus has no names, the "Demo name" label and "Contact not available in dataset" are shown, and that the extraction schema was not changed; its "Row count" line says 20; the web app runbook <code>src/getwork/webapp/README.md</code> contains the strings "Demo name" and "placeholder". The architecture already holds ADR-40 and CC-21 (checked by the same test). <em>Test:</em> <code>src/tests/test_webapp_docs.py::test_candidate_names_limitation_documented</code>.</li>
+        <li id="AC-23"><strong>AC-23</strong>: No regressions. The full Python suite and the full front-end suite pass, including <code>test_webapp_guardrails.py</code>, <code>test_webapp_contract.py</code> (the unmodified <code>contract.json</code> still validates as <code>MatchResponse</code>), the style-rule tests, <code>test_pipeline_offline.py</code> and the existing agent tests. <em>Test:</em> <code>uv run --offline --frozen pytest -q</code> and <code>npm --prefix src/web test</code>.</li>
+      </ol>
+    </section>
+
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>No task is <code>large</code>. Tasks that touch the same file are sequenced. T-1 to T-3 are Python, T-4 and T-5 are the front end, T-6 is documentation.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Summary</th><th>Depends on</th><th>ACs</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#T-1">T-1</a></td><td>Generator module and its tests</td><td>none</td><td>AC-1, AC-2, AC-3, AC-4, AC-5</td></tr>
+            <tr><td><a href="#T-2">T-2</a></td><td><code>Match.display_name</code> and API wiring, API tests</td><td>T-1</td><td>AC-6, AC-7, AC-8, AC-9</td></tr>
+            <tr><td><a href="#T-3">T-3</a></td><td>Isolation guard tests (source scan, chat prompts, no files)</td><td>T-2</td><td>AC-10, AC-11, AC-12</td></tr>
+            <tr><td><a href="#T-4">T-4</a></td><td>UI copy constants and candidate card</td><td>T-2 (response shape)</td><td>AC-13, AC-15, AC-16, AC-20</td></tr>
+            <tr><td><a href="#T-5">T-5</a></td><td>Results-page note, page-level and chat-page tests, axe test</td><td>T-4</td><td>AC-14, AC-17, AC-18, AC-19, AC-21</td></tr>
+            <tr><td><a href="#T-6">T-6</a></td><td>Deviations row, runbook paragraph, docs test; final full-suite run</td><td>T-3, T-5</td><td>AC-22, AC-23</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section id="T-1" class="card">
+        <div class="card-header"><span class="badge badge-info">T-1</span><h3>Generator module and tests</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/pseudonym.py</code> (new), <code>src/tests/webapp/test_webapp_pseudonym.py</code> (new). About 160 changed lines, most of them the two lists.</p>
+        <p><strong>Depends on:</strong> none. <strong>Satisfies:</strong> AC-1, AC-2, AC-3, AC-4, AC-5. <strong>Cites:</strong> ADR-40, CC-21, CC-10.</p>
+        <p><strong>Interfaces (verbatim from Design I-1):</strong></p>
+<pre><code>NAME_SEED: str = "getwork-demo-names-v1"
+FIRST_NAMES: tuple[str, ...]   # at least 150 distinct entries, each matching ^[A-Z][a-z]+$
+LAST_NAMES: tuple[str, ...]    # at least 150 distinct entries, each matching ^[A-Z][a-z]+$
+
+def display_name(doc_id: str | None) -> str | None:
+    """Placeholder name "First Last" for a document id, or None when doc_id is None or blank.
+    digest = hashlib.sha256(f"{NAME_SEED}:{doc_id}".encode("utf-8")).digest()
+    first = FIRST_NAMES[int.from_bytes(digest[0:4], "big") % len(FIRST_NAMES)]
+    last = LAST_NAMES[int.from_bytes(digest[4:8], "big") % len(LAST_NAMES)]
+    return f"{first} {last}" """</code></pre>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li>Write <code>pseudonym.py</code> exactly to I-1 with a module docstring saying: placeholder names for the demo, the resume corpus has no names, never stored or sent anywhere (CC-21). Imports: <code>hashlib</code> only (plus <code>from __future__ import annotations</code> if you want it).</li>
+          <li>Write the two lists as tuple literals of at least 150 distinct common first names and 150 distinct common surnames, ASCII letters, capitalized as <code>^[A-Z][a-z]+$</code> (no hyphens, apostrophes or "Mc" forms), mixed in origin and gender. Do not include a name that is also a famous public figure's single well-known name.</li>
+          <li>Write the tests: <code>test_same_id_same_name</code>; <code>test_stable_across_processes</code> runs <code>subprocess.run([sys.executable, "-c", code], env={**os.environ, "PYTHONHASHSEED": "1"}, cwd=tmp_path, capture_output=True, text=True, check=True)</code> and again with <code>"2"</code>, where <code>code</code> imports <code>getwork.webapp.pseudonym</code> and prints <code>display_name("r-123")</code>, then compares the two outputs with each other and with the in-process value (the package is installed in the project environment, so no path tweaks are needed; <code>cwd=tmp_path</code> keeps the repo directory off the import path); <code>test_golden_names</code> pins <code>r-1</code>, <code>r-2</code>, <code>r-30000</code> to the values the finished lists produce, written as literals; <code>test_name_shape_and_spread</code>; <code>test_blank_id_gives_none</code>; <code>test_module_is_offline_and_pure</code> using <code>ast</code> over the file text.</li>
+          <li>Run with the <code>offline</code> fixture (<code>pytestmark = pytest.mark.usefixtures("offline")</code>), like the neighbouring webapp tests.</li>
+        </ol>
+      </section>
+
+      <section id="T-2" class="card">
+        <div class="card-header"><span class="badge badge-info">T-2</span><h3>Match.display_name and API wiring</h3></div>
+        <p><strong>Files:</strong> <code>src/getwork/webapp/models.py</code> (modify), <code>src/getwork/webapp/api.py</code> (modify), <code>src/tests/webapp/test_webapp_display_names.py</code> (new). About 120 changed lines.</p>
+        <p><strong>Depends on:</strong> T-1. <strong>Satisfies:</strong> AC-6, AC-7, AC-8, AC-9. <strong>Cites:</strong> ADR-40, CC-21, CC-18.</p>
+        <p><strong>Interfaces (verbatim from Design I-2, I-3):</strong></p>
+<pre><code># models.py, class Match: add as the last field
+    display_name: str | None = None
+
+# api.py, in match(), in the models.Match(...) call
+display_name=pseudonym.display_name(document.id) if document.side == "resume" else None</code></pre>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li>Add the field to <code>Match</code> with a one-line comment <code># placeholder name, resume matches only (CC-21)</code>. Change nothing else in <code>models.py</code>; <code>models.py</code> must still not import <code>getwork.agent</code> (existing test).</li>
+          <li>In <code>api.py</code>, extend the import to <code>from getwork.webapp import explain, models, pseudonym</code> and add the keyword argument shown. Do not touch <code>engine.py</code>, <code>demo.py</code>, <code>artifacts.py</code>, <code>explain.py</code> or the examples and explain routes.</li>
+          <li>Tests in the new file, using <code>api.create_app(demo.DemoEngine(), explain.TemplateExplainer())</code> and <code>TestClient</code> like <code>test_webapp_api.py</code>: <code>test_candidate_matches_have_names</code> (AC-6), <code>test_job_matches_have_no_name</code> (AC-7; patch with <code>monkeypatch.setattr(pseudonym, "display_name", boom)</code> where <code>boom</code> raises), <code>test_name_only_on_match</code> (AC-8; import <code>ChatRequest</code> and <code>ChatMatchRef</code> from <code>getwork.agent.models</code>; for the explain body call <code>/api/explain</code> with direction <code>posting_to_resume</code>, query the document <code>j-1</code> and <code>match_id</code> <code>r-1</code>), <code>test_rankings_unaffected</code> (AC-9; parametrize over the three systems; build the expected list from <code>demo.DemoEngine().match(models.MatchRequest(...))</code>).</li>
+        </ol>
+      </section>
+
+      <section id="T-3" class="card">
+        <div class="card-header"><span class="badge badge-info">T-3</span><h3>Isolation guard tests</h3></div>
+        <p><strong>Files:</strong> <code>src/tests/test_display_name_isolation.py</code> (new). About 90 lines. Test-only task.</p>
+        <p><strong>Depends on:</strong> T-2. <strong>Satisfies:</strong> AC-10, AC-11, AC-12. <strong>Cites:</strong> CC-21, CC-10.</p>
+        <p><strong>Interfaces (existing, do not change):</strong> <code>agent_helpers.make_client(script)</code> returns <code>(TestClient, FakeLLMClient)</code>; <code>agent_helpers.chat_json(**overrides)</code> builds a <code>ChatRequest</code> dict from the demo engine; <code>FakeLLMClient.calls</code> is a list of <code>LLMRequest</code> with <code>system</code> and <code>user</code> strings.</p>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li><code>test_only_allowed_modules_mention_names</code>: <code>root = Path(__file__).resolve().parents[1] / "getwork"</code>; for each <code>*.py</code> under it (skip <code>__pycache__</code>), read as UTF-8 and search <code>re.compile(r"pseudonym|display_name", re.I)</code>. Allowed relative paths: <code>webapp/pseudonym.py</code>, <code>webapp/api.py</code>, <code>webapp/models.py</code>. Assert the offender list is empty. Read-only; never write.</li>
+          <li><code>test_chat_prompts_contain_no_names</code>: <code>client, fake = make_client(["Both documents list JavaScript and CSS."])</code>; POST <code>/api/match</code> <code>{"direction": "posting_to_resume", "query": {"kind": "corpus", "id": "j-1"}, "k": 6}</code>; collect <code>display_name</code> values; POST <code>/api/chat</code> with <code>chat_json(direction="posting_to_resume", query=demo.DemoEngine().get_document("j-1").model_dump(mode="json"), focus_id="r-1", matches=[{"id": "r-1", "rank": 1, "score": 0.5}, {"id": "r-2", "rank": 2, "score": 0.4}], message="Why is r-1 ranked above r-2?")`; assert status 200, <code>fake.calls</code> non-empty, and that no name occurs in <code>call.system + call.user</code> for any call nor in the reply. If the chat answer is a 502 because the scripted reply is rejected, change the scripted reply to a sentence naming only skills of the demo documents; do not weaken the assertions.</li>
+          <li><code>test_match_request_writes_no_files</code>: use the <code>offline</code> fixture's <code>tmp_path</code>, <code>monkeypatch.chdir(tmp_path)</code>, run the AC-6 request, assert <code>list(tmp_path.iterdir()) == []</code> (if the <code>offline</code> fixture itself creates entries there, compare the listing before and after instead).</li>
+        </ol>
+      </section>
+
+      <section id="T-4" class="card">
+        <div class="card-header"><span class="badge badge-info">T-4</span><h3>UI copy constants and candidate card</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/candidateCopy.js</code> (new), <code>src/web/src/components/MatchCard.jsx</code> (modify), <code>src/web/src/components/MatchCard.test.jsx</code> (modify). About 120 changed lines.</p>
+        <p><strong>Depends on:</strong> T-2 (the <code>display_name</code> response field). <strong>Satisfies:</strong> AC-13, AC-15, AC-16, AC-20. <strong>Cites:</strong> ADR-40, CC-21, CC-18.</p>
+        <p><strong>Interfaces (verbatim from Design I-4):</strong></p>
+<pre><code>// candidateCopy.js
+export const DEMO_NAME_LABEL = "Demo name";
+export const CONTACT_UNAVAILABLE = "Contact not available in dataset";
+export const UNNAMED_CANDIDATE = "Unnamed candidate";
+export const NAMES_NOTE =
+  "Candidate names are placeholders. The resume dataset has no names, so each name is generated from the resume id and is the same every time.";
+
+// MatchCard props unchanged: { match, system, expanded, onToggle, children }
+// candidate card  <=>  match.document.side === "resume"; markup order as in Design I-4</code></pre>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li>Create <code>candidateCopy.js</code> with the four constants. <code>NAMES_NOTE</code> is used in T-5; define it now so the file is complete.</li>
+          <li>In <code>MatchCard.jsx</code>, branch on <code>match.document.side === "resume"</code>. Keep the job branch's output byte-for-byte as it is now (same elements, same text, so every existing test passes unmodified). The candidate branch follows Design I-4: <code>hasName = typeof match.display_name === "string" &amp;&amp; match.display_name.trim() !== ""</code>; <code>&lt;article className="card" data-candidate&gt;</code>; the tag is <code>&lt;span className="chip chip-other" data-demo-name&gt;</code>. Share the score line, <code>EvidenceChips</code>, button and region code between the two branches rather than copying it. No new CSS and no new dependency; do not add any <code>href</code> to the card.</li>
+          <li>Tests in <code>MatchCard.test.jsx</code> (build the candidate fixture inline from <code>contract.match.matches[0]</code> with <code>document.side = "resume"</code> and a <code>display_name</code>; do not edit <code>contract.json</code>): "candidate card shows name, tag, title, level and contact line" (AC-13), "candidate card without a name falls back" via <code>test.each([null, undefined, "  "])</code> (AC-15), "job card has no candidate extras" (AC-16), "candidate card shows no contact details" (AC-20: assert no <code>a[href^="mailto:"]</code>, <code>a[href^="tel:"]</code>, and that the card's <code>textContent</code> matches neither regex of AC-20).</li>
+          <li>Run <code>npm --prefix src/web test</code>; the style-rule and theme tests must stay green (no CSS was changed).</li>
+        </ol>
+      </section>
+
+      <section id="T-5" class="card">
+        <div class="card-header"><span class="badge badge-info">T-5</span><h3>Results-page note and page-level tests</h3></div>
+        <p><strong>Files:</strong> <code>src/web/src/pages/FindPage.jsx</code> (modify), <code>src/web/src/pages/FindPage.test.jsx</code> (modify), <code>src/web/src/pages/ChatPage.test.jsx</code> (modify), <code>src/web/src/a11y.test.jsx</code> (modify). About 150 changed lines, mostly tests.</p>
+        <p><strong>Depends on:</strong> T-4. <strong>Satisfies:</strong> AC-14, AC-17, AC-18, AC-19, AC-21. <strong>Cites:</strong> ADR-40, CC-21.</p>
+        <p><strong>Interfaces:</strong> <code>NAMES_NOTE</code> and the other constants of <code>candidateCopy.js</code> (T-4); <code>Notice</code> props <code>{ kind, label, ... }</code> (existing, <code>kind="warning"</code>).</p>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li>In <code>FindPage.jsx</code> <code>Results</code>, after the <code>&lt;p aria-live="polite"&gt;</code> line and before <code>&lt;UnderstoodCard/&gt;</code>, add <code>{direction === "posting_to_resume" &amp;&amp; matches.length &gt; 0 &amp;&amp; &lt;Notice kind="warning" label="Note"&gt;{NAMES_NOTE}&lt;/Notice&gt;}</code> where <code>direction</code> is the destructured <code>response.direction</code> already in scope. Import <code>NAMES_NOTE</code>. Nothing else changes (keep the existing <code>notes.map</code> notices).</li>
+          <li><code>FindPage.test.jsx</code>: add a helper that builds a <code>posting_to_resume</code> response with 10 matches (copy <code>contract.match</code>, set <code>direction</code>, set each match's <code>document.side = "resume"</code>, ids <code>r-1..r-10</code>, <code>display_name</code> from a fixed array of 10 names). Add "every candidate card has the Demo name tag and contact line" (AC-14) and "shows the placeholder-names note once for candidates only" (AC-17: candidates once; the existing <code>resume_to_posting</code> fixture zero times; an empty candidate response zero times; initial render zero times).</li>
+          <li><code>ChatPage.test.jsx</code>: seed <code>saveResults({ direction: "posting_to_resume", response: candidateResponse, expandedId: null })</code>, render with the existing chat-enabled <code>health</code>, assert the card shows the name, tag and contact line and the note text is absent (AC-18); send one message with the existing routed fetch and assert the <code>/api/chat</code> request body string contains neither the name nor <code>display_name</code> (AC-19).</li>
+          <li><code>a11y.test.jsx</code>: add "no axe violations with candidate results" that renders <code>#/candidates</code> with a fake fetch returning the candidate response and runs <code>axe</code> with the existing <code>AXE_OPTIONS</code> (AC-21). Place the shared candidate-response builder in the test files themselves (duplicate a few lines rather than adding a shared module).</li>
+        </ol>
+      </section>
+
+      <section id="T-6" class="card">
+        <div class="card-header"><span class="badge badge-info">T-6</span><h3>Limitation documented; final run</h3></div>
+        <p><strong>Files:</strong> <code>docs/deviations.md</code> (modify), <code>src/getwork/webapp/README.md</code> (modify), <code>src/tests/test_webapp_docs.py</code> (modify). About 60 changed lines. Do not edit <code>specs/architecture.html</code> (the planner already added ADR-40, CC-21, the CC-18 sentence and the feature row).</p>
+        <p><strong>Depends on:</strong> T-3, T-5. <strong>Satisfies:</strong> AC-22, AC-23. <strong>Cites:</strong> ADR-40, CC-21.</p>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+          <li><code>docs/deviations.md</code>: add the summary row after P-19 exactly as <code>| P-20 | Web app | Find Candidates shows deterministic placeholder names because the resume corpus has none | Addition | specced | Yes (one sentence in the app scope) |</code>; change <code>Row count: 19.</code> to <code>Row count: 20.</code>; add a section <code>## P-20 Placeholder candidate names on Find Candidates</code> after P-19 (before "Gap-fillers and additions") with the same bullet labels as P-19: <em>Proposal says</em> (the app returns the top-k candidates for a posting; it says nothing about names), <em>Now</em> (each candidate card shows a generated name from a SHA-256 of a fixed seed and the resume id, tagged "Demo name", with one note, plus "Contact not available in dataset"; computed in the API at response time, never stored or used by embeddings, ranking, the agent or the evaluation; extraction schema unchanged, no resume re-run; ADR-40, CC-21), <em>Reason recorded</em> (the Indeed resume text has no candidate names: about 0.6% of a ~2,000 sample contain one; the user chose placeholders over a schema change and a re-run), <em>Impact</em> (screenshots and demos show fake names; the report must say so; the names say nothing about the person, are not unique, and imply a gender and ethnicity at random; real locations and contact links are not shown), <em>Status</em> specced, <em>Proposal text change</em> one sentence in the app scope, <em>Report sentence</em> TBD, <em>Owner</em> TBD, <em>Resolution</em> open (a regex follow-up for real links is possible and needs its own spec). Add one bullet under "Could not verify": the sample figures (about 0.6% names, 2% email, 2% phone, 17% LinkedIn, 34% URL) come from the user and were not re-measured by an agent.</li>
+          <li><code>src/getwork/webapp/README.md</code>: add one paragraph (no new <code>## WA-</code> heading; the existing test requires exactly WA-1 to WA-6) after the paragraph that describes the chat agent, saying that Find Candidates cards show placeholder names tagged "Demo name" because the resume corpus has no names, that they come from <code>getwork.webapp.pseudonym</code> at response time, are never stored or sent to the agent or the evaluation, and that contact details are not shown ("Contact not available in dataset").</li>
+          <li><code>src/tests/test_webapp_docs.py</code>: add <code>test_candidate_names_limitation_documented</code> asserting the AC-22 facts: the deviations file has a line starting <code>| P-20 |</code>, a heading <code>## P-20</code>, the text "placeholder", "Demo name" and "Row count: 20."; the runbook contains "Demo name" and "placeholder"; <code>specs/architecture.html</code> contains <code>id="ADR-40"</code> and <code>id="CC-21"</code>. Keep the existing tests unchanged.</li>
+          <li>Run both full suites (AC-23) and report the counts. No real LLM call, no <code>.env</code> read, nothing under <code>data/</code> or <code>artifacts_trial/</code> touched, nothing under <code>src/getwork/evaluation/</code> edited.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section id="edge-cases">
+      <h2>Edge cases &amp; risks</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Case</th><th>Required behavior</th><th>Covered by</th></tr></thead>
+          <tbody>
+            <tr><td>Match id is empty (the API uses <code>document.id or ""</code>)</td><td><code>display_name</code> is null (generator returns None); the card shows "Unnamed candidate" without a tag and with the contact line</td><td>AC-4, AC-15</td></tr>
+            <tr><td>Same resume in two searches or two processes</td><td>Same name every time</td><td>AC-1, AC-2</td></tr>
+            <tr><td>Two different resumes get the same name (about 1 in 22,500 pairs at 150 x 150)</td><td>Allowed. The ids differ and the names are labeled placeholders; no uniqueness logic, no retry</td><td>AC-3</td></tr>
+            <tr><td>Names imply a gender or ethnicity</td><td>The hash is independent of resume content, so the implication is random and never correlates with ranking; the tag and note say the names are placeholders; the risk is recorded in ADR-40 and P-20</td><td>AC-13, AC-17, AC-22</td></tr>
+            <tr><td>Name drifts into a prompt, a judge input or an artifact in a later change</td><td>The source scan fails the build when any other module mentions <code>pseudonym</code> or <code>display_name</code></td><td>AC-10, AC-11</td></tr>
+            <tr><td>The user asks the chat agent "what is this candidate's name?"</td><td>The agent does not know it; this is intended. No code change; mention in the runbook paragraph is optional</td><td>AC-11</td></tr>
+            <tr><td>Results restored from the chat page snapshot</td><td>Names come back from <code>sessionStorage</code> unchanged; the note shows again because it keys on <code>response.direction</code></td><td>AC-17, AC-18</td></tr>
+            <tr><td>Old cached response without <code>display_name</code></td><td>Treated as no name: "Unnamed candidate", no tag</td><td>AC-15</td></tr>
+            <tr><td><code>dev-mock.js</code> serves one fixed job-match response for every direction</td><td>Not changed; Find Candidates under <code>npm run dev</code> shows job-style cards, as today. Use <code>webapp serve --demo</code> to see candidate names</td><td>none (documented)</td></tr>
+            <tr><td>A real resume text happens to contain a person's name, email or link</td><td>Never shown: the card shows only the generated name and "Contact not available in dataset"</td><td>AC-20</td></tr>
+            <tr><td>A future task edits the lists</td><td>The golden test fails until the new literals are written deliberately; seed changes are also visible there</td><td>AC-2</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="open-questions">
+      <h2>Open questions</h2>
+      <div class="callout warn"><span class="callout-title">Assumptions</span>
+        <p><strong>A-1 (location is not shown).</strong> The request asks for title and location on the cards. No served artifact carries a location: the structured record has only title, skills, experience (role, company, duration) and education, the documents table (<a href="../architecture.html#CC-16">CC-16</a>) has no location column, and <code>DocumentView</code> has none. The city appears only inside the raw resume text under <code>data/processed/</code>, which the engine does not load and developers may not read. Getting it means either changing the extraction schema and re-running (ruled out) or parsing the first lines of raw text with a regex at engine load time (new dependency of the web app on <code>data/processed</code>, unmeasured precision, a new <code>DocumentView</code> or <code>Match</code> field and a privacy decision). I assumed the cards show <strong>job title and level</strong> only and that location is a follow-up. If the user wants location now, say so and it becomes a separate spec (suggested name <code>candidate-location</code>) that measures the regex on the ~2,000 sample first; it does not change anything in this spec.</p>
+        <p><strong>A-2 (list size and name format).</strong> 150 first and 150 last names, "First Last", ASCII only. A larger list lowers collisions, a smaller one is easier to review; 22,500 combinations is ample for a demo.</p>
+        <p><strong>A-3 (fallback has no tag).</strong> A resume match with no usable name shows "Unnamed candidate" with no "Demo name" tag, because the tag labels a generated name. The alternative (always show the tag) would label something that is not a name.</p>
+        <p><strong>A-4 (field on <code>Match</code>, not <code>DocumentView</code>).</strong> Chosen so that every path that already carries a <code>DocumentView</code> (chat requests, agent prompts, the explain query) cannot carry the name. The alternative, a field on <code>DocumentView</code>, would put the name into the agent prompt builder's input objects and the front end's chat request.</p>
+        <p><strong>A-5 (index status).</strong> The architecture feature index row says <code>proposed</code> as the user asked, although a spec now exists; move it to <code>draft</code> or <code>approved</code> when the user decides. ADR-40 is recorded as accepted because the user made the decision.</p>
+      </div>
+    </section>
+
+    <footer class="footer">GetWork · candidate-display-names · see architecture.html</footer>
+  </main>
+</div>
+</body>
+</html>
