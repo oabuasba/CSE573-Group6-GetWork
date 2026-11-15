@@ -39,6 +39,20 @@ def test_member_list_reason() -> None:
     assert model.member_list_reason("JUnit / Selenium / TDD", []) is None
 
 
+def test_member_list_reason_whitespace_needs_every_word_a_member() -> None:
+    members = ["Network", "Security", "Python", "Java", "PHP"]
+    assert model.member_list_reason("Network Security Protocols", members) is None
+    for listed in ["Python Java PHP", "network security", "Python  Java"]:
+        reason = model.member_list_reason(listed, members)
+        assert reason is not None and "member skills" in reason
+    assert model.member_list_reason("Python Java Frameworks", members) is None
+    assert model.member_list_reason("Python", members) is None
+    # separators keep the over-half rule
+    reason = model.member_list_reason("Network / Security / Protocols", members)
+    assert reason is not None and "member skills" in reason
+    assert model.member_list_reason("Network / Protocols", members) is None
+
+
 def test_make_taxonomy_validation() -> None:
     def make(clusters: list[Cluster], noise: list[str] | None = None) -> model.Taxonomy:
         return model.make_taxonomy(clusters, noise or [], "v", {})
