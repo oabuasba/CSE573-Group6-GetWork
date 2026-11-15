@@ -1,9 +1,9 @@
 {
   "abort_reason": null,
-  "already_done": 500,
-  "attempted": 500,
+  "already_done": 4023,
+  "attempted": 4400,
   "backend": "voyager",
-  "calls": 502,
+  "calls": 4442,
   "config": {
     "extra_body": null,
     "limit": null,
@@ -14,30 +14,30 @@
     "max_tokens": 4096,
     "max_validation_attempts": 3,
     "reasoning_effort": "none",
-    "sample": 1000,
+    "sample": null,
     "seed": 0,
     "temperature": 0.0,
     "use_response_schema": true
   },
-  "done_total": 1000,
-  "failed": 0,
+  "done_total": 8416,
+  "failed": 7,
   "failures_by_stage": {
     "permanent": 0,
     "rate_limit": 0,
     "transient": 0,
-    "validation": 0
+    "validation": 7
   },
-  "failures_total": 0,
+  "failures_total": 7,
   "model": "qwen38-27b",
   "not_attempted": 0,
   "prompt_version": "extract_v1",
   "rate_limited": 0,
   "retries": 0,
   "schema_version": "1",
-  "selected": 1000,
+  "selected": 8423,
   "source": "postings",
   "status": "complete",
-  "succeeded": 500,
+  "succeeded": 4393,
   "total_in_source": 8423,
   "truncated_inputs": 0
 }
