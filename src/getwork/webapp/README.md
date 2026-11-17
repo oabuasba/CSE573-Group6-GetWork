@@ -12,6 +12,10 @@ start); `--explainer template` turns chat off (`chat.reason` says so). `/api/hea
 `chat` (`enabled`, `model`, `backend`, `prompt_version`, `reason`); the UI shows the chat button when `chat.enabled` is true.
 `webapp check` prints the same health JSON (rules-based explanations plus the chat state) and calls no model.
 
+Find Candidates cards show placeholder names tagged "Demo name", because the resume corpus has no candidate names. The
+names come from `getwork.webapp.pseudonym` at response time, are never stored, and are never sent to the chat agent or
+used by the evaluation. Contact details are not shown; each card says "Contact not available in dataset".
+
 Which artifacts are served is your choice, never fixed in code:
 
 - `--artifacts-dir PATH` (both subcommands) wins over the environment variable `WEBAPP_ARTIFACTS_DIR`, which wins over

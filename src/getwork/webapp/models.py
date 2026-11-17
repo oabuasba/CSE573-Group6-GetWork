@@ -130,6 +130,7 @@ class Match(BaseModel):
     score: float
     document: DocumentView
     evidence: Evidence
+    display_name: str | None = None  # placeholder name, resume matches only (CC-21)
 
 
 class Note(BaseModel):

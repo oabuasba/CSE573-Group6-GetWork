@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import FindPage from "./FindPage.jsx";
@@ -416,4 +416,62 @@ test("example from the random group can be submitted", async () => {
   } finally {
     randomSpy.mockRestore();
   }
+});
+
+const CANDIDATE_NAMES = [
+  "Priya Nair", "Marcus Webb", "Elena Rossi", "Tomas Novak", "Aisha Khan",
+  "Liam Walsh", "Mei Chen", "Omar Haddad", "Sofia Duarte", "Noah Berg",
+];
+const candidateResponse = (count = 10) => ({
+  ...contract.match,
+  direction: "posting_to_resume",
+  matches: Array.from({ length: count }, (_, i) => ({
+    ...contract.match.matches[0],
+    rank: i + 1,
+    id: `r-${i + 1}`,
+    display_name: CANDIDATE_NAMES[i],
+    document: { ...contract.match.matches[0].document, id: `r-${i + 1}`, side: "resume" },
+  })),
+});
+const NAMES_NOTE_TEXT = /Candidate names are placeholders/;
+
+async function searchCandidates(response) {
+  const fetchImpl = routedFetch({ match: reply(response) });
+  const { user } = setup(fetchImpl, "posting_to_resume");
+  await user.click(screen.getByRole("button", { name: "Fill in a form" }));
+  await user.type(screen.getByLabelText("Skills"), "Vue, CSS");
+  await user.click(screen.getByRole("button", { name: "Find candidates" }));
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+  return { user };
+}
+
+test("every candidate card has the Demo name tag and contact line", async () => {
+  await searchCandidates(candidateResponse());
+  expect(document.querySelectorAll("[data-candidate]")).toHaveLength(10);
+  expect(screen.getAllByText("Demo name")).toHaveLength(10);
+  expect(screen.getAllByText("Contact not available in dataset")).toHaveLength(10);
+  for (const card of document.querySelectorAll("[data-candidate]")) {
+    expect(card.querySelectorAll("[data-demo-name]")).toHaveLength(1);
+  }
+});
+
+test("shows the placeholder-names note once for candidates only", async () => {
+  setup(routedFetch(), "posting_to_resume");
+  expect(screen.queryByText(NAMES_NOTE_TEXT)).not.toBeInTheDocument();
+  cleanup();
+
+  await searchCandidates(candidateResponse());
+  const note = screen.getByText(NAMES_NOTE_TEXT);
+  expect(screen.getAllByText(NAMES_NOTE_TEXT)).toHaveLength(1);
+  expect(note.closest(".alert-warning")).toHaveTextContent("Note");
+  cleanup();
+
+  await searchCandidates(candidateResponse(0));
+  expect(screen.queryByText(NAMES_NOTE_TEXT)).not.toBeInTheDocument();
+  cleanup();
+
+  const { user } = setup(routedFetch());
+  await fillAndSubmit(user);
+  await screen.findByRole("heading", { level: 2, name: "Results" });
+  expect(screen.queryByText(NAMES_NOTE_TEXT)).not.toBeInTheDocument();
 });

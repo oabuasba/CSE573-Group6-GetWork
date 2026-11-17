@@ -42,3 +42,52 @@ test("keyword score label and untitled fallback", () => {
   expect(screen.getByText("Keyword score")).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 3, name: "Untitled" })).toBeInTheDocument();
 });
+
+const candidate = (display_name) => ({
+  ...match,
+  display_name,
+  document: { ...match.document, side: "resume", title: "Java Developer", level: "Associate" },
+});
+
+test("candidate card shows name, tag, title, level and contact line", async () => {
+  const user = userEvent.setup();
+  const onToggle = vi.fn();
+  const { container } = render(
+    <MatchCard match={candidate("Priya Nair")} system="Full" expanded={false} onToggle={onToggle} />,
+  );
+  expect(screen.getByRole("heading", { level: 3, name: "Priya Nair" })).toBeInTheDocument();
+  expect(screen.getByText("Demo name")).toHaveAttribute("data-demo-name");
+  expect(screen.getByText("Java Developer").tagName).toBe("P");
+  expect(screen.getByText("Associate").tagName).toBe("P");
+  expect(screen.getByText("Contact not available in dataset").tagName).toBe("P");
+  expect(screen.getByText("0.812")).toBeInTheDocument();
+  expect(container.querySelector("article")).toHaveAttribute("data-candidate");
+  await user.click(screen.getByRole("button", { name: "Why this match?" }));
+  expect(onToggle).toHaveBeenCalledTimes(1);
+});
+
+test.each([null, undefined, "  "])("candidate card without a name falls back", (name) => {
+  render(<MatchCard match={candidate(name)} system="Full" expanded={false} onToggle={() => {}} />);
+  expect(screen.getByRole("heading", { level: 3, name: "Unnamed candidate" })).toBeInTheDocument();
+  expect(screen.queryByText("Demo name")).not.toBeInTheDocument();
+  expect(screen.getByText("Java Developer")).toBeInTheDocument();
+  expect(screen.getByText("Associate")).toBeInTheDocument();
+  expect(screen.getByText("Contact not available in dataset")).toBeInTheDocument();
+});
+
+test("job card has no candidate extras", () => {
+  const { container } = render(<MatchCard match={match} system="Full" expanded={false} onToggle={() => {}} />);
+  expect(screen.queryByText("Demo name")).not.toBeInTheDocument();
+  expect(screen.queryByText("Contact not available in dataset")).not.toBeInTheDocument();
+  expect(container.querySelector("[data-candidate]")).toBeNull();
+});
+
+test("candidate card shows no contact details", () => {
+  const { container } = render(
+    <MatchCard match={candidate("Priya Nair")} system="Full" expanded={false} onToggle={() => {}} />,
+  );
+  expect(container.querySelector("a")).toBeNull();
+  expect(container.querySelector('a[href^="mailto:"], a[href^="tel:"]')).toBeNull();
+  expect(container.textContent).not.toMatch(/\S+@\S+\.\S+/);
+  expect(container.textContent).not.toMatch(/\d{3}[-. ]\d{3}[-. ]\d{4}/);
+});

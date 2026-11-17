@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { describeError, NETWORK_ERROR_CODE, postMatch } from "../api.js";
+import { NAMES_NOTE } from "../candidateCopy.js";
 import ExplainPanel from "../components/ExplainPanel.jsx";
 import GroupedSkills from "../components/GroupedSkills.jsx";
 import MatchCard from "../components/MatchCard.jsx";
@@ -76,6 +77,9 @@ function Results({ response, copy, headingRef, expandedId, onToggle, fetchImpl, 
     <section>
       <h2 tabIndex={-1} ref={headingRef}>Results</h2>
       <p aria-live="polite">{matches.length} {copy.noun} found</p>
+      {direction === "posting_to_resume" && matches.length > 0 && (
+        <Notice kind="warning" label="Note">{NAMES_NOTE}</Notice>
+      )}
       <UnderstoodCard query={query} />
       {notes.map((note) => (
         <Notice key={note.code} kind="warning" label="Note">{note.message}</Notice>

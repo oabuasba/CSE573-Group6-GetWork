@@ -29,3 +29,15 @@ def test_readme_and_gitignore() -> None:
     assert row.rstrip().endswith("| Built |") and "webapp serve --demo" in row
     ignored = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "node_modules/" in ignored and "src/web/dist/" in ignored
+
+
+def test_candidate_names_limitation_documented() -> None:
+    deviations = (REPO / "docs" / "deviations.md").read_text(encoding="utf-8")
+    assert any(line.startswith("| P-22 |") for line in deviations.splitlines())
+    assert re.search(r"^## P-22\b", deviations, re.M)
+    for needle in ("placeholder", "Demo name", "Row count: 22."):
+        assert needle in deviations, needle
+    runbook = RUNBOOK.read_text(encoding="utf-8")
+    assert "Demo name" in runbook and "placeholder" in runbook
+    architecture = (REPO / "specs" / "architecture.html").read_text(encoding="utf-8")
+    assert 'id="ADR-40"' in architecture and 'id="CC-21"' in architecture
