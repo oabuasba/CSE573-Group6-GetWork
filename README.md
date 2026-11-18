@@ -19,7 +19,7 @@ GetWork (CSE 573, Group 6) is a two-way resume and job matcher for software engi
 
 - Python >= 3.11 and [uv](https://docs.astral.sh/uv/)
 - Node >= 20.11 and npm, only for the web UI
-- An ASU Voyager API key, only for real structurer, embedding, chat-agent and judge runs. You create your own key and put it in your own environment (below). Tests, the demo and preprocessing do not need it.
+- An ASU Voyager API key, only for real structurer runs, the Voyager embed steps (`taxonomy embed`, `doc-embed embed`), the evaluation judges and the web app chat. You create your own key and put it in your own environment (below). Tests, the demo and preprocessing do not need it.
 
 ```
 git clone https://github.com/oabuasba/CSE573-Group6-GetWork.git && cd CSE573-Group6-GetWork
@@ -55,9 +55,11 @@ The big raw files and the document embeddings are not in git. [`data/raw/README.
 Optional, after rebuilding the embeddings per that README (until then it stops with `file not found ... (run doc-embed embed)`):
 
 ```
-uv run webapp check --artifacts-dir data/pipeline_run_v7
-uv run webapp serve --artifacts-dir data/pipeline_run_v7
+uv run webapp check --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b
+uv run webapp serve --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b
 ```
+
+Pass the same embedding backend and model that built the stored vectors (v7: Voyager `qwen3-embedding-8b`). The default is the local model, and with a mismatch typed resumes and postings fail with an embedding-mismatch error (409).
 
 Always pass `--artifacts-dir` (or set `WEBAPP_ARTIFACTS_DIR`) for real data; a pipeline script run writes its own folder, see below.
 
@@ -84,7 +86,8 @@ Data flows left to right: `data/raw` -> `data/processed` (`run_resumes`, `run_po
  resumes_corpus.zip + job_postings CSVs  -->  run_resumes / run_postings (filter, dedup)
    -->  structurer (ASU Voyager LLM)  -->  alias table, skill taxonomy, relabel
    -->  document embeddings  -->  two-way retrieval (B1+, B2, Full)
-   -->  evaluation  /  FastAPI backend + React UI + explainer + chat agent
+   -->  evaluation  /  FastAPI backend + React UI + template explainer (real artifacts or --demo)
+        + optional LLM explanation agent and chat
 ```
 
 More: [`scripts/README.md`](scripts/README.md), [`eval/README.md`](eval/README.md), [`docs/running-end-to-end.md`](docs/running-end-to-end.md) (runbook), and the stage READMEs: [`structure`](src/getwork/structure/README.md), [`alias`](src/getwork/alias/README.md), [`taxonomy`](src/getwork/taxonomy/README.md), [`relabel`](src/getwork/relabel/README.md), [`docembed`](src/getwork/docembed/README.md), [`retrieval`](src/getwork/retrieval/README.md), [`evaluation`](src/getwork/evaluation/README.md), [`webapp`](src/getwork/webapp/README.md), [`agent`](src/getwork/agent/README.md).
@@ -98,7 +101,11 @@ uv run structurer --source resumes --preflight      # contacts Voyager; see the 
 ARTIFACTS_DIR=<new folder> bash scripts/bash/run_pipeline.sh [CONFIG_ID]
 ```
 
-`run_pipeline.sh` runs every step after structuring (alias table, taxonomy, relabel, document embeddings, retrieval) and stops at the first failure. It reads `data/structured` and `data/processed`, writes only to `ARTIFACTS_DIR`, and defaults `CONFIG_ID` to `kmeans-01` (k=10). Pick a folder that is not an existing run. The embed steps and, by default, cluster naming make real Voyager calls. Optional variables: `STRUCTURED_DIR`, `PROCESSED_DIR`, `TOP_N`, `NAME_METHOD` (`heuristic` runs naming offline); all are documented at the top of the script. After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir <that folder>`.
+`run_pipeline.sh` runs every step after structuring (alias table, taxonomy, relabel, document embeddings, retrieval) and stops at the first failure. It reads `data/structured` (10,567 resumes and 8,416 postings in v7) and `data/processed`, writes only to `ARTIFACTS_DIR`, and defaults `CONFIG_ID` to `kmeans-01` (k=10). Pick a folder that is not an existing run. The embed steps and, by default, cluster naming make real Voyager calls. Optional variables: `STRUCTURED_DIR`, `PROCESSED_DIR`, `TOP_N`, `NAME_METHOD` (`heuristic` runs naming offline); all are documented at the top of the script. After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir <that folder>`.
+
+## Evaluation
+
+`evaluate` samples queries, pools the top 10 from B1+, B2 and Full, has two Voyager LLM judges label every pair blind, and computes P@5, P@10, MRR, nDCG@10, judge agreement and ARI. The judge stages refuse to start unless you set `USER_RUN_JUDGE=1`; every other stage is offline. The preliminary run (no B1+ tuning, no human check) is `USER_RUN_JUDGE=1 ARTIFACTS_DIR=data/pipeline_run_v7 EVAL_DIR=<new folder> bash scripts/bash/run_evaluation_preliminary.sh` (use a fresh `EVAL_DIR` each time); the run in the slides is `eval/preliminary_results/`. Stages and label rules: [`eval/README.md`](eval/README.md) and [`src/getwork/evaluation/README.md`](src/getwork/evaluation/README.md).
 
 ## Development workflow
 
