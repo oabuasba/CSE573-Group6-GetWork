@@ -3264,25 +3264,25 @@
       "branch": "dev",
       "tasks": {
         "T-1": {
-          "phase": "passed",
+          "phase": "merged",
           "deps": [],
           "batch": "T-1-T-3",
           "notes": "slides 1-2: AI disclosure; Voyager-availability model disclaimer"
         },
         "T-2": {
-          "phase": "passed",
+          "phase": "merged",
           "deps": [],
           "batch": "T-1-T-3",
           "notes": "slides 4-5: merge setup+metrics into Preliminary evaluation plan, add upcoming plan box, drop judge-agreement box; slide 5 takeaways, 'preliminary results' label, not-yet-run footnote"
         },
         "T-3": {
-          "phase": "passed",
+          "phase": "merged",
           "deps": [],
           "batch": "T-1-T-3",
           "notes": "Open question for user: proposal wk6-7 \"substitution test\"/\"rate explanations\"/explanation-faithfulness not on plan slide; confirm cut or add as Upcoming"
         },
         "T-4": {
-          "phase": "passed",
+          "phase": "merged",
           "deps": [],
           "batch": "T-4",
           "notes": "Non-blocking: slide 4 says \"HDBSCAN scored higher\" but dbscan-02 scored highest (0.186) under noise cap; B1+ weights 0.7/0.15/0.15 not shown. Spec feedback: v7 embedding model is qwen3-embedding-8b (4096 dims) vs proposal 4B / P-14 \"8B out of scope\"."
@@ -3311,18 +3311,18 @@
     },
     "repo-restructure": {
       "spec": "inline brief from user (no spec file)",
-      "phase": "building",
+      "phase": "done",
       "planner_agent": null,
       "branch": "dev",
       "tasks": {
         "T-1": {
-          "phase": "fixing",
+          "phase": "merged",
           "deps": [],
           "batch": "T-1-T-3",
           "notes": "move data/eval/scripts, gitignore >50MB files, nested .git out of tree"
         },
         "T-2": {
-          "phase": "fixing",
+          "phase": "merged",
           "deps": [
             "T-1"
           ],
@@ -3330,7 +3330,7 @@
           "notes": "Spec feedback: stale paths (scripts/, eval_out, data/job_postings, data/resume_corpus, artifacts_trial/v7) in architecture.html and specs/features evaluation, naming-*, alias-and-naming-v2, posting-/resume-preprocessing; docs/ not updated"
         },
         "T-3": {
-          "phase": "fixing",
+          "phase": "merged",
           "deps": [
             "T-1"
           ],
