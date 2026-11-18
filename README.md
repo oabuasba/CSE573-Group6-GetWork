@@ -41,7 +41,13 @@ artifacts/, artifacts_trial/  new and older trial pipeline runs (git-ignored)
 uv sync
 uv run pytest                                                   # offline tests
 uv run webapp serve --demo                                      # demo data, no keys needed
-uv run webapp serve --artifacts-dir data/pipeline_run_v7        # the committed v7 run (needs the .npy files, see its README)
+uv run webapp serve --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b   # the committed v7 run
+```
+
+The v7 run needs its four document vector files (`documents/*/*.npy`, about 620 MB), which are git-ignored. Get them from a teammate or rebuild them once with a Voyager key (about 45 minutes; see [`data/pipeline_run_v7/README.md`](data/pipeline_run_v7/README.md)):
+
+```
+uv run doc-embed embed --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b
 ```
 
 Data flows left to right: `data/raw` -> `data/processed` (`run_resumes`, `run_postings`) -> `data/structured` (`structure`, Voyager LLM) -> `data/pipeline_run_v7` (`bash scripts/bash/run_pipeline.sh`) -> `eval/` (`bash scripts/bash/run_evaluation_preliminary.sh`, see [`eval/README.md`](eval/README.md)).
@@ -75,7 +81,7 @@ Data flows left to right: `data/raw` -> `data/processed` (`run_resumes`, `run_po
    [BUILT] evaluation (preliminary run done)
                                    |
                                    v
-   [BUILT, demo data] FastAPI backend + React UI + template explainer
+   [BUILT] FastAPI backend + React UI + template explainer (real artifacts or --demo)
    [BUILT, optional extra] LLM explanation agent + chat (default when LLM settings are set)
 ```
 
@@ -84,7 +90,7 @@ Data flows left to right: `data/raw` -> `data/processed` (`run_resumes`, `run_po
 - Python >= 3.11
 - [uv](https://docs.astral.sh/uv/)
 - git
-- An ASU Voyager API key, only for real structurer runs and the Voyager embed steps (`taxonomy embed`, `doc-embed embed`) (Linux or WSL). The Voyager portal, where you create the key, needs an ASURITE login and the ASU network or VPN. Tests and preprocessing do not need it.
+- An ASU Voyager API key, only for real structurer runs, the Voyager embed steps (`taxonomy embed`, `doc-embed embed`), the evaluation judges and the web app chat. The Voyager portal, where you create the key, needs an ASURITE login and the ASU network or VPN. Tests and preprocessing do not need it.
 - Raw data: small files are committed, the large ones are git-ignored and you place them yourself (see [`data/raw/README.md`](data/raw/README.md)):
   - Resumes: `data/raw/resume_corpus/resumes_corpus.zip` (the Jiechieu and Tsopze corpus).
   - Postings (LinkedIn Job Postings, Kaggle): under `data/raw/job_postings/`, the preprocessor reads `companies/postings.csv`, `jobs/job_industries.csv` and `mappings/industries.csv`.
@@ -97,7 +103,7 @@ uv sync                      # core dependencies plus the dev group (pytest, htt
 uv run pytest                # tests live in src/tests
 ```
 
-`uv sync` needs Python >= 3.11 and installs the dependencies from `pyproject.toml` (fastapi, uvicorn, pandas, pyarrow, numpy, scikit-learn, scipy, umap-learn, plotly, matplotlib, openai, pydantic, python-dotenv, langdetect) and registers the commands `structurer`, `alias-table`, `taxonomy`, `relabel`, `doc-embed`, `retrieve`, `embed-preflight` and `webapp`.
+`uv sync` needs Python >= 3.11 and installs the dependencies from `pyproject.toml` (fastapi, uvicorn, pandas, pyarrow, numpy, scikit-learn, scipy, umap-learn, plotly, matplotlib, openai, pydantic, python-dotenv, langdetect) and registers the commands `structurer`, `alias-table`, `taxonomy`, `relabel`, `doc-embed`, `retrieve`, `evaluate`, `embed-preflight` and `webapp`.
 
 Optional extra `embed` (local embeddings; installs torch and sentence-transformers, several GB):
 
@@ -124,9 +130,11 @@ uv run webapp serve --demo          # http://127.0.0.1:8000, API docs at /docs
 Run it on your artifacts (the folder is your choice: `--artifacts-dir`, else the environment variable `WEBAPP_ARTIFACTS_DIR`, else `artifacts_trial`; a folder of `vN` runs resolves to its highest complete run, or pass a run such as `data/pipeline_run_v7`):
 
 ```
-uv run webapp check --artifacts-dir data/pipeline_run_v7
-uv run webapp serve --artifacts-dir data/pipeline_run_v7
+uv run webapp check --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b
+uv run webapp serve --artifacts-dir data/pipeline_run_v7 --embed-backend voyager --embed-model qwen3-embedding-8b
 ```
+
+Pass the same embedding backend and model that built the stored vectors (v7: Voyager `qwen3-embedding-8b`). The default is the local model, and with a mismatch typed resumes and postings fail with an embedding-mismatch error (409).
 
 See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
 
@@ -163,11 +171,7 @@ The full command list, exit codes and output files are in [`src/getwork/structur
 [STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] [CLUSTER_CONFIG_ID=...] bash scripts/bash/run_pipeline.sh [CONFIG_ID]
 ```
 
-Before the first run on the full data (4k resumes, 1k postings), `preprocess` and `structure` must already have produced `STRUCTURED_DIR` for both sources. The structurer writes to `data/structured/<source>` by default. If your structured output is still in the trial folder, move it yourself (the script never moves data):
-
-```
-git mv data/structured_trial data/structured     # or: mv data/structured_trial data/structured
-```
+Before the first run on the full data (10,567 resumes, 8,416 postings in v7), `preprocess` and `structure` must already have produced `STRUCTURED_DIR` for both sources. The structurer writes to `data/structured/<source>` by default.
 
 Environment variables (all optional):
 
@@ -220,7 +224,7 @@ Examples:
 ```
 bash scripts/bash/run_pipeline.sh                       # full data, 10 clusters (kmeans-01)
 bash scripts/bash/run_pipeline.sh kmeans-04             # force a specific configuration
-STRUCTURED_DIR=data/structured_trial ARTIFACTS_DIR=artifacts_trial bash scripts/bash/run_pipeline.sh   # trial tree
+ARTIFACTS_DIR=artifacts_trial/v8 bash scripts/bash/run_pipeline.sh   # write a separate run
 ```
 
 After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir "$ARTIFACTS_DIR"` (without the flag it reads `artifacts_trial/`). Per-stage options are in the READMEs: [`alias`](src/getwork/alias/README.md), [`taxonomy`](src/getwork/taxonomy/README.md), [`relabel`](src/getwork/relabel/README.md), [`docembed`](src/getwork/docembed/README.md), [`retrieval`](src/getwork/retrieval/README.md).
@@ -232,6 +236,30 @@ After it finishes, inspect results with `uv run retrieve show --direction resume
 ```bash
 [ARTIFACTS_DIR=...] [K=5] bash scripts/bash/match_random.sh [RESUME_ID]
 ```
+
+## Evaluation
+
+The `evaluate` command samples queries, pools the top 10 from B1+, B2 and Full, has two LLM judges on Voyager (Gemma 4 31B and Llama 4 Maverick 17B by default) label every pair blind, and computes P@5, P@10, MRR, nDCG@10, judge agreement and ARI. Only the judge stages call Voyager, and they refuse to start unless `USER_RUN_JUDGE=1` is set. Every other stage is offline.
+
+```
+# preliminary run (no B1+ tuning, no human check); use a fresh EVAL_DIR each time
+USER_RUN_JUDGE=1 ARTIFACTS_DIR=data/pipeline_run_v7 EVAL_DIR=eval/run \
+  bash scripts/bash/run_evaluation_preliminary.sh
+
+# full run (adds B1+ weight tuning on the dev queries)
+USER_RUN_JUDGE=1 ARTIFACTS_DIR=data/pipeline_run_v7 EVAL_DIR=eval/run bash scripts/bash/run_evaluation.sh
+```
+
+Results land in `EVAL_DIR`: `report.md`, `metrics.json`, `agreement.json`, `ari.json`. The run in the slides is `eval/preliminary_results/` (30 + 30 test queries).
+
+Human check (pending): the two authors label `pairs_blind_human.jsonl` independently, 0/1/2, saved as `human/<author>.jsonl` in the run folder. Then:
+
+```
+uv run evaluate agreement --scope human --artifacts-dir data/pipeline_run_v7 --out-dir eval/preliminary_results
+uv run evaluate metrics --labels <author> --queries human --artifacts-dir data/pipeline_run_v7 --out-dir eval/preliminary_results
+```
+
+Stages, the rubric and the label rules are in [`eval/README.md`](eval/README.md) and [`src/getwork/evaluation/README.md`](src/getwork/evaluation/README.md).
 
 ## Development workflow (multi-agent)
 
