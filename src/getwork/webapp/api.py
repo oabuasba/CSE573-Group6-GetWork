@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from getwork.llm import client as llm_client
 from getwork.webapp import engine as engine_mod
-from getwork.webapp import explain, models
+from getwork.webapp import explain, models, pseudonym
 
 LOGGER = logging.getLogger("getwork.webapp")
 INTERNAL_MESSAGE = "Something went wrong on the server"
@@ -108,6 +108,9 @@ def _install_api_routes(
                 score=score,
                 document=document,
                 evidence=explain.build_evidence(request.direction, result.query, document),
+                display_name=(
+                    pseudonym.display_name(document.id) if document.side == "resume" else None
+                ),
             )
             for position, (document, score) in enumerate(result.matches, start=1)
         ]

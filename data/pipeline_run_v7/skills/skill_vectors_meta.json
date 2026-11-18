@@ -1,0 +1,14 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "dim": 4096,
+  "embedding": {
+    "backend": "voyager",
+    "dim": 4096,
+    "dtype": null,
+    "max_seq_length": null,
+    "model": "qwen3-embedding-8b"
+  },
+  "kind": "skills",
+  "n": 1000,
+  "selected_skills_version": "sha256:cdc007a5a377"
+}

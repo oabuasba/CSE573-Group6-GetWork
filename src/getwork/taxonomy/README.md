@@ -104,7 +104,7 @@ backend and omitted for `--backend local`; `omit` never sends it. A reasoning mo
 budget or default effort can spend it all thinking and return an empty reply (`not valid JSON` or
 `empty reply` in the `rejected` lines), so keep effort `none` or raise `--max-tokens`.
 
-`--workers` is accepted and ignored for `--method heuristic`. `scripts/run_pipeline.sh` passes
+`--workers` is accepted and ignored for `--method heuristic`. `scripts/bash/run_pipeline.sh` passes
 `NAME_WORKERS` (default 4).
 
 ## Fit review of names
@@ -143,7 +143,7 @@ name 'Development Tools' may not fit its members (status weak_fit); ...` to stde
 `n_weak_fit` to its JSON summary; the build is never refused. Build makes no model call, so to
 clear a warning after fixing a name set its status to `ok` in `cluster_names.csv` (a file without
 a `status` column gives no warnings). `--fit-rounds` is accepted and ignored for
-`--method heuristic`. `scripts/run_pipeline.sh` passes `NAME_FIT_ROUNDS` (default 1).
+`--method heuristic`. `scripts/bash/run_pipeline.sh` passes `NAME_FIT_ROUNDS` (default 1).
 
 ## Overlap review of names
 
@@ -176,7 +176,7 @@ overlap review done: 1 cluster(s) still overlapping: 5
 `taxonomy build` only warns: it prints `warning: clusters 3, 5 have overlapping names (...)` to
 stderr for each rule-detected group (names that are member lists are ignored) and adds
 `n_overlap_groups` to its JSON summary. Overlap is a judgment call and the rules have false
-positives, so the build is never refused for it. `scripts/run_pipeline.sh` passes
+positives, so the build is never refused for it. `scripts/bash/run_pipeline.sh` passes
 `NAME_OVERLAP_ROUNDS` (default 2).
 
 ## Review procedure
@@ -274,7 +274,7 @@ nothing under `artifacts_trial/`, `data/structured/`, or `data/processed/` shows
 
 ### AV-4: full pipeline with LLM names (uses your keys)
 
-`bash scripts/run_pipeline.sh` makes embedding and LLM calls; `NAME_METHOD` defaults to `llm`
+`bash scripts/bash/run_pipeline.sh` makes embedding and LLM calls; `NAME_METHOD` defaults to `llm`
 (set the model in `.env` or run `taxonomy name` by hand with its options). `NAME_METHOD=heuristic`
 is for offline runs only and adds `--allow-member-names` to `taxonomy build`. Pass: every step
 exits 0 (or 1 from `name` if some clusters fell back, see AV-5).
@@ -287,14 +287,14 @@ before `taxonomy build` succeeds.
 
 ### AV-6: read the overlap review (uses your keys)
 
-Run the naming step with `--method llm` (or `bash scripts/run_pipeline.sh`; `NAME_OVERLAP_ROUNDS`
+Run the naming step with `--method llm` (or `bash scripts/bash/run_pipeline.sh`; `NAME_OVERLAP_ROUNDS`
 sets the rounds). Read the stderr lines `overlap group`, `renamed`, `kept` and
 `overlap review done`, then open `cluster_names.csv`. Pass: no row has status `overlap`, or a short
 list that you fix by hand before `taxonomy build`; renamed rows show `name_v2+rename_v1`.
 
 ### AV-7: read the fit review (uses your keys)
 
-Run the naming step with `--method llm` (or `bash scripts/run_pipeline.sh`; `NAME_FIT_ROUNDS` sets
+Run the naming step with `--method llm` (or `bash scripts/bash/run_pipeline.sh`; `NAME_FIT_ROUNDS` sets
 the rounds). Read the stderr lines `fit review round`, `weak fit`, `renamed`, `kept` and
 `fit review done`, then open `cluster_names.csv`. Pass: the clusters you would call misnamed were
 listed and renamed (rows show `name_v2+refit_v1`), and any row with status `weak_fit` is a cluster

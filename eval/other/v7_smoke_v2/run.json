@@ -1,0 +1,63 @@
+{
+  "artifacts_dir": "artifacts_trial/v7",
+  "judges": [
+    {
+      "backend": "voyager",
+      "family": "google",
+      "id": "judge-a",
+      "model": "gemma4-31b-it"
+    },
+    {
+      "backend": "voyager",
+      "family": "meta",
+      "id": "judge-b",
+      "model": "llama4-maverick-17b"
+    }
+  ],
+  "params": {
+    "dev_postings": 10,
+    "dev_resumes": 10,
+    "human_postings": 10,
+    "human_resumes": 10,
+    "pool_cap": 5000,
+    "seed": 0,
+    "test_postings": 100,
+    "test_resumes": 100
+  },
+  "processed_dir": "data/processed",
+  "rubric_hash": "sha256:9e331cf31118",
+  "schema": 1,
+  "seed": 0,
+  "stamps": {
+    "documents": {
+      "alias_table_version": "sha256:5fac60728a08",
+      "b2_order": "grouped",
+      "level_bands": [
+        2.0,
+        5.0
+      ],
+      "relabel_backend": null,
+      "relabel_mode": "lookup_only",
+      "relabel_model": null,
+      "serialization_version": "ser_v1",
+      "taxonomy_version": "sha256:02456e823462"
+    },
+    "embedding": {
+      "backend": "voyager",
+      "dim": 4096,
+      "dtype": null,
+      "max_seq_length": null,
+      "model": "qwen3-embedding-8b"
+    },
+    "n_postings": 8416,
+    "n_resumes": 10567
+  },
+  "weights": {
+    "dev": {
+      "level": 0.15,
+      "skills": 0.7,
+      "source": "default",
+      "title": 0.15
+    }
+  }
+}

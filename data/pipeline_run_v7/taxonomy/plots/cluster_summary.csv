@@ -1,0 +1,11 @@
+cluster_id,name,size,df_resumes,df_postings,n_both,n_resumes_only,n_postings_only
+0,Server-Side Development,118,35243,8108,106,12,0
+1,Network Infrastructure,124,14062,5819,122,2,0
+2,Database Administration,125,36222,6506,103,22,0
+3,Collaboration Platforms,151,33253,7705,145,5,1
+4,Programming Languages,109,21928,4037,89,20,0
+5,Operating Systems,47,16146,3500,44,3,0
+6,IT Project Management,63,11191,4357,59,4,0
+7,Visual Interface Design,56,11887,858,46,10,0
+8,Cloud Infrastructure,105,12367,13414,104,0,1
+9,Front-end Development,102,50285,8130,94,8,0

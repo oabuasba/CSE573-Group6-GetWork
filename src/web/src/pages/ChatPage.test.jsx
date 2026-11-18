@@ -434,3 +434,43 @@ test("the disclaimer stays visible after an error", async () => {
   await screen.findByRole("alert");
   expect(document.getElementById("chat-disclaimer")).toHaveTextContent(AI_DISCLAIMER);
 });
+
+const CANDIDATE_NAME = "Priya Nair";
+const candidateResponse = {
+  ...contract.match,
+  direction: "posting_to_resume",
+  matches: contract.match.matches.map((m, i) => ({
+    ...m,
+    id: `r-${i + 1}`,
+    display_name: i === 0 ? CANDIDATE_NAME : `Other Name${i}`,
+    document: { ...m.document, id: `r-${i + 1}`, side: "resume" },
+  })),
+};
+
+function setupCandidate() {
+  saveResults({ direction: "posting_to_resume", response: candidateResponse, expandedId: null });
+  const fetchImpl = routedFetch();
+  const user = userEvent.setup();
+  render(<ChatPage matchId="r-1" health={health} fetchImpl={fetchImpl} />);
+  return { user, fetchImpl };
+}
+
+test("candidate suggestion card shows the demo name, no note", () => {
+  setupCandidate();
+  const section = screen.getByRole("region", { name: "The suggestion" });
+  expect(within(section).getByRole("heading", { level: 3, name: CANDIDATE_NAME })).toBeInTheDocument();
+  expect(within(section).getByText("Demo name")).toBeInTheDocument();
+  expect(within(section).getByText("Contact not available in dataset")).toBeInTheDocument();
+  expect(screen.queryByText(/Candidate names are placeholders/)).not.toBeInTheDocument();
+});
+
+test("chat request body carries no display name", async () => {
+  const { user, fetchImpl } = setupCandidate();
+  await ask(user, "Why?");
+  await screen.findByText(replyText);
+  const calls = fetchImpl.mock.calls.filter(([p]) => p === "/api/chat");
+  expect(calls).toHaveLength(1);
+  const body = JSON.stringify(JSON.parse(calls[0][1].body));
+  expect(body).not.toContain(CANDIDATE_NAME);
+  expect(body).not.toContain("display_name");
+});

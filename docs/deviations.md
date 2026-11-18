@@ -39,8 +39,9 @@ Status values: `built`, `specced`, `draft`, `proposed`, `open`.
 | P-19 | Agent | Agent model is served by Voyager by default, not ASU CreateAI | Clarification | built | Yes (one clause in 3.7) |
 | P-20 | Evaluation | Judges: two named Voyager models, independence and the seniority cap enforced in code, judges read cleaned text | Clarification | built | Yes (Methods and 5.1) |
 | P-21 | Evaluation | Harness choices the proposal leaves open: sampling, pool, pairs, statistics, tuning, ARI | Clarification | built | Yes (5.1 to 5.3) |
+| P-22 | Web app | Find Candidates shows deterministic placeholder names because the resume corpus has none | Addition | specced | Yes (one sentence in the app scope) |
 
-Row count: 21.
+Row count: 22.
 
 ---
 
@@ -316,6 +317,18 @@ The built code and the spec differed on these points; the spec now states the bu
 - Not yet in the code (follow-up tasks T-29 to T-31 of the evaluation spec): `agreement --scope human` errors when a judge file or the label table lacks a human pair (it silently used fewer pairs); `human.blind_pair_ids` is public (three copies existed); `args.positive_int` is the single definition (five copies existed).
 - Known code nits not specified (reviewer notes in `specs/status.json`): `scoring.py` pools every system in the table rather than only the three; `tune.py` drops a query with no rows and can divide by zero; `kendall_tau` is O(n^2) (fine for three systems).
 
+## P-22 Placeholder candidate names on Find Candidates
+
+- **Proposal says:** The app returns the top-k candidates for a posting; it says nothing about names.
+- **Now (specced, candidate-display-names, ADR-40, CC-21):** each candidate card shows a generated name taken from a SHA-256 of a fixed seed and the resume id, tagged "Demo name", with one note on the results page, plus the line "Contact not available in dataset". The name is computed in the API at response time and is never stored or used by embeddings, ranking, the agent or the evaluation. The extraction schema is unchanged and no resume stage is re-run.
+- **Reason recorded:** the Indeed resume text has no candidate names (about 0.6% of a ~2,000 sample contain one); the user chose placeholders over a schema change and a re-run.
+- **Impact:** screenshots and demos show fake names, and the report must say so. The names say nothing about the person, are not unique, and imply a gender and ethnicity at random. Real locations and contact links are not shown.
+- **Status:** specced.
+- **Proposal text change:** One sentence in the app scope.
+- **Report sentence:** TBD
+- **Owner:** TBD
+- **Resolution:** open (a regex follow-up for real links is possible and needs its own spec)
+
 ## Gap-fillers and additions (not disagreements)
 
 - `project-foundation` (repo layout and shared config) was cancelled by the user: the layout grew feature by feature, and the CC-1 models, id scheme and model client came with `structurer`, `alias-table` and `local-llm-backend`. The proposed repo conventions in the architecture (Q-6) stay unconfirmed.
@@ -368,6 +381,7 @@ The built code and the spec differed on these points; the spec now states the bu
 
 ## Could not verify
 
+- The sample figures behind P-22 (about 0.6% names, 2% email, 2% phone, 17% LinkedIn, 34% URL in a ~2,000 resume sample) come from the user and were not re-measured by an agent.
 - The real judge runs and the human check of the evaluation (evaluation AC-51, EV-1 to EV-6): whether `gemma4-31b-it` and `llama4-maverick-17b` return valid verdicts under the strict schema, how often the schema fallback fires, how often documents are truncated, the judges' kappa and the final rankings. User-run; every test uses fakes.
 
 - Whether the fit review (ADR-26) finds the weak names it was designed for on the real corpus: the user-run checklist step AV-7 was not run by any agent (tests use a fake client only).

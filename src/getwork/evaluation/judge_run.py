@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 from collections.abc import Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
@@ -95,6 +97,16 @@ def read_judge_rows(path: Path, rubric_hash: str) -> dict[str, dict]:
     return _best_rows(_scan(Path(path))[0], rubric_hash)
 
 
+def read_all_rows(path: Path) -> list[dict]:
+    """Every valid row of the file in order, whatever its rubric hash; {} semantics as above."""
+    return _scan(Path(path))[0]
+
+
+def best_rows(rows: Sequence[dict], rubric_hash: str) -> dict[str, dict]:
+    """The best row per pair for this hash, chosen as read_judge_rows does."""
+    return _best_rows(rows, rubric_hash)
+
+
 def _write_durably(tmp: Path, content: bytes) -> None:
     with tmp.open("wb") as f:
         f.write(content)
@@ -147,11 +159,48 @@ def _judge_pair(judge: Judge, rubric: Rubric, pair: PairText) -> dict:
     return _ok_row(base=base, verdict=verdict, truncated=truncated)
 
 
+class _Progress:
+    """One progress line per `every` finished pairs and one at the end; 0 disables.
+
+    Only the collector's thread calls it, so lines never interleave. A line holds counts and
+    times only, never prompts, rationales or secrets.
+    """
+
+    def __init__(self, *, judge_id: str, total: int, skipped: int, every: int,
+                 stream: TextIO | None) -> None:
+        self.judge_id, self.total, self.skipped, self.every = judge_id, total, skipped, every
+        self.stream = stream
+        self.start = time.monotonic()
+        self.last_printed = -1
+
+    def note(self, *, n_ok: int, n_failed: int, final: bool = False) -> None:
+        finished = n_ok + n_failed
+        if self.every <= 0 or finished == self.last_printed:
+            return
+        if not final and finished % self.every:
+            return
+        self.last_printed = finished
+        stream = self.stream or sys.stderr
+        print(self._line(n_ok=n_ok, n_failed=n_failed), file=stream, flush=True)
+
+    def _line(self, *, n_ok: int, n_failed: int) -> str:
+        finished = n_ok + n_failed
+        elapsed = time.monotonic() - self.start
+        left = self.total - self.skipped - finished
+        eta = f", ETA {elapsed / finished * left:.0f}s" if finished and left > 0 else ""
+        return (
+            f"[{self.judge_id}] judged {self.skipped + finished}/{self.total} pairs "
+            f"({n_ok} ok, {n_failed} failed, {self.skipped} skipped as already done) "
+            f"elapsed {elapsed:.0f}s{eta}"
+        )
+
+
 class _Collector:
     """Owns the pending futures; only its caller's thread writes rows."""
 
-    def __init__(self, handle: TextIO) -> None:
+    def __init__(self, handle: TextIO, progress: _Progress) -> None:
         self.handle = handle
+        self.progress = progress
         self.pending: set[Future] = set()
         self.n_ok = self.n_failed = self.n_truncated = 0
         self.fatal: str | None = None
@@ -171,10 +220,13 @@ class _Collector:
             else:
                 self.n_failed += 1
             self.n_truncated += bool(row["truncated"])
+            self.progress.note(n_ok=self.n_ok, n_failed=self.n_failed)
 
 
 def run_judge(judge: Judge, pairs: Sequence[PairText], *, path: Path, rubric: Rubric,
-              workers: int = 4) -> RunSummary:
+              workers: int = 4, progress_every: int = 0,
+              progress_stream: TextIO | None = None) -> RunSummary:
+    """Judge the pairs not yet ok; progress lines go to progress_stream (default stderr)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     rows, repaired = _scan(path)
@@ -185,7 +237,11 @@ def run_judge(judge: Judge, pairs: Sequence[PairText], *, path: Path, rubric: Ru
     with path.open("a", encoding="utf-8") as handle, ThreadPoolExecutor(
         max_workers=width
     ) as pool:
-        run = _Collector(handle)
+        progress = _Progress(
+            judge_id=judge.info.id, total=len(pairs), skipped=len(pairs) - len(todo),
+            every=progress_every, stream=progress_stream,
+        )
+        run = _Collector(handle, progress)
         for pair in todo:
             run.pending.add(pool.submit(_judge_pair, judge, rubric, pair))
             while len(run.pending) >= width or (run.fatal and run.pending):
@@ -194,6 +250,7 @@ def run_judge(judge: Judge, pairs: Sequence[PairText], *, path: Path, rubric: Ru
                 break
         while run.pending:
             run.drain_some()
+        progress.note(n_ok=run.n_ok, n_failed=run.n_failed, final=True)
     return RunSummary(
         n_pairs=len(pairs), n_skipped=len(pairs) - len(todo), n_ok=run.n_ok,
         n_failed=run.n_failed, n_truncated=run.n_truncated, fatal=run.fatal,

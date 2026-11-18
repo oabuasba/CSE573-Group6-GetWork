@@ -1,0 +1,29 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "incomplete_by_reason": {
+    "few_skills": 478,
+    "low_coverage": 3063,
+    "no_skills": 70
+  },
+  "mean_known_fraction": 0.5454878440561703,
+  "n_incomplete": 3611,
+  "n_records": 8416,
+  "n_reextract_failed": 0,
+  "n_reextracted": 0,
+  "n_skills_final": 115971,
+  "n_unseen_distinct": 25437,
+  "n_unseen_unresolved": 0,
+  "p10_threshold": 4,
+  "relabel_backend": null,
+  "relabel_mode": "lookup_only",
+  "relabel_model": null,
+  "relabel_prompt_version": null,
+  "source": "postings",
+  "taxonomy_version": "sha256:02456e823462",
+  "via_counts": {
+    "default": 53537,
+    "llm": 0,
+    "noise": 0,
+    "taxonomy": 62434
+  }
+}

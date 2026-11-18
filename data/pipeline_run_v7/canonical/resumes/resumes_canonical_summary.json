@@ -1,0 +1,11 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "distinct_after": 54533,
+  "distinct_before": 67666,
+  "n_records": 10567,
+  "n_records_changed": 9764,
+  "n_records_without_skills": 48,
+  "skills_after": 371287,
+  "skills_before": 388155,
+  "source": "resumes"
+}

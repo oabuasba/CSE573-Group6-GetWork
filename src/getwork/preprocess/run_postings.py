@@ -8,7 +8,7 @@ import pandas as pd
 from getwork.preprocess import domain, posting_dedup, postings
 from getwork.preprocess.filters import ResumeFilterConfig, apply_quality_filters
 
-DEFAULT_DATA: Path = Path("data/job_postings")
+DEFAULT_DATA: Path = Path("data/raw/job_postings")
 DEFAULT_OUT: Path = Path("data/processed/postings")
 REVIEW_SAMPLE_SIZE: int = 100
 

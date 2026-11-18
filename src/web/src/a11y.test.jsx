@@ -227,3 +227,24 @@ test("no axe violations on the chat page without a session", async () => {
   const { container } = renderChat({ chat: () => reply(agent.chat), seed: false });
   expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
 });
+
+test("no axe violations with candidate results", async () => {
+  const candidates = {
+    ...contract.match,
+    direction: "posting_to_resume",
+    matches: contract.match.matches.map((m, i) => ({
+      ...m,
+      display_name: ["Priya Nair", "Marcus Webb", "Elena Rossi"][i],
+      document: { ...m.document, side: "resume" },
+    })),
+  };
+  window.location.hash = "#/candidates";
+  const user = userEvent.setup();
+  const { container } = render(<App fetchImpl={fakeFetch(reply(candidates))} />);
+  await user.click(await screen.findByRole("button", { name: "Fill in a form" }));
+  await user.type(screen.getByLabelText("Skills"), "Vue");
+  await user.click(screen.getByRole("button", { name: "Find candidates" }));
+  await screen.findByRole("heading", { name: "Results" });
+  expect(screen.getAllByText("Demo name")).toHaveLength(3);
+  expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+});

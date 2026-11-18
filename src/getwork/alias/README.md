@@ -78,7 +78,7 @@ too, and a spelling row becomes a curated row.
 
 Changing the families file or the curated file changes `alias_table_version`. Every later stage
 checks that version, so each artifact below refuses to be used with the new table and must be
-regenerated, in this order. `bash scripts/run_pipeline.sh` runs all of it. Nothing is migrated;
+regenerated, in this order. `bash scripts/bash/run_pipeline.sh` runs all of it. Nothing is migrated;
 the rerun overwrites existing files. To keep the old results for comparison, set a fresh root such
 as `ARTIFACTS_DIR=artifacts_trial/v2` first; the skill-embedding cache is then not reused.
 

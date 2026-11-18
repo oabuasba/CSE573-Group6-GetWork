@@ -219,10 +219,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Raw input data (not tracked; data/processed/ stays tracked)
-data/job_postings/
-data/resume_corpus/
-
 # Trial and sample structurer runs (never committed; real outputs go in data/structured/)
 data/structured_trial/
 
@@ -232,6 +228,22 @@ data/structured_trial_*/
 # Trial pipeline artifacts (never committed)
 artifacts_trial/
 artifacts/
+
+# Files over 50 MB stay untracked (GitHub rejects 100 MB); see data/raw/README.md and
+# data/pipeline_run_v7/README.md for where to get or how to rebuild them.
+data/raw/job_postings/companies/postings.csv
+data/raw/resume_corpus/resume_samples.txt
+data/raw/resume_corpus/resume_samples.zip
+data/raw/resume_corpus/resumes_corpus.zip
+data/pipeline_run_v7/documents/postings/postings_b2.npy
+data/pipeline_run_v7/documents/postings/postings_full.npy
+data/pipeline_run_v7/documents/resumes/resumes_b2.npy
+data/pipeline_run_v7/documents/resumes/resumes_full.npy
+# Embedding request caches are reproducible and large in total
+data/pipeline_run_v7/**/_embed_cache/
+
+# Office lock files
+~$*
 
 # Frontend (src/web)
 node_modules/

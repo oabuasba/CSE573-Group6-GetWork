@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Runs every pipeline step between structuring and the web client.
-# Usage: [STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] bash scripts/run_pipeline.sh [CONFIG_ID]
+# Usage: [STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] bash scripts/bash/run_pipeline.sh [CONFIG_ID]
 #   STRUCTURED_DIR  structurer output, read by alias-table only (default data/structured)
 #   ARTIFACTS_DIR   output tree for every later step (default artifacts)
 #   PROCESSED_DIR   preprocessed parquet, read by relabel and doc-embed build (default data/processed)
 # `taxonomy select` always runs right after grid, so the cluster count is fixed: the configuration is CONFIG_ID
 #   (first argument), else $CLUSTER_CONFIG_ID, else kmeans-01 (k=10, exactly 10 clusters, no noise). Grid's own pick is overridden.
-#   CLUSTER_CONFIG_ID  configuration id for `taxonomy select` when no argument is given (default kmeans-01)
+#   CLUSTER_CONFIG_ID  configuration id for `taxonomy select` when no argument is given (default kmeans-01).
+#                   In the default grid: kmeans-01 k=10, kmeans-02 k=15, kmeans-03 k=20, kmeans-04 k=30, kmeans-05 k=40, kmeans-06 k=60.
+#   TOP_N           optional positive integer: how many top skills `taxonomy counts` keeps (passed as --top-n);
+#                   unset = the command's own default (1000). Use a fresh ARTIFACTS_DIR when you change it, for example
+#                   ARTIFACTS_DIR=artifacts_trial/v8 TOP_N=3000 bash scripts/bash/run_pipeline.sh kmeans-04
 #   NAME_METHOD     how `taxonomy name` writes cluster names: llm (default, real LLM calls) or heuristic
 #                   (offline runs only; member-list names then need --allow-member-names at build)
 #   NAME_OVERLAP_ROUNDS  overlap review rounds after naming (default 2; 0 disables it; each round can make real LLM calls when NAME_METHOD is llm)
@@ -16,7 +20,7 @@
 # The embed steps make real Voyager calls. `name --force` overwrites cluster_names.csv, and grid/select
 # overwrite selection.json, so existing copies are first archived to $ARTIFACTS_DIR/taxonomy/archive/.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 STRUCTURED_DIR="${STRUCTURED_DIR:-data/structured}"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
@@ -27,6 +31,16 @@ NAME_OVERLAP_ROUNDS="${NAME_OVERLAP_ROUNDS:-2}"
 NAME_FIT_ROUNDS="${NAME_FIT_ROUNDS:-1}"
 CLUSTER_CONFIG_ID="${1:-${CLUSTER_CONFIG_ID:-kmeans-01}}"
 TAXONOMY_DIR="$ARTIFACTS_DIR/taxonomy"
+TOP_N="${TOP_N:-}"
+if [[ -n "$TOP_N" && ! "$TOP_N" =~ ^[1-9][0-9]*$ ]]; then
+  echo "error: TOP_N must be a positive integer, got '$TOP_N'" >&2
+  exit 2
+fi
+COUNTS_ARGS=()
+if [[ -n "$TOP_N" ]]; then
+  COUNTS_ARGS=(--top-n "$TOP_N")
+fi
+echo "run_pipeline: ARTIFACTS_DIR=$ARTIFACTS_DIR TOP_N=${TOP_N:-default} CLUSTER_CONFIG_ID=$CLUSTER_CONFIG_ID"
 
 step() { echo "==> $*"; "$@"; }
 
@@ -48,7 +62,7 @@ fi
 
 step uv run alias-table build --structured-dir "$STRUCTURED_DIR" "${ART[@]}"
 step uv run alias-table apply --structured-dir "$STRUCTURED_DIR" "${ART[@]}"
-step uv run taxonomy counts "${ART[@]}"
+step uv run taxonomy counts "${ART[@]}" ${COUNTS_ARGS[@]+"${COUNTS_ARGS[@]}"}
 step uv run taxonomy embed "${ART[@]}" "${EMBED[@]}"
 archive "$TAXONOMY_DIR/selection.json"
 step uv run taxonomy grid "${ART[@]}"
