@@ -35,6 +35,7 @@ HEADING_LINE_SPACING = 0.9
 OUTLINE_WIDTH_PT = 1
 ARROW_WIDTH_PT = 2.25
 CORNER_RADIUS = 0.08
+BOLD_MARK = "**"
 
 
 @dataclass(frozen=True)
@@ -168,18 +169,29 @@ def set_text(slide: Slide, *, idx: int, text: str, bulleted: bool = False,
 
 def set_bullets(slide: Slide, *, idx: int, items: Sequence[str], size_pt: int,
                 space_before_pt: float = 9) -> None:
-    """Fill placeholder ``idx`` with ink-colored bullets styled like the previous deck."""
+    """Fill placeholder ``idx`` with ink-colored bullets; ``**x**`` in an item makes x bold."""
     frame = get_placeholder(slide, idx=idx).text_frame
-    frame.text = items[0]
-    for item in items[1:]:
-        frame.add_paragraph().text = item
-    for position, paragraph in enumerate(frame.paragraphs):
+    frame.text = ""
+    for position, item in enumerate(items):
+        paragraph = frame.paragraphs[0] if position == 0 else frame.add_paragraph()
         paragraph.space_before = Pt(0 if position == 0 else space_before_pt)
         _set_bullet(paragraph)
-        for run in paragraph.runs:
-            run.font.size = Pt(size_pt)
-            run.font.name = FONT_NAME
-            run.font.color.rgb = INK
+        _add_runs(paragraph, text=item, size_pt=size_pt, bold=False, color=INK)
+
+
+def _add_runs(paragraph, *, text: str, size_pt: float, bold: bool, color: RGBColor,
+              italic: bool = False) -> None:
+    """Append runs for ``text``; segments wrapped in ``**`` are bold."""
+    for position, part in enumerate(text.split(BOLD_MARK)):
+        if not part:
+            continue
+        run = paragraph.add_run()
+        run.text = part
+        run.font.size = Pt(size_pt)
+        run.font.bold = bold or position % 2 == 1
+        run.font.italic = italic
+        run.font.name = FONT_NAME
+        run.font.color.rgb = color
 
 
 def _set_bullet(paragraph) -> None:
@@ -240,15 +252,8 @@ def _write_lines(frame, *, lines: Sequence[TextLine], align: PP_ALIGN) -> None:
         if line.bullet:
             _set_bullet(paragraph)
         for text, bold in ((line.lead, True), (line.text, line.bold)):
-            if not text:
-                continue
-            run = paragraph.add_run()
-            run.text = text
-            run.font.size = Pt(line.size_pt)
-            run.font.bold = bold
-            run.font.italic = line.italic
-            run.font.name = FONT_NAME
-            run.font.color.rgb = line.color
+            _add_runs(paragraph, text=text, size_pt=line.size_pt, bold=bold, italic=line.italic,
+                      color=line.color)
 
 
 def _prepare_frame(frame, *, anchor: MSO_ANCHOR, inset_x: int = INSET_X_EMU) -> None:

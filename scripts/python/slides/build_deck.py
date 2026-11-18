@@ -37,7 +37,7 @@ DEFAULT_IMAGES = DOCS_DIR / "presentation" / "screenshots"
 LAYOUT_OPENING_TITLE = "CUSTOM_23_1_1_1_1_1_1_2_1_2"
 
 COVER_TITLE = "GetWork: Two-Way Resume and Job Matching with a Skill Taxonomy"
-COVER_GROUP = "CSE 573 · Group 6"
+COVER_GROUP = "CSE 573 · Group 6 · Project 3"
 COVER_MEMBERS = "Omar Abuasba and Prathyush Vasa"
 COVER_TITLE_PT = 40
 AI_DISCLOSURE = ("AI disclosure: Claude (generative AI, Anthropic) was used in producing the "

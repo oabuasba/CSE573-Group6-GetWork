@@ -47,20 +47,32 @@ def text_width_pt(text: str, *, size_pt: float, bold: bool) -> float:
     return font.getlength(text) * size_pt / MEASURE_PX
 
 
-def _words(paragraph) -> Iterator[tuple[str, float, bool]]:
+Piece = tuple[str, float, bool]
+
+
+def _words(paragraph) -> Iterator[list[Piece]]:
+    """Words as lists of (text, size, bold) pieces; a word may span several runs."""
+    word: list[Piece] = []
     for run in paragraph.runs:
         size = run.font.size.pt if run.font.size else DEFAULT_SIZE_PT
-        for word in run.text.split(" "):
-            yield word, size, bool(run.font.bold)
+        for position, part in enumerate(run.text.split(" ")):
+            if position:
+                yield word
+                word = []
+            if part:
+                word.append((part, size, bool(run.font.bold)))
+    yield word
 
 
 def wrapped_line_count(paragraph, *, width_emu: float) -> int:
-    """Lines the paragraph needs in ``width_emu`` (greedy word wrap)."""
+    """Lines the paragraph needs in ``width_emu`` (greedy word wrap, bold runs measured bold)."""
     limit = width_emu / EMU_PER_POINT
     lines, used = 1, 0.0
-    for word, size, bold in _words(paragraph):
-        word_width = text_width_pt(word, size_pt=size, bold=bold)
-        space = text_width_pt(" ", size_pt=size, bold=bold)
+    for word in _words(paragraph):
+        if not word:
+            continue
+        word_width = sum(text_width_pt(t, size_pt=size, bold=bold) for t, size, bold in word)
+        space = text_width_pt(" ", size_pt=word[0][1], bold=False)
         if used and used + space + word_width > limit:
             lines, used = lines + 1, word_width
         else:
