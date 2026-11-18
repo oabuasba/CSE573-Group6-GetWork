@@ -3256,6 +3256,100 @@
         }
       },
       "notes": "User approved build 2026-11-15. In place on dev, no commits unless asked. Standing rules (no .env, no Voyager, fakes only; do not touch data/, artifacts_trial/, eval_out/). Batches: CD-1 (T-1..T-3 python), CD-2 (T-4,T-5 frontend), CD-3 (T-6 docs). No large tasks. | CD-1 dev done (1571 passed; no ruff; front-end suite not run). Dev deviation: write-nothing test compares tmp_path before/after with TMPDIR set. Reviewer dispatched. | CD-1 reviewer PASS. CD-2 (T-4,T-5) dispatched. | CD-2 dev done (287 web, 1571 py; one unexplained earlier web run had 1 failure, not reproduced in 3 later runs -> reviewer asked to check flakiness). Reviewer dispatched. | CD-2 reviewer PASS. PRE-EXISTING flaky test: src/web/src/App.test.jsx 'home links reach the find and about pages' (~1 in 4-6 runs; reproduces on clean HEAD; renderApp waits for any h1, stale window.location.hash) - fix separately: reset hash in beforeEach or wait for home heading. CD-3 (T-6) dispatched to a860c6fef56baaeca. | All 6 tasks reviewed and passing (1572 py, 287 web). Open: pre-existing flaky App.test.jsx; uncommitted."
+    },
+    "deck-final-round": {
+      "spec": "inline brief from user (no spec file)",
+      "phase": "done",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "passed",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "notes": "slides 1-2: AI disclosure; Voyager-availability model disclaimer"
+        },
+        "T-2": {
+          "phase": "passed",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "notes": "slides 4-5: merge setup+metrics into Preliminary evaluation plan, add upcoming plan box, drop judge-agreement box; slide 5 takeaways, 'preliminary results' label, not-yet-run footnote"
+        },
+        "T-3": {
+          "phase": "passed",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "notes": "Open question for user: proposal wk6-7 \"substitution test\"/\"rate explanations\"/explanation-faithfulness not on plan slide; confirm cut or add as Upcoming"
+        },
+        "T-4": {
+          "phase": "passed",
+          "deps": [],
+          "batch": "T-4",
+          "notes": "Non-blocking: slide 4 says \"HDBSCAN scored higher\" but dbscan-02 scored highest (0.186) under noise cap; B1+ weights 0.7/0.15/0.15 not shown. Spec feedback: v7 embedding model is qwen3-embedding-8b (4096 dims) vs proposal 4B / P-14 \"8B out of scope\"."
+        }
+      },
+      "batches": {
+        "T-1-T-3": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "worktree": ".",
+          "developer_agent": "a629b355e6bbff0d0",
+          "fix_rounds": 1
+        },
+        "T-4": {
+          "tasks": [
+            "T-4"
+          ],
+          "worktree": ".",
+          "developer_agent": "a629b355e6bbff0d0",
+          "fix_rounds": 0
+        }
+      }
+    },
+    "repo-restructure": {
+      "spec": "inline brief from user (no spec file)",
+      "phase": "building",
+      "planner_agent": null,
+      "branch": "dev",
+      "tasks": {
+        "T-1": {
+          "phase": "fixing",
+          "deps": [],
+          "batch": "T-1-T-3",
+          "notes": "move data/eval/scripts, gitignore >50MB files, nested .git out of tree"
+        },
+        "T-2": {
+          "phase": "fixing",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-1-T-3",
+          "notes": "Spec feedback: stale paths (scripts/, eval_out, data/job_postings, data/resume_corpus, artifacts_trial/v7) in architecture.html and specs/features evaluation, naming-*, alias-and-naming-v2, posting-/resume-preprocessing; docs/ not updated"
+        },
+        "T-3": {
+          "phase": "fixing",
+          "deps": [
+            "T-1"
+          ],
+          "batch": "T-1-T-3",
+          "notes": "root README + data/eval/scripts READMEs with fetch/rebuild instructions"
+        }
+      },
+      "batches": {
+        "T-1-T-3": {
+          "tasks": [
+            "T-1",
+            "T-2",
+            "T-3"
+          ],
+          "worktree": ".",
+          "developer_agent": "a629b355e6bbff0d0",
+          "fix_rounds": 1
+        }
+      }
     }
   },
   "adhoc": {
