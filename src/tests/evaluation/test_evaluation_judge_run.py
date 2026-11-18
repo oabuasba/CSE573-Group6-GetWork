@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 
@@ -77,6 +78,20 @@ def test_resume_and_rubric_change(tmp_path: Path) -> None:
     rows = judge_run.read_judge_rows(path, OTHER_RUBRIC.hash)
     assert len(rows) == 4
     assert {r["rubric_hash"] for r in rows.values()} == {OTHER_RUBRIC.hash}
+
+
+def test_second_rubric_keeps_first_rubric_rows_and_resumes_either(tmp_path: Path) -> None:
+    path = tmp_path / "a.jsonl"
+    judge_run.run_judge(FakeJudge(INFO, _verdict), _pairs(4), path=path, rubric=RUBRIC)
+    first = path.read_bytes()
+    judge_run.run_judge(FakeJudge(INFO, _verdict), _pairs(6), path=path, rubric=OTHER_RUBRIC)
+    assert path.read_bytes().startswith(first)
+    assert len(judge_run.read_judge_rows(path, RUBRIC.hash)) == 4
+    assert len(judge_run.read_judge_rows(path, OTHER_RUBRIC.hash)) == 6
+    again = FakeJudge(INFO, _verdict)
+    judge_run.run_judge(again, _pairs(6), path=path, rubric=RUBRIC)
+    assert sorted(again.calls) == ["p-4", "p-5"]
+    assert len(judge_run.read_judge_rows(path, OTHER_RUBRIC.hash)) == 6
 
 
 def test_workers_do_not_change_rows(tmp_path: Path) -> None:
@@ -240,3 +255,59 @@ def test_failed_repair_leaves_original_and_no_temp(
         judge_run.run_judge(FakeJudge(INFO, _verdict), _pairs(2), path=path, rubric=RUBRIC)
     assert path.read_bytes() == before
     assert [p.name for p in tmp_path.iterdir()] == ["a.jsonl"]
+
+
+def _progress_lines(stream: io.StringIO) -> list[str]:
+    return stream.getvalue().splitlines()
+
+
+def test_progress_every_and_final_line(tmp_path: Path) -> None:
+    stream = io.StringIO()
+    judge_run.run_judge(
+        FakeJudge(INFO, _verdict, fail={"p-1": JudgeError("invalid_reply")}), _pairs(5),
+        path=tmp_path / "a.jsonl", rubric=RUBRIC, workers=1, progress_every=2,
+        progress_stream=stream,
+    )
+    lines = _progress_lines(stream)
+    assert [ln.split(") ")[0] for ln in lines] == [
+        "[judge-a] judged 2/5 pairs (1 ok, 1 failed, 0 skipped as already done",
+        "[judge-a] judged 4/5 pairs (3 ok, 1 failed, 0 skipped as already done",
+        "[judge-a] judged 5/5 pairs (4 ok, 1 failed, 0 skipped as already done",
+    ]
+    assert all("elapsed" in ln for ln in lines) and "ETA" not in lines[-1]
+    assert "because" not in stream.getvalue()
+
+
+def test_progress_counts_resumed_pairs(tmp_path: Path) -> None:
+    path = tmp_path / "a.jsonl"
+    judge_run.run_judge(FakeJudge(INFO, _verdict), _pairs(3), path=path, rubric=RUBRIC)
+    stream = io.StringIO()
+    judge_run.run_judge(
+        FakeJudge(INFO, _verdict), _pairs(5), path=path, rubric=RUBRIC, progress_every=1,
+        progress_stream=stream,
+    )
+    lines = _progress_lines(stream)
+    assert lines[0].startswith("[judge-a] judged 4/5 pairs (1 ok, 0 failed, 3 skipped")
+    assert lines[-1].startswith("[judge-a] judged 5/5 pairs (2 ok, 0 failed, 3 skipped")
+
+
+def test_progress_zero_is_silent(tmp_path: Path) -> None:
+    stream = io.StringIO()
+    judge_run.run_judge(
+        FakeJudge(INFO, _verdict), _pairs(), path=tmp_path / "a.jsonl", rubric=RUBRIC,
+        progress_every=0, progress_stream=stream,
+    )
+    assert stream.getvalue() == ""
+
+
+def test_progress_with_workers_has_consistent_counts(tmp_path: Path) -> None:
+    stream = io.StringIO()
+    summary = judge_run.run_judge(
+        FakeJudge(INFO, _verdict), _pairs(30), path=tmp_path / "a.jsonl", rubric=RUBRIC,
+        workers=8, progress_every=7, progress_stream=stream,
+    )
+    lines = _progress_lines(stream)
+    assert summary.n_ok == 30 and len(lines) == 5
+    assert lines[-1].startswith("[judge-a] judged 30/30 pairs (30 ok, 0 failed, 0 skipped")
+    done = [int(ln.split("judged ")[1].split("/")[0]) for ln in lines]
+    assert done == sorted(done)

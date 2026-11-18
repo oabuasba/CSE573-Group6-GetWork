@@ -8,7 +8,7 @@ from getwork.preprocess.domain import DOMAIN_FAMILIES, TECH_INDUSTRIES
 
 ROOT = Path(__file__).resolve().parents[3]
 PROCESSED = ROOT / "data" / "processed" / "postings"
-INDUSTRIES_CSV = ROOT / "data" / "job_postings" / "mappings" / "industries.csv"
+INDUSTRIES_CSV = ROOT / "data" / "raw" / "job_postings" / "mappings" / "industries.csv"
 MAX_PARQUET_BYTES = 90 * 1024 * 1024
 EXPECTED_LOADED = 123849
 MIN_KEPT, MAX_KEPT = 5000, 12000

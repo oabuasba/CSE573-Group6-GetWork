@@ -75,7 +75,7 @@ def test_script_and_package_data(stub: _Stub, capsys: pytest.CaptureFixture[str]
     assert "stub" in capsys.readouterr().out
     parsed = cli.build_parser().parse_args(["stub", "--need", "x"])
     assert (parsed.out_dir, parsed.artifacts_dir, parsed.processed_dir) == (
-        Path("eval_out"), paths.DEFAULT_ARTIFACTS_DIR, paths.DEFAULT_PROCESSED_DIR,
+        Path("eval/run"), paths.DEFAULT_ARTIFACTS_DIR, paths.DEFAULT_PROCESSED_DIR,
     )
     assert cli.main(["stub", "--need", "x"]) == 0
 

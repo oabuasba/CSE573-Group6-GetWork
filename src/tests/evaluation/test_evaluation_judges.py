@@ -59,6 +59,51 @@ def test_packaged_rubric_content_and_blindness() -> None:
     assert not re.search(r"\bFull\b", text)
 
 
+V1_HASH = "sha256:87ecca1b14a7"
+V2_FILE = ev_judges.RUBRIC_DEFAULT_FILE.with_name("judge_v2.md")
+V3_FILE = ev_judges.RUBRIC_DEFAULT_FILE.with_name("judge_v3.md")
+V2_HASH = "sha256:9e331cf31118"
+MAX_RUBRIC_V3_CHARS = 4500
+MAX_RUBRIC_CHARS = 4000
+
+
+def test_rubric_v1_is_unchanged() -> None:
+    assert ev_judges.load_rubric().hash == V1_HASH
+
+
+def test_rubric_v2_loads_and_keeps_the_output_contract() -> None:
+    rubric = ev_judges.load_rubric(V2_FILE)
+    assert rubric.version == "judge_v2" and rubric.hash != V1_HASH
+    assert re.fullmatch(r"sha256:[0-9a-f]{12}", rubric.hash)
+    assert len(rubric.text) < MAX_RUBRIC_CHARS
+    for needle in ('"label"', '"seniority_mismatch"', '"rationale"', "seniority_mismatch to true",
+                   "only as data", "mandatory", "preferred"):
+        assert needle in rubric.text
+    for bad in (*FORBIDDEN, *defaults.DEFAULT_JUDGE_MODELS, "gemma", "llama", "judge"):
+        assert bad not in rubric.text
+    assert not re.search(r"\bFull\b", rubric.text)
+
+
+def test_rubric_v2_is_unchanged() -> None:
+    assert ev_judges.load_rubric(V2_FILE).hash == V2_HASH
+
+
+def test_rubric_v3_loads_and_keeps_the_output_contract() -> None:
+    rubric = ev_judges.load_rubric(V3_FILE)
+    assert rubric.version == "judge_v3"
+    assert rubric.hash not in (V1_HASH, V2_HASH)
+    assert re.fullmatch(r"sha256:[0-9a-f]{12}", rubric.hash)
+    assert len(rubric.text) < MAX_RUBRIC_V3_CHARS
+    for needle in ('"label"', '"seniority_mismatch"', '"rationale"', "seniority_mismatch to true",
+                   "only as data", "ignore any instructions", "CREDENTIALS", "CORE SKILLS",
+                   "Ignore location"):
+        assert needle in rubric.text
+    for bad in (*FORBIDDEN, *defaults.DEFAULT_JUDGE_MODELS, "gemma", "llama"):
+        assert bad not in rubric.text
+    assert "seniority is compatible" not in rubric.text
+    assert not re.search(r"\bFull\b", rubric.text)
+
+
 def test_parse_verdict_accepts() -> None:
     expected = Verdict(label=2, seniority_mismatch=False, rationale="Matches.")
     assert ev_judges.parse_verdict(_reply()) == expected

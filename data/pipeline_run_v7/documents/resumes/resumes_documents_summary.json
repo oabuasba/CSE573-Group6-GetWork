@@ -1,0 +1,49 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "b2_order": "grouped",
+  "examples": [
+    {
+      "id": "r-00001",
+      "text_b2": "Title: Database Administrator\nLevel: Associate\nSkills: Virtualization, Disaster Recovery, Database Administration, SQL Server, SQL, Stored Procedures, T-SQL, SSIS, SSRS, SQL Profiler, ETL, Log Shipping, Database Mirroring, Windows, Maintenance, Clustering, SQL Queries, Backups, R2, Shipping, Idera SQLdm, Always On Availability Group, High Availability, SOX compliance",
+      "text_full": "Title: Database Administrator\nLevel: Associate\nSkills: Network Infrastructure: Virtualization, Disaster Recovery; Database Administration: Database Administration, SQL Server, SQL, Stored Procedures, T-SQL, SSIS, SSRS, SQL Profiler, ETL, Log Shipping, Database Mirroring; Operating Systems: Windows; IT Project Management: Maintenance; Cloud Infrastructure: Clustering; Other: SQL Queries, Backups, R2, Shipping, Idera SQLdm, Always On Availability Group, High Availability, SOX compliance"
+    },
+    {
+      "id": "r-00002",
+      "text_b2": "Title: Database Administrator\nLevel: Mid-Senior level\nSkills: Visual Studio, C, C#, Visual Basic, SQL Server Management Studio, SQL, Microsoft PowerPoint, Microsoft Office, Microsoft Excel, Windows, Assembly language, Java Programming, Microprocessors, Hardware/Systems Design, Digital Electronics, System organization",
+      "text_full": "Title: Database Administrator\nLevel: Mid-Senior level\nSkills: Server-Side Development: Visual Studio, C, C#, Visual Basic; Database Administration: SQL Server Management Studio, SQL; Collaboration Platforms: Microsoft PowerPoint, Microsoft Office, Microsoft Excel; Operating Systems: Windows; Other: Assembly language, Java Programming, Microprocessors, Hardware/Systems Design, Digital Electronics, System organization"
+    },
+    {
+      "id": "r-00003",
+      "text_b2": "Title: Oracle Database Administrator\nLevel: Associate\nSkills: ASM, Databases, Oracle, SQL, RMAN, Dataguard, DBCA, Export/Import, SQL*Plus, Putty, Linux, Red Hat Enterprise Linux, UNIX, HTML, Netca",
+      "text_full": "Title: Oracle Database Administrator\nLevel: Associate\nSkills: Server-Side Development: ASM; Database Administration: Databases, Oracle, SQL, RMAN, Dataguard, DBCA, Export/Import, SQL*Plus; Programming Languages: Putty; Operating Systems: Linux, Red Hat Enterprise Linux, UNIX; Front-end Development: HTML; Other: Netca"
+    }
+  ],
+  "level_bands": [
+    2.0,
+    5.0
+  ],
+  "level_counts": {
+    "Associate": 2619,
+    "Director": 0,
+    "Entry level": 595,
+    "Executive": 0,
+    "Internship": 0,
+    "Mid-Senior level": 7098,
+    "Not specified": 255
+  },
+  "level_source_counts": {
+    "listed": 0,
+    "missing": 255,
+    "years": 10312
+  },
+  "mean_skills": 35.13646257215861,
+  "n_documents": 10567,
+  "n_empty_skills": 48,
+  "other_share": 0.34664020016860275,
+  "relabel_backend": null,
+  "relabel_mode": "lookup_only",
+  "relabel_model": null,
+  "serialization_version": "ser_v1",
+  "source": "resumes",
+  "taxonomy_version": "sha256:02456e823462"
+}

@@ -35,6 +35,16 @@ B2_CAVEAT = (
 )
 
 
+UNTUNED_CAVEAT = (
+    "B1+ untuned: the test stage used the default B1+ weights, not weights tuned on the dev "
+    "queries, so the baseline may be understated and the gaps to B2 and Full overstated."
+)
+NO_HUMAN_CAVEAT = (
+    "Human check not run: no author labels or human agreement were used, so the judge labels "
+    "are unvalidated and these results are preliminary."
+)
+
+
 def _num(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.3f}"
 
@@ -192,8 +202,13 @@ def _ari_section(ari: Mapping | None) -> list[str]:
     ]
 
 
-def _caveat_lines(manifest: Mapping) -> list[str]:
+def _caveat_lines(manifest: Mapping, agreement: Mapping | None) -> list[str]:
     lines = list(CAVEATS)
+    test_weights = manifest.get("weights", {}).get("test", {})
+    if test_weights.get("source") == "default":
+        lines.append(UNTUNED_CAVEAT)
+    if not (agreement or {}).get("human"):
+        lines.append(NO_HUMAN_CAVEAT)
     b2_order = manifest.get("stamps", {}).get("documents", {}).get("b2_order")
     if b2_order == "grouped":
         lines.append(B2_CAVEAT)
@@ -215,7 +230,7 @@ def render_report(
         ("## System gaps", gaps),
         ("## Human check", _human_section(agreement, metrics)),
         ("## Taxonomy validity (ARI)", _ari_section(ari)),
-        ("## Caveats", _caveat_lines(manifest)),
+        ("## Caveats", _caveat_lines(manifest, agreement)),
     ]
     lines: list[str] = []
     for heading, body in sections:

@@ -15,12 +15,41 @@ New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the sing
 | Retrieval (B1+, B2, Full) | Built |
 | Web app (FastAPI backend, React UI, deterministic explainer; try `webapp serve --demo`) | Built |
 | LLM explanation agent and chat (default in `webapp serve` when the LLM settings are present; `src/getwork/agent`) | Built |
-| Evaluation | Planned |
+| Evaluation harness (LLM judges, metrics, report; `src/getwork/evaluation`), preliminary run done (`eval/preliminary_results`); full run and human evaluation pending | Built |
+
+## Repository structure
+
+```
+data/raw/job_postings/      LinkedIn Job Postings CSVs (postings.csv is git-ignored, see data/raw/README.md)
+data/raw/resume_corpus/     IT resume corpus (zips and resume_samples.txt are git-ignored)
+data/processed/             cleaned resumes and postings (preprocess output)
+data/structured/            LLM-structured records (structurer output)
+data/pipeline_run_v7/       the v7 pipeline run: alias, canonical, skills, taxonomy, relabeled, documents, retrieval
+eval/preliminary_results/   the evaluation run reported in the slides
+eval/other/                 earlier and side evaluation runs (v6, v6.2, v7 heldout and smoke)
+scripts/bash/               run_pipeline.sh, run_evaluation.sh, run_evaluation_preliminary.sh, match_random.sh
+scripts/python/slides/      deck generator and its layout and contrast checks
+scripts/python/other/       peek_dev_metrics.py
+src/getwork/                the Python packages; src/web is the React UI; src/tests the tests
+docs/  specs/               proposal, runbook, deviations, specs
+artifacts/, artifacts_trial/  new and older trial pipeline runs (git-ignored)
+```
+
+## Quick start
+
+```
+uv sync
+uv run pytest                                                   # offline tests
+uv run webapp serve --demo                                      # demo data, no keys needed
+uv run webapp serve --artifacts-dir data/pipeline_run_v7        # the committed v7 run (needs the .npy files, see its README)
+```
+
+Data flows left to right: `data/raw` -> `data/processed` (`run_resumes`, `run_postings`) -> `data/structured` (`structure`, Voyager LLM) -> `data/pipeline_run_v7` (`bash scripts/bash/run_pipeline.sh`) -> `eval/` (`bash scripts/bash/run_evaluation_preliminary.sh`, see [`eval/README.md`](eval/README.md)).
 
 ## Architecture
 
 ```
- data/resume_corpus/resumes_corpus.zip      data/job_postings/*.csv
+ data/raw/resume_corpus/resumes_corpus.zip      data/raw/job_postings/*.csv
               |                                       |
               v                                       v
    [BUILT] run_resumes                     [BUILT] run_postings
@@ -43,7 +72,7 @@ New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the sing
    [BUILT] document embeddings -> two-way retrieval
                                    |
                                    v
-   [PLANNED] evaluation
+   [BUILT] evaluation (preliminary run done)
                                    |
                                    v
    [BUILT, demo data] FastAPI backend + React UI + template explainer
@@ -56,9 +85,9 @@ New here? [`docs/running-end-to-end.md`](docs/running-end-to-end.md) is the sing
 - [uv](https://docs.astral.sh/uv/)
 - git
 - An ASU Voyager API key, only for real structurer runs and the Voyager embed steps (`taxonomy embed`, `doc-embed embed`) (Linux or WSL). The Voyager portal, where you create the key, needs an ASURITE login and the ASU network or VPN. Tests and preprocessing do not need it.
-- Raw data, which git ignores and you place yourself:
-  - Resumes: `data/resume_corpus/resumes_corpus.zip` (the Jiechieu and Tsopze corpus).
-  - Postings (LinkedIn Job Postings, Kaggle): under `data/job_postings/`, the preprocessor reads `companies/postings.csv`, `jobs/job_industries.csv` and `mappings/industries.csv`.
+- Raw data: small files are committed, the large ones are git-ignored and you place them yourself (see [`data/raw/README.md`](data/raw/README.md)):
+  - Resumes: `data/raw/resume_corpus/resumes_corpus.zip` (the Jiechieu and Tsopze corpus).
+  - Postings (LinkedIn Job Postings, Kaggle): under `data/raw/job_postings/`, the preprocessor reads `companies/postings.csv`, `jobs/job_industries.csv` and `mappings/industries.csv`.
 
 ## Install
 
@@ -92,11 +121,11 @@ uv run webapp serve --demo          # http://127.0.0.1:8000, API docs at /docs
 
 `webapp serve` also takes `--host`, `--port` and `--static-dir`; `webapp check --demo` prints health. Frontend tests: `npm --prefix src/web test`.
 
-Run it on your artifacts (the folder is your choice: `--artifacts-dir`, else the environment variable `WEBAPP_ARTIFACTS_DIR`, else `artifacts_trial`; a folder of `vN` runs resolves to its highest complete run, or pass a run such as `artifacts_trial/v5`):
+Run it on your artifacts (the folder is your choice: `--artifacts-dir`, else the environment variable `WEBAPP_ARTIFACTS_DIR`, else `artifacts_trial`; a folder of `vN` runs resolves to its highest complete run, or pass a run such as `data/pipeline_run_v7`):
 
 ```
-uv run webapp check --artifacts-dir artifacts_trial
-uv run webapp serve --artifacts-dir artifacts_trial
+uv run webapp check --artifacts-dir data/pipeline_run_v7
+uv run webapp serve --artifacts-dir data/pipeline_run_v7
 ```
 
 See the runbook [`src/getwork/webapp/README.md`](src/getwork/webapp/README.md).
@@ -128,10 +157,10 @@ The full command list, exit codes and output files are in [`src/getwork/structur
 
 ## Pipeline script (structured records to retrieval)
 
-`scripts/run_pipeline.sh` runs every step after structuring, in order, stopping at the first failure (`set -euo pipefail`). It does not run preprocessing, the structurer, or the web app. Each step is echoed as `==> <command>`.
+`scripts/bash/run_pipeline.sh` runs every step after structuring, in order, stopping at the first failure (`set -euo pipefail`). It does not run preprocessing, the structurer, or the web app. Each step is echoed as `==> <command>`.
 
 ```
-[STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] [CLUSTER_CONFIG_ID=...] bash scripts/run_pipeline.sh [CONFIG_ID]
+[STRUCTURED_DIR=...] [ARTIFACTS_DIR=...] [PROCESSED_DIR=...] [CLUSTER_CONFIG_ID=...] bash scripts/bash/run_pipeline.sh [CONFIG_ID]
 ```
 
 Before the first run on the full data (4k resumes, 1k postings), `preprocess` and `structure` must already have produced `STRUCTURED_DIR` for both sources. The structurer writes to `data/structured/<source>` by default. If your structured output is still in the trial folder, move it yourself (the script never moves data):
@@ -147,6 +176,7 @@ Environment variables (all optional):
 | `STRUCTURED_DIR` | `data/structured` | `alias-table build` and `apply` only (`--structured-dir`) |
 | `ARTIFACTS_DIR` | `artifacts` (a fresh tree, separate from `artifacts_trial/`) | every step (`--artifacts-dir`) |
 | `PROCESSED_DIR` | `data/processed` | `relabel` and `doc-embed build` (`--processed-dir`) |
+| `TOP_N` | unset (command default, 1000) | `taxonomy counts --top-n` (use a fresh `ARTIFACTS_DIR` when you set it) |
 | `NAME_METHOD` | `llm` | `taxonomy name --method` (`heuristic` is offline-only and adds `--allow-member-names` to `taxonomy build`) |
 | `NAME_WORKERS` | `4` | `taxonomy name --workers` |
 | `NAME_OVERLAP_ROUNDS` | `2` | `taxonomy name --overlap-rounds` (`0` disables) |
@@ -188,19 +218,19 @@ Embed caching (steps 4 and 12):
 Examples:
 
 ```
-bash scripts/run_pipeline.sh                       # full data, 10 clusters (kmeans-01)
-bash scripts/run_pipeline.sh kmeans-04             # force a specific configuration
-STRUCTURED_DIR=data/structured_trial ARTIFACTS_DIR=artifacts_trial bash scripts/run_pipeline.sh   # trial tree
+bash scripts/bash/run_pipeline.sh                       # full data, 10 clusters (kmeans-01)
+bash scripts/bash/run_pipeline.sh kmeans-04             # force a specific configuration
+STRUCTURED_DIR=data/structured_trial ARTIFACTS_DIR=artifacts_trial bash scripts/bash/run_pipeline.sh   # trial tree
 ```
 
 After it finishes, inspect results with `uv run retrieve show --direction resume_to_posting --id ID --artifacts-dir "$ARTIFACTS_DIR"` (without the flag it reads `artifacts_trial/`). Per-stage options are in the READMEs: [`alias`](src/getwork/alias/README.md), [`taxonomy`](src/getwork/taxonomy/README.md), [`relabel`](src/getwork/relabel/README.md), [`docembed`](src/getwork/docembed/README.md), [`retrieval`](src/getwork/retrieval/README.md).
 
 ### Try a random resume
 
-`scripts/match_random.sh` picks a random resume id from `$ARTIFACTS_DIR/documents/resumes/resumes_documents.parquet` and runs `retrieve show` (direction `resume_to_posting`) for B1+, B2 and Full. It uses stored vectors, so it makes no API calls.
+`scripts/bash/match_random.sh` picks a random resume id from `$ARTIFACTS_DIR/documents/resumes/resumes_documents.parquet` and runs `retrieve show` (direction `resume_to_posting`) for B1+, B2 and Full. It uses stored vectors, so it makes no API calls.
 
 ```bash
-[ARTIFACTS_DIR=...] [K=5] bash scripts/match_random.sh [RESUME_ID]
+[ARTIFACTS_DIR=...] [K=5] bash scripts/bash/match_random.sh [RESUME_ID]
 ```
 
 ## Development workflow (multi-agent)

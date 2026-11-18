@@ -1,10 +1,13 @@
+import os
+import stat
+import subprocess
 from pathlib import Path
 
 import pytest
 
 pytestmark = pytest.mark.usefixtures("offline")
 
-SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "run_pipeline.sh"
+SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "bash" / "run_pipeline.sh"
 
 
 def test_run_pipeline_names_with_llm_by_default() -> None:
@@ -71,3 +74,41 @@ def test_run_pipeline_passes_fit_rounds() -> None:
     name = next(line for line in lines if line.startswith("step ") and "taxonomy name" in line)
     assert '--fit-rounds "$NAME_FIT_ROUNDS"' in name
     assert name.index("--overlap-rounds") < name.index("--fit-rounds")
+
+
+def _run_with_uv_stub(tmp_path: Path, **env: str) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    bin_dir, log = tmp_path / "bin", tmp_path / "uv_calls.log"
+    bin_dir.mkdir()
+    stub = bin_dir / "uv"
+    stub.write_text(f'#!/usr/bin/env bash\necho "$*" >> "{log}"\n', encoding="utf-8")
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+    base = {k: v for k, v in os.environ.items() if k not in ("TOP_N", "CLUSTER_CONFIG_ID")}
+    base.update(PATH=f"{bin_dir}{os.pathsep}{base['PATH']}", ARTIFACTS_DIR=str(tmp_path / "art"),
+                NAME_METHOD="heuristic")
+    result = subprocess.run(["bash", str(SCRIPT), *env.pop("ARGS", "").split()],
+                            capture_output=True, text=True, check=False, env={**base, **env})
+    return result, log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+
+
+def test_run_pipeline_top_n_unset_keeps_counts_default(tmp_path: Path) -> None:
+    result, calls = _run_with_uv_stub(tmp_path)
+    assert result.returncode == 0, result.stderr
+    counts = next(c for c in calls if c.startswith("run taxonomy counts"))
+    assert "--top-n" not in counts
+    assert "TOP_N=default CLUSTER_CONFIG_ID=kmeans-01" in result.stdout
+
+
+def test_run_pipeline_top_n_is_passed_to_counts_only(tmp_path: Path) -> None:
+    result, calls = _run_with_uv_stub(tmp_path, TOP_N="3000", ARGS="kmeans-04")
+    assert result.returncode == 0, result.stderr
+    assert [c for c in calls if "--top-n" in c] == [
+        f"run taxonomy counts --artifacts-dir {tmp_path / 'art'} --top-n 3000"
+    ]
+    assert f"ARTIFACTS_DIR={tmp_path / 'art'} TOP_N=3000 CLUSTER_CONFIG_ID=kmeans-04" in result.stdout
+
+
+@pytest.mark.parametrize("value", ["abc", "0", "-5", "10.5", "1e3"])
+def test_run_pipeline_rejects_bad_top_n_before_any_step(tmp_path: Path, value: str) -> None:
+    result, calls = _run_with_uv_stub(tmp_path, TOP_N=value)
+    assert result.returncode == 2 and "TOP_N" in result.stderr
+    assert not calls and "==>" not in result.stdout

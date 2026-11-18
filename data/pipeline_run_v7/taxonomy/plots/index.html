@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Skill taxonomy plots</title>
+<style>body{font-family:sans-serif;max-width:1100px;margin:2em auto;padding:0 1em}img{max-width:100%;border:1px solid #ddd}</style></head>
+<body><h1>Skill taxonomy plots</h1><p>Config kmeans-01: 10 clusters, 0 of 1000 skills are noise; 8.8% of skills appear in only one corpus.</p>
+<h2>Cluster map</h2>
+<p>Each dot is a skill, colored by cluster (grey = noise). Positions come from a separate 2-D UMAP, so distances are only a rough guide to the clustering space.</p>
+<p><a href="cluster_map.html">open cluster_map.html on its own</a></p>
+<iframe src="cluster_map.html" width="100%" height="880" loading="lazy"></iframe>
+<a href="cluster_map.png"><img src="cluster_map.png" alt="Cluster map"></a>
+<h2>Cluster sizes</h2>
+<p>Skills per cluster, largest first; noise on top.</p>
+<a href="cluster_sizes.png"><img src="cluster_sizes.png" alt="Cluster sizes"></a>
+<h2>Mentions by corpus (per cluster)</h2>
+<p>One point per cluster. Points on an axis are mentioned in one corpus only.</p>
+<a href="cluster_corpus_balance.png"><img src="cluster_corpus_balance.png" alt="Mentions by corpus (per cluster)"></a>
+<h2>Skills seen in one corpus only</h2>
+<p>Skills per cluster that occur in both corpora, only resumes or only postings.</p>
+<a href="cluster_one_corpus.png"><img src="cluster_one_corpus.png" alt="Skills seen in one corpus only"></a>
+<h2>Skill document frequencies</h2>
+<p>Every skill at (resume df, posting df), colored by cluster.</p>
+<a href="skill_document_frequency.png"><img src="skill_document_frequency.png" alt="Skill document frequencies"></a>
+<h2>Grid overview</h2>
+<p>All configurations: clusters vs noise, silhouette as color; the chosen one is ringed.</p>
+<a href="grid_overview.png"><img src="grid_overview.png" alt="Grid overview"></a>
+</body></html>

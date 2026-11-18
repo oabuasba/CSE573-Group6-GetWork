@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Runs the evaluation harness end to end, or one stage of it (see src/getwork/evaluation/README.md).
-# Usage: [VAR=...] bash scripts/run_evaluation.sh [STAGE]
+# Usage: [VAR=...] bash scripts/bash/run_evaluation.sh [STAGE]
 #   STAGE: all (default when omitted), smoke, or one of
 #          prepare dev-judge tune-plan tune-judge tune-pick freeze test-prepare test-judge metrics report
 #   all     runs every single stage above in that order and stops at the first failure
 #   smoke   quick check: prepare, judge --preflight, then dev-judge limited to JUDGE_LIMIT (default 10);
 #           no tune, freeze or test stages
 # Point ARTIFACTS_DIR at the pipeline's output folder, for example:
-#   USER_RUN_JUDGE=1 ARTIFACTS_DIR=artifacts_trial/v6 EVAL_DIR=eval_out/v6 bash scripts/run_evaluation.sh
+#   USER_RUN_JUDGE=1 ARTIFACTS_DIR=artifacts_trial/v6 EVAL_DIR=eval/other/v6 bash scripts/bash/run_evaluation.sh
 #   ARTIFACTS_DIR   retrieval artifacts to evaluate, read only (default artifacts_trial)
 #   PROCESSED_DIR   preprocessed parquet, read only (default data/processed)
-#   EVAL_DIR        the only output folder (default eval_out)
+#   EVAL_DIR        the only output folder (default eval/run)
 #   JUDGE_MODELS, JUDGE_FAMILIES  optional; passed only when both are set (else the command defaults
 #                   apply: gemma4-31b-it/google and llama4-maverick-17b/meta); one alone exits 2
 #   ALSO_USED_MODELS  optional, space-separated models the judges must also differ from
@@ -21,19 +21,31 @@
 # before any work. Every command is printed as it runs.
 # Every other stage is offline. This script never passes --force.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 STAGES="prepare dev-judge tune-plan tune-judge tune-pick freeze test-prepare test-judge metrics report"
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts_trial}"
 PROCESSED_DIR="${PROCESSED_DIR:-data/processed}"
-EVAL_DIR="${EVAL_DIR:-eval_out}"
+EVAL_DIR="${EVAL_DIR:-eval/run}"
 WORKERS="${WORKERS:-4}"
 
 GROUPS_LIST="all smoke"
 
-usage() { echo "usage: bash scripts/run_evaluation.sh [{all|smoke|${STAGES// /|}}]" >&2; exit 2; }
+usage() { echo "usage: bash scripts/bash/run_evaluation.sh [{all|smoke|${STAGES// /|}}]" >&2; exit 2; }
 
 step() { echo "==> $*"; "$@"; }
+
+# numbered NAME CMD...: prints "[i/TOTAL] NAME", runs CMD, then "done: NAME (Ns)" (not on failure).
+STAGE_INDEX=0
+STAGE_TOTAL=1
+numbered() {
+  local name="$1" started=$SECONDS
+  shift
+  STAGE_INDEX=$((STAGE_INDEX + 1))
+  echo "[$STAGE_INDEX/$STAGE_TOTAL] $name"
+  "$@"
+  echo "done: $name ($((SECONDS - started))s)"
+}
 
 [[ $# -le 1 ]] || usage
 STAGE="${1:-all}"
@@ -129,17 +141,20 @@ run_stage() {
 case "$STAGE" in
   all)
     require_user_run
-    for stage in $STAGES; do
-      run_stage "$stage"
+    read -r -a ALL_STAGES <<< "$STAGES"
+    STAGE_TOTAL=${#ALL_STAGES[@]}
+    for stage in "${ALL_STAGES[@]}"; do
+      numbered "$stage" run_stage "$stage"
     done
     ;;
   smoke)
     require_user_run
-    run_stage prepare
-    evaluate judge "${JUDGE_ARGS[@]}" --preflight
-    evaluate judge "${JUDGE_ARGS[@]}" --stage dev
+    STAGE_TOTAL=3
+    numbered prepare run_stage prepare
+    numbered preflight evaluate judge "${JUDGE_ARGS[@]}" --preflight
+    numbered dev-judge evaluate judge "${JUDGE_ARGS[@]}" --stage dev
     ;;
   *)
-    run_stage "$STAGE"
+    numbered "$STAGE" run_stage "$STAGE"
     ;;
 esac

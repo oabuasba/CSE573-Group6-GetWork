@@ -1,0 +1,26 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "b2_order": "grouped",
+  "dim": 4096,
+  "embedding": {
+    "backend": "voyager",
+    "dim": 4096,
+    "dtype": null,
+    "max_seq_length": null,
+    "model": "qwen3-embedding-8b"
+  },
+  "kind": "document_vectors",
+  "level_bands": [
+    2.0,
+    5.0
+  ],
+  "n": 10567,
+  "relabel_backend": null,
+  "relabel_mode": "lookup_only",
+  "relabel_model": null,
+  "serialization_version": "ser_v1",
+  "source": "resumes",
+  "system": "Full",
+  "taxonomy_version": "sha256:02456e823462",
+  "texts_hash": "sha256:d42814a19c50"
+}

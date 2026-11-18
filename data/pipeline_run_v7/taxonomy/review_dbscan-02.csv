@@ -1,0 +1,62 @@
+cluster_id,size,df_sum,members
+0,15,11184,HTML; XML; xHTML; Dhtml; XSLT; DOM; XSL; XSD; html/css; XPath; SAX; Html/Html5; JAXP; DTD; W3C
+1,73,31528,SQL; SQL Server; Oracle; MySQL; Pl/sql; PostgreSQL; SSIS; DB2; RMAN; T-SQL; Database; MS Access; Access; SQL Developer; DBA; Oracle Database; Sql Dba; SQL*Loader; Sybase; SQL*Plus; Microsoft Access; SQLite; Rdbms; MS Sql; Oracle Dba
+2,5,6442,CSS; SASS; SCSS; Flexbox; Css/Css3
+3,6,5005,Windows; Windows OS; DOS; XP; operating systems; WINS
+4,25,12482,Java; JSP; J2EE; Apache Tomcat; Tomcat; Struts; WebLogic; JBoss; Servlets; JMS; EJB; Log4j; JSF; WebSphere; JSTL; Core Java; Web Logic; JNDI; JDK; Web Sphere; Java Beans; Servlet; Java/J2EE; IBM Web Sphere; Glassfish
+5,18,8681,Linux; UNIX; AIX; Solaris; Ubuntu; HP-UX; Sun Solaris; Red Hat; CentOS; Red Hat Linux; RHEL; Unix/Linux; Redhat; IBM AIX; Debian; Linux/Unix; Red Hat Enterprise Linux; Redhat Linux
+6,18,8589,Git; GitHub; SVN; Bitbucket; TFS; Subversion; GitLab; Team Foundation Server; Perforce; VSS; Tortoise SVN; Clear Case; ClearCase; version control; Source Tree; Visual Source Safe; SourceTree; Git Hub
+7,13,7466,Agile; Scrum; SDLC; Kanban; Agile Methodology; Agile Scrum; Scrum Master; Agile Methodologies; Agile/Scrum; SAFe; Agile Development; Lean; Certified Scrum Master
+8,26,8611,AWS; Azure; Google Cloud Platform; S3; EC2; Lambda; IAM; EBS; CloudWatch; Amazon Web Services (AWS); AWS Ec2; CloudFormation; Cloud Computing; Cloud; AWS Lambda; AWS S3; Amazon EC2; ECS; ELB; Amazon S3; Amazon AWS; EKS; CloudFront; Route53; AWS Cloud
+9,12,6142,Microsoft Office; PowerPoint; Word; Microsoft Excel; Microsoft Word; Microsoft Office Suite; MS Word; MS Office Suite; Microsoft PowerPoint; Power Point; MS PowerPoint; Google Docs
+10,23,13024,Node.js; React; Angular; AngularJS; TypeScript; Redux; Angular JS; Vue.js; React JS; ES6; Angular.js; Express.js; React Native; RxJS; Angular CLI; Angular Material; MEAN stack; React-Router; JSX; ExpressJS; Express JS; Kendo UI; Socket.io
+11,19,6639,C#; .NET; ASP.NET; ASP; Visual Basic; VB.Net; VB; .NET Core; Entity Framework; VBA; .NET Framework; ASP.NET MVC; ADO.Net; VBScript; LINQ; WPF; Unity; C#.NET; VB Script
+12,7,2257,Active Directory; LDAP; Group Policy; MDM; Microsoft Active Directory; Intune; Azure AD
+13,5,2456,MongoDB; NoSQL; Mongo DB; Firebase; NoSQL databases
+14,7,2537,Wordpress; Drupal; Joomla; CMS; ColdFusion; AEM; Sitecore
+15,66,14156,Eclipse; Waterfall; LESS; TOAD; Grunt; Karma; ANT; AWR; Cassandra; ADDM; Remedy; RAC; Putty; R; Puppet; Babel; Rally; DOJO; ASH; Sublime; Atom; Golden Gate; Opatch; Redshift; Nessus
+16,8,3497,Docker; Kubernetes; Terraform; SaaS; Heroku; OpenStack; OpenShift; PaaS
+17,17,3726,SharePoint; Outlook; Exchange; Microsoft Exchange; SMTP; Lotus Notes; Microsoft SharePoint; Microsoft Outlook; Microsoft; O365; Exchange Server; Microsoft 365; SharePoint Designer; MS Outlook; OneDrive; SharePoint Online; Microsoft Teams
+18,17,2875,VMware; Citrix; Hyper-V; Virtualization; NetApp; vSphere; Veeam; NetBackup; Vagrant; VMware ESXi; VMware vSphere; Commvault; Fortinet; SonicWall; Avaya; Symantec; ESXi
+19,18,4600,Visual Studio; Sublime Text; NetBeans; Notepad++; IntelliJ; Visual Studio Code; WebStorm; PyCharm; Microsoft Visual Studio; Eclipse IDE; Android Studio; Net Beans; Xcode; IntelliJ IDEA; Web Storm; VS Code; MS Visual Studio; Edit Plus
+20,23,5695,Photoshop; Adobe Photoshop; Illustrator; Dreamweaver; Flash; Adobe Illustrator; InDesign; Adobe Creative Suite; Adobe; Adobe Dreamweaver; Graphic Design; Adobe Flash; AutoCAD; After Effects; Adobe Acrobat; Adobe InDesign; Adobe Suite; Acrobat; Adobe Fireworks; Photography; Publisher; Adobe Creative Cloud; Adobe Premiere
+21,29,4314,Project Management; Change Management; System Administrator; Program Management; Strategic Planning; Network Administration; Training; System Admin; budget; Vendor Management; System Administration; Process Improvement; Management; Operations; Estimating; ITSM; Project; Enterprise Manager; IT Management; Budgeting; Project Planning; Systems Engineering; Product Management; Configuration Management; Inventory Management
+22,17,5704,SOAP; REST API; REST; Web Services; WSDL; API; RESTful web services; GraphQL; APIs; RESTful; WCF; Web API; Swagger; API Gateway; UDDI; RESTful services; REST Web Services
+23,10,3141,PowerShell; Bash; Shell Scripting; UNIX Shell Scripting; Scripting; Shell; Shell Scripts; Unix shell; Shell Script; UNIX shell scripts
+24,15,3006,JUnit; TDD; Jest; Protractor; testing; Mockito; unit testing; TestNG; Test Driven Development; Test-Driven Development; PyTest; BDD; NUnit; PyUnit; QUnit
+25,32,6765,Tcp/ip; DNS; DHCP; Networking; VPN; FTP; LAN; VoIP; SSH; BGP; WAN; OSPF; TCP; NAS; WinSCP; Ethernet; MPLS; VLAN; Eigrp; SFTP; VLANs; NFS; Wireless; routing; UDP
+26,13,2910,Spring; Spring Boot; Spring MVC; Spring Framework; Spring Security; Spring Batch; Spring AOP; Springboot; Spring IOC; Spring Core; Spring JDBC; Spring Cloud; Spring Data
+27,9,2128,Jasmine; Mocha; Erwin; Chef; Cucumber; Chai; Bamboo; Enzyme; Celery
+28,7,5045,Bootstrap; NPM; Gulp; Webpack; Bower; Web pack; Yarn
+29,6,1890,Apache; IIS; LAMP; Nginx; Apache Web Server; WAMP
+30,9,2565,Front End; UI; Front-End; Web Design; User Interface; UX; User Experience; User Experience Design; User Interface Design
+31,6,1728,CI/CD; DevOps; Continuous Integration; CI/CD pipelines; DevSecOps; Infrastructure as Code
+32,5,1334,Android; iOS; Ionic; iPhone; Blackberry
+33,6,1273,Tableau; Power BI; PowerBI; Pivot Tables; DAX; QlikView
+34,7,1253,Confluence; Slack; Trello; Asana; Teams; Basecamp; Smartsheet
+35,14,2817,Salesforce; SAP; ServiceNow; CRM; Service Now; PeopleSoft; Quickbooks; BMC Remedy; Salesforce.com; Zendesk; Workday; Okta; MuleSoft; Hubspot
+36,11,1946,Selenium; Firebug; Safari; Chrome; Firefox; Chrome Developer Tools; Internet Explorer; Google Chrome; IE Developer Toolbar; IE; Mozilla Firefox
+37,9,1332,SEO; Marketing; SNS; Sales; Digital Marketing; Social Media Marketing; Search Engine Optimization; Social Media; Email Marketing
+38,20,3625,Kafka; Hadoop; Spark; Redis; Hive; Snowflake; Elasticsearch; HDFS; Elastic Search; HBase; PySpark; Apache Spark; MapReduce; Airflow; Sqoop; Apache Kafka; Apache Cassandra; Solr; Flume; Oozie
+39,6,1061,ASM; Cobol; JCL; AS400; CICS; VSAM
+40,5,876,PMP; PM; Project Management Professional (PMP); PMI; Pmbok
+41,5,1206,Mac; Mac OS; Mac OS X; MacOS; Mac OSX
+42,10,1785,Security; Data Guard; Network Security; SIEM; Information Security; Cyber Security; Cybersecurity; It Security; IDS; Cloud Security
+43,9,1525,Customer Service; Desktop Support; Troubleshooting; Help Desk; Technical Support; Maintenance; Service Desk; Tech Support; Computer Repair
+44,5,920,Ruby; Ruby on Rails; Rails; Rust; RSpec
+45,10,1774,Explain Plan; Tkprof; Statspack; SQL Profiler; Performance Tuning; SQL Trace; SQL Tuning Advisor; Performance Monitor; SQL Server Profiler; Query Analyzer
+46,8,1048,Backbone.js; Handlebars; Backbone JS; Require.js; BackboneJS; Ember.js; Knockout.js; Knockout JS
+47,11,5958,Python; Django; Flask; NumPy; Matlab; Matplotlib; SciPy; TensorFlow; PyTorch; scikit-learn; PyQt
+48,7,847,Sketch; Axure; InVision; Balsamiq; Adobe XD; Figma; Wireframe
+49,14,1872,Cissp; CompTIA A+; CCNA; CompTIA Security+; Security+; CompTIA Network+; CCNP; CISM; MCSE; CEH; Comptia; Oracle Certified Associate; MCSA; Network+
+50,11,1368,Data Analysis; Business Intelligence; Data Warehousing; Business Analysis; Data Warehouse; Business Objects; data analytics; Big Data; Data Mining; Analytics; BI
+51,7,845,Disaster Recovery; Risk Management; vulnerability management; incident response; penetration testing; Incident Management; Risk Assessment
+52,5,1340,UML; Object-Oriented Programming; Design Patterns; Rational Rose; OOAD
+53,12,1141,Hipaa; NIST; SOX; Fisma; CISA; ISO 27001; ISO; GDPR; FedRAMP; Cobit; Compliance; NIST 800-53
+54,7,1384,Cisco; Routers; Switches; Cisco routers; Cisco switches; Cisco ASA; Cisco IOS
+55,5,739,Jax-ws; Jax-Rs; JAXB; Apache CXF; Jax-rpc
+56,5,496,SSL; Encryption; IPSec; PKI; HTTPS
+57,5,560,Magento; Shopify; WooCommerce; Ecommerce; E-Commerce
+58,5,824,Google Analytics; Facebook; Google Adwords; Google Maps API; Google
+59,5,2746,PHP; Laravel; CodeIgniter; phpMyAdmin; cPanel
+-1,197,54335,JavaScript; jQuery; JIRA; JSON; AJAX; C++; Excel; Jenkins; C; Maven; MVC; Visio; Hibernate; SSRS; ETL; JDBC; Perl; CVS; Ansible; ITIL; Splunk; MS Project; Go; Express; Firewalls

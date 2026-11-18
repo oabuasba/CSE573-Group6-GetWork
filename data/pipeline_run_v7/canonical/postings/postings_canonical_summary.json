@@ -1,0 +1,11 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "distinct_after": 26351,
+  "distinct_before": 30673,
+  "n_records": 8416,
+  "n_records_changed": 6632,
+  "n_records_without_skills": 70,
+  "skills_after": 115971,
+  "skills_before": 116477,
+  "source": "postings"
+}

@@ -1,0 +1,59 @@
+{
+  "clusters": {
+    "ari_by_seed": [
+      0.18899491665112964,
+      0.1884459313449524,
+      0.18550066118942288,
+      0.18597027608035918,
+      0.1879630881424252
+    ],
+    "ari_mean": 0.18737497468165787,
+    "ari_sd": 0.0013858763891135026,
+    "dims": 10
+  },
+  "k": 10,
+  "labels": [
+    "Database_Administrator",
+    "Java_Developer",
+    "Network_Administrator",
+    "Project_manager",
+    "Python_Developer",
+    "Security_Analyst",
+    "Software_Developer",
+    "Systems_Administrator",
+    "Web_Developer"
+  ],
+  "n_resumes": 10300,
+  "n_unlabeled_excluded": 267,
+  "raw_skills": {
+    "ari_by_seed": [
+      0.2021066623409466,
+      0.2015397785857107,
+      0.20027327151967025,
+      0.20701439715787026,
+      0.20196673601651136
+    ],
+    "ari_mean": 0.20258016912414184,
+    "ari_sd": 0.0023094188072476543,
+    "dims": 1000
+  },
+  "schema": 1,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "taxonomy": {
+    "config_id": "kmeans-01",
+    "n_clusters": 10,
+    "noise_fraction": 0.0,
+    "silhouette": 0.08014529943466187
+  },
+  "vocabulary_gap": {
+    "fraction_one_corpus": 0.088,
+    "n_one_corpus": 88,
+    "n_retained": 1000
+  }
+}

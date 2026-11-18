@@ -14,12 +14,12 @@ pytestmark = pytest.mark.usefixtures("offline")
 
 ROOT = Path(__file__).resolve().parents[3]
 README = ROOT / "src" / "getwork" / "evaluation" / "README.md"
-SCRIPT = ROOT / "scripts" / "run_evaluation.sh"
+SCRIPT = ROOT / "scripts" / "bash" / "run_evaluation.sh"
 END_TO_END = ROOT / "docs" / "running-end-to-end.md"
 REQUIRED_STRINGS = (
     "evaluate sample", "evaluate pool", "evaluate judge", "--dry-run", "--limit", "freeze-rubric",
     "tune plan", "tune pick", "evaluate metrics", "evaluate agreement", "evaluate ari",
-    "evaluate report", "eval_out", "pairs_blind_human.jsonl", "human/", ".env", "user-run",
+    "evaluate report", "eval/run", "pairs_blind_human.jsonl", "human/", ".env", "user-run",
     "Voyager", "EV-1", "EV-2", "EV-3", "EV-4", "EV-5", "EV-6",
 )
 STAGES = (
@@ -56,7 +56,7 @@ def test_script_stages_and_safety() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert subprocess.run(["bash", "-n", str(SCRIPT)], check=False).returncode == 0
     assert "set -euo pipefail" in text
-    assert 'EVAL_DIR="${EVAL_DIR:-eval_out}"' in text
+    assert 'EVAL_DIR="${EVAL_DIR:-eval/run}"' in text
     assert re.search(r'^STAGES="' + " ".join(STAGES) + '"$', text, re.MULTILINE)
     assert "--force" not in text.replace("never passes --force", "")
     assert ".env" not in text
@@ -95,7 +95,7 @@ def test_script_documents_all_smoke_and_artifacts_dir() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     assert 'STAGE="${1:-all}"' in text
     assert 'JUDGE_LIMIT="${JUDGE_LIMIT:-10}"' in text
-    assert "ARTIFACTS_DIR=artifacts_trial/v6 EVAL_DIR=eval_out/v6" in text
+    assert "ARTIFACTS_DIR=artifacts_trial/v6 EVAL_DIR=eval/other/v6" in text
     smoke = text[text.index("  smoke)\n    require_user_run"):]
     assert "--preflight" in smoke and "freeze" not in smoke and "test" not in smoke.split("esac")[0]
 
@@ -105,3 +105,10 @@ def test_end_to_end_doc_section() -> None:
     heading = re.search(r"^## \d+\. Evaluation$", text, re.MULTILINE)
     assert heading is not None
     assert "../src/getwork/evaluation/README.md" in text[heading.end():]
+
+
+def test_full_script_prints_numbered_banners() -> None:
+    text = (ROOT / "scripts" / "bash" / "run_evaluation.sh").read_text(encoding="utf-8")
+    assert 'echo "[$STAGE_INDEX/$STAGE_TOTAL] $name"' in text
+    assert 'echo "done: $name ($((SECONDS - started))s)"' in text
+    assert "STAGE_TOTAL=${#ALL_STAGES[@]}" in text and 'numbered "$STAGE" run_stage' in text

@@ -122,3 +122,13 @@ def test_report_is_deterministic_and_b2_caveat() -> None:
     assert "Full grouping order" in _render()
     assert "Full grouping order" not in _render(manifest=_manifest(b2_order="record"))
     assert not re.search(r"\d{4}-\d{2}-\d{2}|\d{2}:\d{2}", _render())
+
+
+def test_report_caveats_flag_untuned_b1plus_and_missing_human_check() -> None:
+    tuned = _render()
+    assert report.UNTUNED_CAVEAT not in tuned and report.NO_HUMAN_CAVEAT not in tuned
+    untuned = _manifest()
+    untuned["weights"] = {"test": {"skills": 0.6, "title": 0.2, "level": 0.2, "source": "default"}}
+    text = _render(manifest=untuned, agreement={"judges": {}})
+    assert report.UNTUNED_CAVEAT in text and report.NO_HUMAN_CAVEAT in text
+    assert report.NO_HUMAN_CAVEAT in _render(agreement=None)

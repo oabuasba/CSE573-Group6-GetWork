@@ -1,0 +1,14 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "mention_coverage": 0.6259886959270038,
+  "min_df": 2,
+  "n_distinct_skills": 73307,
+  "n_docs": {
+    "postings": 8416,
+    "resumes": 10567
+  },
+  "n_selected": 1000,
+  "one_corpus_only_fraction": 0.088,
+  "selected_skills_version": "sha256:cdc007a5a377",
+  "top_n": 1000
+}

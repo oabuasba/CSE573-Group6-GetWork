@@ -1,0 +1,49 @@
+{
+  "alias_table_version": "sha256:5fac60728a08",
+  "b2_order": "grouped",
+  "examples": [
+    {
+      "id": "j-175485704",
+      "text_b2": "Title: Software Engineer\nLevel: Not specified\nSkills: PHP, MySQL, relational databases, Object-Oriented Programming, HTML, CSS, JavaScript, e-commerce platforms",
+      "text_full": "Title: Software Engineer\nLevel: Not specified\nSkills: Server-Side Development: PHP; Database Administration: MySQL, relational databases; Visual Interface Design: Object-Oriented Programming; Front-end Development: HTML, CSS, JavaScript; Other: e-commerce platforms"
+    },
+    {
+      "id": "j-266825034",
+      "text_b2": "Title: Software Support Specialist\nLevel: Entry level\nSkills: PHP, Web Development, JavaScript, Spanish, Portuguese",
+      "text_full": "Title: Software Support Specialist\nLevel: Entry level\nSkills: Server-Side Development: PHP; Visual Interface Design: Web Development; Front-end Development: JavaScript; Other: Spanish, Portuguese"
+    },
+    {
+      "id": "j-2234533717",
+      "text_b2": "Title: Full Stack Engineer\nLevel: Associate\nSkills: PostgreSQL, version control, testing, Python, Agile, MongoDB, AWS, Azure, Google Cloud Platform, CI/CD, JavaScript, TypeScript, React, Node.js, Express.js, HTML, CSS",
+      "text_full": "Title: Full Stack Engineer\nLevel: Associate\nSkills: Database Administration: PostgreSQL; Collaboration Platforms: version control, testing; Programming Languages: Python; IT Project Management: Agile; Cloud Infrastructure: MongoDB, AWS, Azure, Google Cloud Platform, CI/CD; Front-end Development: JavaScript, TypeScript, React, Node.js, Express.js, HTML, CSS"
+    }
+  ],
+  "level_bands": [
+    2.0,
+    5.0
+  ],
+  "level_counts": {
+    "Associate": 1001,
+    "Director": 88,
+    "Entry level": 1412,
+    "Executive": 23,
+    "Internship": 51,
+    "Mid-Senior level": 5099,
+    "Not specified": 742
+  },
+  "level_source_counts": {
+    "listed": 6041,
+    "missing": 742,
+    "years": 1633
+  },
+  "mean_skills": 13.779824144486692,
+  "n_documents": 8416,
+  "n_empty_skills": 70,
+  "other_share": 0.46164127238706226,
+  "relabel_backend": null,
+  "relabel_mode": "lookup_only",
+  "relabel_model": null,
+  "serialization_version": "ser_v1",
+  "source": "postings",
+  "taxonomy_version": "sha256:02456e823462"
+}

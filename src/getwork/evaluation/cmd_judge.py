@@ -36,6 +36,7 @@ from getwork.webapp.engine import EngineLoadError
 
 COMMANDS = ("judge",)
 DEFAULT_WORKERS = 4
+DEFAULT_PROGRESS_EVERY = 25
 DEFAULT_MAX_CHARS = 20000
 DEFAULT_MAX_TOKENS = 512
 
@@ -48,6 +49,10 @@ def _positive_int(value: str) -> int:
     if number < 1:
         raise argparse.ArgumentTypeError(f"must be positive: {value}")
     return number
+
+
+def _non_negative_int(value: str) -> int:
+    return 0 if value.strip() == "0" else _positive_int(value)
 
 
 def add_parser(sub: argparse._SubParsersAction) -> None:
@@ -64,6 +69,11 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
                         help="another model the pipeline uses; judges must differ from it")
     parser.add_argument("--rubric-file", type=Path, default=None)
     parser.add_argument("--limit", type=_positive_int, default=None)
+    parser.add_argument("--offset", type=_non_negative_int, default=0,
+                        help="skip the first N pairs by sorted pair id (a held-out slice with "
+                             "--limit); default 0")
+    parser.add_argument("--progress-every", type=_non_negative_int, default=DEFAULT_PROGRESS_EVERY,
+                        help="print a progress line to stderr every N judged pairs; 0 disables")
     parser.add_argument("--dry-run", action="store_true", help="count pairs and calls only")
     parser.add_argument("--preflight", action="store_true",
                         help="check both judge models against the provider's model list")
@@ -117,7 +127,8 @@ def _read_pair_texts(args: argparse.Namespace, stage: str) -> list[PairText]:
         raise FileNotFoundError(f"{path} not found (run evaluate pool --stage {stage})")
     table = pq.read_table(path, columns=["pair_id", "resume_id", "posting_id"]).to_pylist()
     table.sort(key=lambda row: row["pair_id"])
-    table = table[: args.limit]
+    end = None if args.limit is None else args.offset + args.limit
+    table = table[args.offset : end]
     texts = {
         source: loading.read_texts(
             args.processed_dir, source, sorted({row[f"{source[:-1]}_id"] for row in table})
@@ -146,7 +157,7 @@ def _judge_all(
     for judge in judges_:
         run = judge_run.run_judge(
             judge, pairs, path=layout.judge_path(args.out_dir, judge.info.id), rubric=rubric,
-            workers=args.workers,
+            workers=args.workers, progress_every=args.progress_every,
         )
         summary[judge.info.id] = {
             "model": judge.info.model, "family": judge.info.family, "pairs": run.n_pairs,

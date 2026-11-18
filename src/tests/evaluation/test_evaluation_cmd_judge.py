@@ -250,3 +250,45 @@ def test_models_and_families_must_be_given_together(tmp_path: Path) -> None:
     _no_calls(common, "--judge-models", "mA,mB")
     _no_calls(common, "--judge-families", "fa,fb")
     _no_calls(common, "--judge-models", f"{GEMMA},{LLAMA}", "--judge-families", "google,google")
+
+
+def test_progress_every_option(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    common = _prepared(tmp_path)
+    total = _n_pairs(tmp_path)
+    assert _judge(common, "--progress-every", "1", "--workers", "3",
+                  client=FakeLLMClient(handler=_by_model)) == 0
+    captured = capsys.readouterr()
+    for judge_id in ("judge-a", "judge-b"):
+        assert f"[{judge_id}] judged {total}/{total} pairs ({total} ok, 0 failed, 0 skipped" \
+            in captured.err
+    assert json.loads(captured.out.splitlines()[-1])["stage"] == "dev"
+    assert _judge(common, client=FakeLLMClient(handler=_by_model)) == 0
+    resumed = capsys.readouterr().err
+    assert f"judged {total}/{total} pairs (0 ok, 0 failed, {total} skipped as already done)" \
+        in resumed
+
+
+def test_progress_every_zero_is_silent(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    common = _prepared(tmp_path)
+    assert _judge(common, "--progress-every", "0", client=FakeLLMClient(handler=_by_model)) == 0
+    assert "judged" not in capsys.readouterr().err
+
+
+def test_offset_takes_a_slice_after_the_sorted_prefix(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    common = _prepared(tmp_path)
+    capsys.readouterr()
+    ids = sorted(pq.read_table(tmp_path / "out" / "pairs_dev.parquet").column("pair_id").to_pylist())
+    assert len(ids) >= 5
+    assert _judge(common, "--limit", "2", client=FakeLLMClient(handler=_by_model)) == 0
+    assert _judge(common, "--offset", "2", "--limit", "2",
+                  client=FakeLLMClient(handler=_by_model)) == 0
+    assert sorted(r["pair_id"] for r in _rows(tmp_path, "judge-a")) == ids[:4]
+    assert _judge(common, "--offset", "4", client=FakeLLMClient(handler=_by_model)) == 0
+    assert sorted(r["pair_id"] for r in _rows(tmp_path, "judge-b")) == ids
+
+
+def test_offset_defaults_to_zero_and_rejects_negative(tmp_path: Path) -> None:
+    common = _prepared(tmp_path)
+    assert _judge(common, "--offset", "-1") == 2

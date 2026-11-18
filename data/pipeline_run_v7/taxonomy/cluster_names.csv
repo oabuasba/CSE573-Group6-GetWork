@@ -1,0 +1,11 @@
+cluster_id,name,size,top_members,method,status,model,backend,prompt_version
+0,Server-Side Development,118,Java; PHP; C#; C++; Jenkins,llm,ok,qwen38-27b,voyager,name_v2
+1,Network Infrastructure,124,VMware; Tcp/ip; DNS; Cisco; DHCP,llm,ok,qwen38-27b,voyager,name_v2
+2,Database Administration,125,SQL; SQL Server; Oracle; MySQL; Excel,llm,ok,qwen38-27b,voyager,name_v2
+3,Collaboration Platforms,151,Git; JIRA; Microsoft Office; Active Directory; Wordpress,llm,ok,qwen38-27b,voyager,name_v2+refit_v1
+4,Programming Languages,109,Python; Eclipse; Waterfall; LESS; TOAD,llm,ok,qwen38-27b,voyager,name_v2+refit_v1
+5,Operating Systems,47,Windows; Linux; UNIX; PowerShell; Bash,llm,ok,qwen38-27b,voyager,name_v2
+6,IT Project Management,63,Agile; Scrum; Project Management; SDLC; ITIL,llm,ok,qwen38-27b,voyager,name_v2
+7,Visual Interface Design,56,Photoshop; Visio; Front End; Adobe Photoshop; Illustrator,llm,ok,qwen38-27b,voyager,name_v2+refit_v1
+8,Cloud Infrastructure,105,AWS; Azure; MongoDB; Docker; Kubernetes,llm,ok,qwen38-27b,voyager,name_v2
+9,Front-end Development,102,JavaScript; HTML; CSS; jQuery; Bootstrap,llm,ok,qwen38-27b,voyager,name_v2

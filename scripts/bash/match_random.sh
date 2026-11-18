@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Shows top-K postings for a random (or given) resume under each retrieval system.
-# Usage: [ARTIFACTS_DIR=...] [K=5] bash scripts/match_random.sh [RESUME_ID]
+# Usage: [ARTIFACTS_DIR=...] [K=5] bash scripts/bash/match_random.sh [RESUME_ID]
 # Read-only: `retrieve show` uses stored vectors, so no Voyager/LLM calls are made.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
 K="${K:-5}"
 RESUMES="$ARTIFACTS_DIR/documents/resumes/resumes_documents.parquet"
 
 if [[ ! -f "$RESUMES" ]]; then
-  echo "error: $RESUMES not found; run scripts/run_pipeline.sh first" >&2
+  echo "error: $RESUMES not found; run scripts/bash/run_pipeline.sh first" >&2
   exit 1
 fi
 

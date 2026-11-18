@@ -1,0 +1,55 @@
+{
+  "judges": {
+    "dev": {
+      "confusion": [
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          31,
+          24
+        ],
+        [
+          0,
+          2,
+          40
+        ]
+      ],
+      "kappa": 0.47994056463595847,
+      "kappa_quadratic": 0.5399277029247453,
+      "meets_threshold": false,
+      "n": 100,
+      "pct_agree": 0.72,
+      "threshold": 0.6
+    },
+    "test": {
+      "confusion": [
+        [
+          88,
+          36,
+          2
+        ],
+        [
+          37,
+          466,
+          185
+        ],
+        [
+          0,
+          80,
+          392
+        ]
+      ],
+      "kappa": 0.5465923914959632,
+      "kappa_quadratic": 0.6728755392573467,
+      "meets_threshold": false,
+      "n": 1286,
+      "pct_agree": 0.7356143079315708,
+      "threshold": 0.6
+    }
+  },
+  "schema": 1
+}

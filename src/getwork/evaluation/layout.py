@@ -11,7 +11,7 @@ from getwork.docembed.documents import COMPARE_KEYS
 from getwork.evaluation import defaults
 from getwork.retrieval.inputs import RetrievalInputs
 
-DEFAULT_OUT_DIR: Path = Path("eval_out")
+DEFAULT_OUT_DIR: Path = Path("eval/run")
 STAGES: tuple[str, ...] = ("dev", "test", "tune")
 BLIND_STAGES: tuple[str, ...] = ("dev", "test", "tune", "human")
 MANIFEST_FILE = "run.json"

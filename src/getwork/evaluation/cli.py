@@ -22,7 +22,7 @@ from getwork.webapp.engine import EngineLoadError
 
 COMMAND_MODULES: tuple[str, ...] = (
     "cmd_sample", "cmd_pool", "cmd_rubric", "cmd_judge", "cmd_metrics",
-    "cmd_agreement", "cmd_tune", "cmd_ari", "cmd_report",
+    "cmd_agreement", "cmd_tune", "cmd_ari", "cmd_report", "cmd_compare",
 )
 FATAL_ERRORS: tuple[type[BaseException], ...] = (FatalLLMError, JudgeFatalError)
 USAGE_ERRORS: tuple[type[BaseException], ...] = (
@@ -81,7 +81,8 @@ def main(
         return args
     ctx = Context(llm_client=llm_client, environ=os.environ if environ is None else environ)
     try:
-        layout.check_out_dir(args.out_dir, _protected_paths(args))
+        if hasattr(args, "out_dir"):  # compare-rubrics only reads, from several folders
+            layout.check_out_dir(args.out_dir, _protected_paths(args))
         return _command_modules()[args.command].run(args, ctx)
     except FATAL_ERRORS as exc:
         print(f"error: {exc}", file=sys.stderr)
