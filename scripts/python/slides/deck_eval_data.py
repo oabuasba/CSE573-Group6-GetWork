@@ -32,6 +32,7 @@ class EvalValues:
     direction: str = DEFAULT_DIRECTION
     results: dict[tuple[str, str], str] = field(default_factory=dict)
     gaps: dict[str, tuple[str, str]] = field(default_factory=dict)
+    direction_gaps: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
     exact_agreement: str | None = None
     kappa: str | None = None
     kappa_weighted: str | None = None
@@ -55,6 +56,23 @@ def _p_text(value: float) -> str:
     return f"p < {P_FLOOR}" if float(value) < P_FLOOR else f"p = {_num(value)}"
 
 
+def _gap_strings(block: dict) -> dict[str, tuple[str, str]]:
+    gaps = {}
+    for label, key in GAP_KEYS.items():
+        gap = block["gaps"][key][GAP_METRIC]
+        gaps[label] = (f"{float(gap['diff']):+.3f}", _p_text(gap["p"]))
+    return gaps
+
+
+def _fill_direction_gaps(values: EvalValues, directions: dict) -> None:
+    """nDCG@10 gaps for both directions; a direction that cannot be read is skipped."""
+    for name in (DEFAULT_DIRECTION, POSTING_DIRECTION):
+        try:
+            values.direction_gaps[name] = _gap_strings(directions[name])
+        except (KeyError, TypeError, ValueError):
+            continue
+
+
 def _fill_metrics(values: EvalValues, metrics: dict) -> None:
     try:
         block = metrics["groups"][JUDGE_GROUP]["directions"][values.direction]
@@ -64,9 +82,8 @@ def _fill_metrics(values: EvalValues, metrics: dict) -> None:
                 low, high = entry["ci"]
                 values.results[(system, metric)] = (
                     f"{_num(entry['mean'])} [{_num(low)}, {_num(high)}]")
-        for label, key in GAP_KEYS.items():
-            gap = block["gaps"][key][GAP_METRIC]
-            values.gaps[label] = (f"{float(gap['diff']):+.3f}", _p_text(gap["p"]))
+        values.gaps = _gap_strings(block)
+        _fill_direction_gaps(values, metrics["groups"][JUDGE_GROUP]["directions"])
     except (KeyError, TypeError, ValueError):
         values.warnings.append("metrics.json: results table incomplete; placeholders kept")
 

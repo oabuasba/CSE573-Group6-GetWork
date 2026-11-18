@@ -56,10 +56,15 @@ PRELIMINARY_ITEMS = [
                   "randomization test for system gaps"),
 ]
 UPCOMING_ITEMS = [
-    ("Skills retained: ", "vary the top-N skills kept for the taxonomy"),
+    ("Skills retained: ", "vary the top-N skills kept"),
     ("Clusters: ", "vary the number of clusters k"),
     ("Judge prompts: ", "compare rubric versions"),
-    ("Judge models: ", "try other models and families"),
+    ("Judge models: ", "try other models"),
+    ("Directions: ", "do system gaps differ for resume to posting vs. posting to "
+                     "resume?"),
+    ("Substitution test (not yet run): ", "React to Vue vs. React to Java rank drop"),
+    ("Explanation faithfulness (not yet run): ", "judge rating 1-5, hallucination rate, "
+                                                 "hand review"),
     ("Human evaluation: ", "the system is built, so the focus shifts here; both authors "
                            "label blind, judges checked against them"),
 ]
@@ -89,11 +94,12 @@ GAP_COLUMNS = ("Difference", "nDCG@10 gap", "p-value")
 GAP_WIDTHS = (1500000, 2000000, 2000000)
 RIGHT_LEFT = 6000000
 NOTE_TOP, NOTE_HEIGHT = 4560000, 380000
-AGREEMENT_HEIGHT, RIGHT_GAP, TAKEAWAY_PT = 1200000, 100000, 11
+AGREEMENT_HEIGHT, RIGHT_GAP, TAKEAWAY_PT = 1200000, 100000, 10
 RESULTS_SECTION = "Preliminary Results"
 NOT_RUN_NOTE = ("Note: the full evaluation plan has not been run yet. Parameter tuning "
-                "(skills retained, number of clusters, judge prompts, judge models) is still "
-                "in progress ahead of the final report.")
+                "(skills retained, number of clusters, judge prompts, judge models) is still in "
+                "progress ahead of the final report. Not yet reported: substitution test, "
+                "explanation faithfulness, human check.")
 
 
 def _result_rows() -> list[list[str]]:
@@ -144,5 +150,5 @@ def _add_side_cards(slide: Slide) -> None:
                          ("", f"Pairs judged: {pairs}")], space=3))
     top = CONTENT_TOP + AGREEMENT_HEIGHT + RIGHT_GAP
     _card(slide, rect=Rect(RIGHT_LEFT, top, width, NOTE_TOP - 80000 - top), title="Takeaways",
-          body=[TextLine(text, TAKEAWAY_PT, bullet=True, space_before_pt=4)
+          body=[TextLine(text, TAKEAWAY_PT, bullet=True, space_before_pt=2)
                 for text in deck_takeaways.takeaways(_values)])

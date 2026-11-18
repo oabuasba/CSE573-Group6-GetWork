@@ -23,30 +23,30 @@ EXAMPLE = '"Front-end Development: JavaScript, HTML, CSS"'
 
 STEPS = [
     ("1  Structure and canonicalize", [
-        "An LLM extracts title, skills, experience and education (reasoning off, temperature 0, "
-        "schema-validated, up to 3 attempts)",
-        "An alias table canonicalizes skills: JS becomes JavaScript, Windows 7/10/11 fold "
+        "An **LLM** extracts title, skills, experience and education (reasoning off, temperature 0, "
+        "**schema-validated**, up to 3 attempts)",
+        "An **alias table** canonicalizes skills: JS becomes JavaScript, Windows 7/10/11 fold "
         "into one",
     ]),
     ("2  Build the skill taxonomy", [
         "Top 1,000 canonical skills by count across both corpora, each embedded alone",
-        "UMAP (5 dimensions, 15 neighbors), then 29 configurations of k-means, DBSCAN, HDBSCAN",
-        "Best mean silhouette (cosine, clustered skills only) under a 30% noise cap",
-        "Review chose k-means, 10 clusters (HDBSCAN scored higher, left skills unclustered); "
+        "**UMAP** (5 dimensions, 15 neighbors), then 29 configurations of **k-means**, **DBSCAN**, **HDBSCAN**",
+        "Best mean **silhouette** (**cosine**, clustered skills only) under a 30% noise cap",
+        "Review chose **k-means**, 10 clusters (**HDBSCAN** scored higher, left skills unclustered); "
         "an LLM names them",
     ]),
     ("3  Re-label and serialize", [
-        'Known skills: cluster lookup; noise skills: "Other"',
+        'Known skills: **cluster lookup**; noise skills: "Other"',
         "LLM only for unseen skills and incomplete documents (few skills, or under half known)",
         f"Text: title, level, then skills by cluster, e.g. {EXAMPLE}; this gives related "
         "skills partial credit",
         "Level: listed for postings, from years of experience for resumes",
     ]),
     ("4  Retrieval", [
-        "Document vectors are L2-normalized, so cosine is an inner product: S = R · J^T",
+        "Document vectors are **L2-normalized**, so **cosine** is an inner product: S = R · J^T",
         "Top-k by row (jobs for a resume) or by column (candidates for a posting): "
         "one matrix, both directions",
-        "B1+: skill Jaccard + title token overlap + seniority distance (default weights, "
+        "B1+: skill **Jaccard** + title **token overlap** + **seniority distance** (default weights, "
         "untuned)",
         "B2: same text without cluster labels; Full: with them. B1+ vs. B2 isolates "
         "embeddings, B2 vs. Full the taxonomy",

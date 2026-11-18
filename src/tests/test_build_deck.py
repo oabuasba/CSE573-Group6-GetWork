@@ -78,7 +78,7 @@ def test_cover_slide_text(built):
     assert len(prs.slides) == 10
     texts = [s.text_frame.text for s in prs.slides[0].placeholders]
     assert "GetWork: Two-Way Resume and Job Matching with a Skill Taxonomy" in texts
-    assert "CSE 573 · Group 6" in texts
+    assert "CSE 573 · Group 6 · Project 3" in texts
     assert "Omar Abuasba and Prathyush Vasa" in texts
     disclosure = _slide_text(prs.slides[0])
     assert "AI disclosure: Claude (generative AI" in disclosure
@@ -194,13 +194,17 @@ EXPECTED_SLIDE_TEXT = {
         "Llama 4 Maverick 17B (Meta)", "rubric judge_v1 frozen before the test run",
         "nDCG@10 (graded gain 0/1/2)", "paired randomization test",
         "Upcoming evaluation plan", "Skills retained", "Clusters", "Judge prompts",
-        "Judge models", "Human evaluation"],
+        "Judge models", "Directions: do system gaps differ for resume to posting vs. posting to resume?",
+        "Substitution test (not yet run): React to Vue vs. React to Java rank drop",
+        "Explanation faithfulness (not yet run): judge rating 1-5, hallucination rate, hand review",
+        "Human evaluation"],
     6: ["Preliminary Results", "[Headline: one sentence finding goes here]", "Differences",
         "B2 - B1+", "Full - B2", "Full - B1+", "0.000 [0.000, 0.000]", "+0.000", "p = 0.000",
         "Judge agreement", "Exact agreement: [00%]",
         "Cohen's kappa: [0.00] (weighted [0.00])", "Pairs judged: [N]", "Takeaways",
         "[Finding 1]", "[Finding 2]", "[Caveat: ...]",
-        "the full evaluation plan has not been run yet"],
+        "the full evaluation plan has not been run yet",
+        "Not yet reported: substitution test, explanation faithfulness, human check."],
     7: ["UI Interfaces", "Find matches in both directions",
         "Submit a resume to find jobs, or a posting to find candidates",
         "Each result shows a similarity score and which skills match, relate or are missing",
@@ -236,6 +240,31 @@ def test_eval_plan_slide_merges_old_boxes(built):
     plan = next(s for s in slide.shapes if s.has_text_frame
                 and s.text_frame.paragraphs[0].text == "Preliminary evaluation plan")
     assert "nDCG@10 (graded gain 0/1/2), P@10, MRR" in plan.text_frame.text
+
+
+def _bold_text(slide) -> set[str]:
+    return {run.text for shape in slide.shapes if shape.has_text_frame
+            for paragraph in shape.text_frame.paragraphs for run in paragraph.runs
+            if run.font.bold}
+
+
+def test_algorithm_names_and_structured_counts_are_bold(built):
+    prs = pptx.Presentation(str(built[0]))
+    algorithms = _bold_text(prs.slides[3])
+    for name in ("UMAP", "k-means", "DBSCAN", "HDBSCAN", "silhouette", "cosine", "Jaccard",
+                 "L2-normalized", "alias table", "LLM"):
+        assert name in algorithms
+    datasets = _bold_text(prs.slides[4])
+    assert {"10,567", "8,416"} <= datasets
+    assert "29,783" in datasets and "28,842" not in datasets and "8,423" not in datasets
+
+
+def test_direction_takeaway_from_real_run_numbers(build_deck_module, template, tmp_path):
+    out = build_deck_module.build_deck(
+        template=template, out=tmp_path / "d.pptx",
+        eval_dir=REPO_ROOT / "eval" / "preliminary_results")
+    results = _slide_text(pptx.Presentation(str(out)).slides[6])
+    assert "Posting to resume: B2 over B1+ +0.195 (vs. +0.117); Full vs. B2 unclear in both" in results
 
 
 def test_text_fit_estimator_counts_wrapping_and_paragraph_spacing():
@@ -323,7 +352,9 @@ def test_eval_dir_fills_slides_6_and_7(build_deck_module, template, tmp_path):
     assert "Pairs judged: 321" in results
     assert "[Finding 1]" not in results
     assert "Takeaways" in results and "(+0.012, p = 0.040)" in results
-    assert "Judge kappa 0.61 is at or above the 0.6 target on 321 pairs" in results
+    assert "Judge kappa 0.61 is at or above the 0.6 target" in results
+    assert "Posting to resume: B2 over B1+ +0.012 (vs. +0.012); Full vs. B2 same in both" in results
+    assert "Directions: " in design
     import check_deck_layout
 
     for index in (5, 6):

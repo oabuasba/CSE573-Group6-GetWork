@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from deck_eval_data import EvalValues
+from deck_eval_data import DEFAULT_DIRECTION, POSTING_DIRECTION, EvalValues
 
 SIGNIFICANCE = 0.05
 KAPPA_TARGET = 0.6
 PLACEHOLDER_HEADLINE = "[Headline: one sentence finding goes here]"
 PLACEHOLDER_TAKEAWAYS = ["[Finding 1]", "[Finding 2]", "[Caveat: ...]"]
 GENERIC_HEADLINE = "Preliminary results from the judge-labeled test run"
-CAVEAT = "Caveat: B1+ used untuned default weights; results are resume-to-posting queries"
+CAVEAT = "Caveat: B1+ uses untuned default weights; table shows resume to posting"
 PAIRS = (("B2 - B1+", "B2", "B1+"), ("Full - B2", "Full", "B2"))
 
 
@@ -29,13 +29,30 @@ def _verdict(values: EvalValues, *, label: str) -> str:
 
 def _gap_sentence(values: EvalValues, *, label: str, system: str, other: str) -> str:
     diff, p_text = values.gaps[label]
-    phrase = {"better": f"{system} beats {other}", "worse": f"{system} trails {other}",
-              "unclear": f"{system} vs. {other}: no clear gap"}[_verdict(values, label=label)]
-    return f"{phrase} on nDCG@10 ({diff}, {p_text})"
+    verdict = _verdict(values, label=label)
+    if verdict == "unclear":
+        return f"{system} vs. {other}: no clear gap ({diff}, {p_text})"
+    verb = "beats" if verdict == "better" else "trails"
+    return f"{system} {verb} {other} on nDCG@10 ({diff}, {p_text})"
 
 
 def _has_all(values: EvalValues) -> bool:
     return bool(values.gaps) and values.kappa is not None and values.pairs_judged is not None
+
+
+def _direction_sentence(values: EvalValues) -> str | None:
+    """B2 over B1+ and Full vs. B2 in each direction, or None unless both are available."""
+    forward = values.direction_gaps.get(DEFAULT_DIRECTION)
+    reverse = values.direction_gaps.get(POSTING_DIRECTION)
+    if not forward or not reverse:
+        return None
+    verdicts = {name: _verdict(EvalValues(gaps=gaps), label="Full - B2")
+                for name, gaps in (("forward", forward), ("reverse", reverse))}
+    kinds = set(verdicts.values())
+    full = ("Full vs. B2 unclear in both" if kinds == {"unclear"}
+            else "Full vs. B2 same in both" if len(kinds) == 1 else "Full vs. B2 differs")
+    return (f"Posting to resume: B2 over B1+ {reverse['B2 - B1+'][0]} (vs. "
+            f"{forward['B2 - B1+'][0]}); {full}")
 
 
 def headline(values: EvalValues) -> str:
@@ -53,7 +70,10 @@ def takeaways(values: EvalValues) -> list[str]:
     sentences = [_gap_sentence(values, label=label, system=system, other=other)
                  for label, system, other in PAIRS]
     sentences.append(CAVEAT)
+    direction = _direction_sentence(values)
+    if direction:
+        sentences.append(direction)
     below = float(values.kappa) < KAPPA_TARGET
     sentences.append(f"Judge kappa {values.kappa} is {'below' if below else 'at or above'} "
-                     f"the {KAPPA_TARGET} target on {values.pairs_judged} pairs: preliminary")
+                     f"the {KAPPA_TARGET} target")
     return sentences

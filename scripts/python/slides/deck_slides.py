@@ -98,8 +98,8 @@ def add_datasets_slide(prs: PresentationType) -> Slide:
                          keep_body=True)
     tiles = [
         ("29,783", "IT resumes, 10 occupation labels. 28,842 after cleaning, "
-                   "10,567 LLM-structured so far"),
-        ("~124K", "LinkedIn job postings, 2023-2024. 8,423 retained, 8,416 structured"),
+                   "**10,567** LLM-structured so far"),
+        ("~124K", "LinkedIn job postings, 2023-2024. 8,423 retained, **8,416** structured"),
         ("3+ yrs", "gap between resume and posting collection (pre-2021 vs. 2023-2024)"),
     ]
     for column, (number, caption) in enumerate(tiles):
@@ -111,7 +111,7 @@ def add_datasets_slide(prs: PresentationType) -> Slide:
         "Resumes need no domain filter; occupation labels serve as a reference for our clusters",
         "Postings are filtered to software and adjacent IT roles by title and industry, with no "
         "LLM; duplicate, short, corrupted and non-English documents are dropped from both",
-        "Structuring is time-limited: 10,567 resumes took about 15 hours of LLM time. We moved "
+        "Structuring is time-limited: **10,567** resumes took about 15 hours of LLM time. We moved "
         "ahead on this subset and will structure the rest before the final report",
     ])
     dh.place(dh.get_placeholder(slide, idx=IDX_BODY),

@@ -251,3 +251,6 @@ src/web/dist/
 
 # Editor settings
 .vscode/
+
+# Slide decks are built locally, never committed
+*.pptx
